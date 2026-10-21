@@ -12,6 +12,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/exp/teatest"
+	"go.yaml.in/yaml/v3"
 )
 
 type env struct {
@@ -589,5 +590,30 @@ func TestExecIn_CapsOutputOfPrintLoop(t *testing.T) {
 func TestVerify_RejectsUnknownLang(t *testing.T) {
 	if err := Verify(t.Context(), os.DirFS("testdata/bank"), "typescrit", io.Discard); err == nil {
 		t.Fatal("a typo must not verify successfully")
+	}
+}
+
+func TestQuestion_MissingOrNullAnswerFailsCheck(t *testing.T) {
+	for _, src := range []string{"choices: [a, b]", "choices: [a, b]\nanswer: ~", "choices: [a, b]\nanswer: 0"} {
+		var q Question
+		if err := yaml.Unmarshal([]byte("type: choice\n"+src), &q); err != nil {
+			t.Fatal(err)
+		}
+		bad := slices.Contains(checkStructure(&q), "answer 超出選項範圍")
+		if want := !strings.HasSuffix(src, "answer: 0"); bad != want {
+			t.Errorf("%q: range error %v, want %v (answer %d)", src, bad, want, q.Answer)
+		}
+	}
+}
+
+func TestArchiveDir_ReturnsErrorWhenWorkspaceUnreadable(t *testing.T) {
+	m := &model{cfg: Config{DataDir: t.TempDir()}}
+	ws := filepath.Join(m.cfg.DataDir, "workspace")
+	if err := os.Mkdir(ws, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(ws, 0o755) })
+	if _, err := m.archiveDir("go"); err == nil { // used to loop forever and freeze the menu
+		t.Fatal("want permission error")
 	}
 }

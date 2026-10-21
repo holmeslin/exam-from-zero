@@ -52,9 +52,10 @@ type runner struct {
 
 func nodeRunner() runner {
 	return runner{
-		test:    []string{"npx", "--no-install", "vitest", "run", "--dir", "{dir}"},
-		run:     []string{"node", "{dir}/main.ts"}, // node strips TS types natively
-		timeout: 10 * time.Second,                  // a warm vitest+jsdom run measured under 1s
+		test: []string{"npx", "--no-install", "vitest", "run", "--dir", "{dir}"},
+		// type stripping is on by default only from Node 22.18, but vitest accepts 22.12
+		run:     []string{"node", "--experimental-strip-types", "{dir}/main.ts"},
+		timeout: 10 * time.Second, // a warm vitest+jsdom run measured under 1s
 		inRoot:  true,
 		setup:   []string{"npm", "install", "--no-audit", "--no-fund"},
 	}

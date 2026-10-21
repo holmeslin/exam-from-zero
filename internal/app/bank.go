@@ -52,6 +52,17 @@ type Question struct {
 	Ref            string   `yaml:"ref"`
 }
 
+// UnmarshalYAML starts Answer at -1 so a missing or null answer fails the range check instead of meaning the first choice.
+func (q *Question) UnmarshalYAML(n *yaml.Node) error {
+	type plain Question // drops this method, avoiding recursion
+	p := plain{Answer: -1}
+	if err := n.Decode(&p); err != nil {
+		return err
+	}
+	*q = Question(p)
+	return nil
+}
+
 // Bank holds every chapter, grouped by lang in file-name order.
 type Bank struct {
 	FS       fs.FS

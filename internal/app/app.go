@@ -3,6 +3,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"math/rand/v2"
@@ -215,7 +216,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateQuestion(msg)
 		case scrRedoIntro:
 			if msg.String() == "enter" {
-				m.loadQuestion()
+				if m.err != nil { // a redo must start from the starter, so retry the reset that failed
+					m.err = m.resetWrong()
+				}
+				if m.err == nil {
+					m.loadQuestion()
+				}
 			}
 		case scrCleared:
 			return m.updateCleared(msg)
@@ -262,12 +268,16 @@ func (m *model) allPassed(lang string) bool {
 }
 
 // archiveDir is where a reset moves the old workspace; it never overwrites an earlier archive.
-func (m *model) archiveDir(lang string) string {
+func (m *model) archiveDir(lang string) (string, error) {
 	base := filepath.Join(m.cfg.DataDir, "workspace", lang+".bak-"+time.Now().Format("2006-01-02"))
 	p := base
 	for i := 2; ; i++ {
-		if _, err := os.Stat(p); os.IsNotExist(err) {
-			return p
+		_, err := os.Stat(p)
+		if errors.Is(err, fs.ErrNotExist) {
+			return p, nil
+		}
+		if err != nil { // e.g. permission denied: every candidate would fail the same way
+			return "", err
 		}
 		p = fmt.Sprintf("%s-%d", base, i)
 	}
@@ -276,11 +286,16 @@ func (m *model) archiveDir(lang string) string {
 func (m *model) reset() {
 	lang := m.lang().ID
 	ws := filepath.Join(m.cfg.DataDir, "workspace", lang)
-	if _, err := os.Stat(ws); err == nil {
-		if err := os.Rename(ws, m.archiveDir(lang)); err != nil {
-			m.resetMsg = "封存失敗：" + err.Error()
-			return
+	_, err := os.Stat(ws)
+	if err == nil {
+		var dst string
+		if dst, err = m.archiveDir(lang); err == nil {
+			err = os.Rename(ws, dst)
 		}
+	}
+	if err != nil && !errors.Is(err, fs.ErrNotExist) { // never drop progress while the workspace is still in place
+		m.resetMsg = "封存失敗：" + err.Error()
+		return
 	}
 	delete(m.prog, lang)
 	m.save()
@@ -652,17 +667,23 @@ func (m *model) advance(startedRedo, done bool) {
 		delete(lp.Runs, key)
 		m.clearedRun, m.scr = m.run, scrCleared
 	case startedRedo:
-		for _, id := range m.run.Wrong {
-			if q := m.bank.byID[id]; q.Type == "code" {
-				if err := resetWorkspace(m.bank, m.cfg.DataDir, m.lang().ID, q); err != nil {
-					m.err = err
-				}
-			}
-		}
+		m.err = m.resetWrong()
 		m.scr = scrRedoIntro
 	default:
 		m.loadQuestion()
 	}
+}
+
+// resetWrong puts every wrong code question back to its starter for the redo pass.
+func (m *model) resetWrong() error {
+	for _, id := range m.run.Wrong {
+		if q := m.bank.byID[id]; q.Type == "code" {
+			if err := resetWorkspace(m.bank, m.cfg.DataDir, m.lang().ID, q); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (m *model) updateCleared(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -752,8 +773,12 @@ func (m *model) viewMenu() string {
 	}
 	if m.resetting {
 		l := m.lang()
-		body := fmt.Sprintf("所有進度將清除，workspace 會封存為\n%s\n\n輸入 %s 以確認：%s",
-			tildePath(m.archiveDir(l.ID)), l.ID, m.resetInput.View())
+		where, err := m.archiveDir(l.ID)
+		where = tildePath(where)
+		if err != nil {
+			where = badStyle.Render("無法存取：" + err.Error())
+		}
+		body := fmt.Sprintf("所有進度將清除，workspace 會封存為\n%s\n\n輸入 %s 以確認：%s", where, l.ID, m.resetInput.View())
 		if m.resetMsg != "" {
 			body += "\n" + badStyle.Render(m.resetMsg)
 		}
@@ -911,6 +936,9 @@ func (m *model) viewRedoIntro() string {
 		nums = append(nums, fmt.Sprint(slices.Index(m.run.IDs, id)+1))
 	}
 	body := fmt.Sprintf("⟲ 第 %s 題你曾答錯，workspace 已重設為 starter，\n  請從頭再寫一次。", strings.Join(nums, "、"))
+	if m.err != nil {
+		return m.box(body) + "\n" + badStyle.Render("  重設失敗：") + m.err.Error() + "\n" + help("enter 重試")
+	}
 	return m.box(body) + "\n  進度  " + m.progressRow() + "\n" + help("enter 開始")
 }
 
