@@ -284,6 +284,9 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 			}
 			return res, err
 		}
+		if r.slowFirstBuild {
+			_ = os.WriteFile(filepath.Join(filepath.Dir(work), builtMarker), nil, 0o644) // if this fails the note just shows again
+		}
 	}
 	if q.Check == "stdout" {
 		res, stdout, err := execIn(ctx, cwd, r.timeout, env, r.run, q.Stdin, nil)

@@ -194,9 +194,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err == nil {
 			m.record(msg.res)
 		}
-		if msg.err == nil && msg.res.Kind != KindCompile && msg.res.Kind != KindTimeout && firstBuildPending(m.lang().ID, m.langRoot()) {
-			_ = os.WriteFile(filepath.Join(m.langRoot(), builtMarker), nil, 0o644) // if this fails the note just shows again
-		}
 		m.setOutput(resultBody(msg.res))
 		return m, nil
 	case editorDoneMsg:
