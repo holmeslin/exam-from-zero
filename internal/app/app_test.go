@@ -548,6 +548,56 @@ func TestNodeLang_ReinstallsWhenBankWorkspaceChanges(t *testing.T) {
 	e.waitFor("安裝 TypeScript 依賴中")
 }
 
+func TestWorkspace_ArchivedWhenBankStarterChanges(t *testing.T) {
+	bank := t.TempDir()
+	if err := os.CopyFS(bank, os.DirFS("testdata/bank")); err != nil {
+		t.Fatal(err)
+	}
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS(bank)
+	restart := func(e *env) *env {
+		if err := e.tm.Quit(); err != nil {
+			t.Fatal(err)
+		}
+		return start(t, cfg)
+	}
+	e := start(t, cfg)
+	enterFirstQuestion(e, "實作 Add")
+	e.writeAnswer("go", "go-ch01-q01", "main.go", "// my work\n")
+
+	e = restart(e) // same bank: the learner's work stays
+	enterFirstQuestion(e, "實作 Add", "// my work")
+
+	// a new release of the bank changes this question's starter
+	starter := filepath.Join(bank, "go", "go-ch01-q01", "starter", "main.go")
+	if err := os.WriteFile(starter, []byte("package main\n\n// v2 starter\nfunc Add(a, b int) int { return 0 }\n\nfunc main() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e = restart(e)
+	enterFirstQuestion(e, "實作 Add", "// v2 starter") // the inline editor shows the new starter
+	old, err := filepath.Glob(filepath.Join(cfg.DataDir, "workspace", "go", "go-ch01-q01.bak-*", "main.go"))
+	if err != nil || len(old) != 1 {
+		t.Fatalf("want the old workspace archived once, got %v %v", old, err)
+	}
+	if b, _ := os.ReadFile(old[0]); string(b) != "// my work\n" {
+		t.Fatalf("archive lost the learner's work: %q", b)
+	}
+}
+
+func TestInlineEditor_MissingMainFileShowsError(t *testing.T) {
+	cfg := newConfig(t)
+	e := start(t, cfg)
+	enterFirstQuestion(e, "實作 Add")
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(cfg.DataDir, "workspace", "go", "go-ch01-q01", "main.go")); err != nil {
+		t.Fatal(err)
+	}
+	e = start(t, cfg)
+	enterFirstQuestion(e, "實作 Add", "錯誤：", "main.go")
+}
+
 func TestNodeLang_FailedInstallCanBeRetried(t *testing.T) {
 	cfg := newConfig(t)
 	cfg.Bank = os.DirFS("testdata/badnode")

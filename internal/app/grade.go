@@ -99,12 +99,17 @@ func langReady(b *Bank, lang, root string) bool {
 
 // workspaceStamp hashes <lang>/_workspace so a bank release that changes dependencies triggers a reinstall.
 func workspaceStamp(b *Bank, lang string) string {
+	return treeStamp(b.FS, path.Join(lang, "_workspace"))
+}
+
+// treeStamp hashes every file under dir. A read error only changes the hash, which at worst causes one extra reinstall or reset.
+func treeStamp(fsys fs.FS, dir string) string {
 	h := sha256.New()
-	_ = fs.WalkDir(b.FS, path.Join(lang, "_workspace"), func(p string, d fs.DirEntry, err error) error {
+	_ = fs.WalkDir(fsys, dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		data, err := fs.ReadFile(b.FS, p)
+		data, err := fs.ReadFile(fsys, p)
 		fmt.Fprintf(h, "%s\x00%d\x00", p, len(data))
 		h.Write(data)
 		return err
@@ -133,13 +138,50 @@ func workspaceDir(dataDir, lang, id string) string {
 func prepareWorkspace(b *Bank, dataDir, lang string, q *Question) (string, error) {
 	dir := workspaceDir(dataDir, lang, q.ID)
 	if _, err := os.Stat(dir); err == nil {
-		return dir, nil
+		if stamp, _ := os.ReadFile(filepath.Join(dir, starterStamp)); string(stamp) == starterHash(b, lang, q) {
+			return dir, nil
+		}
+		// the bank changed this question since the workspace was made: keep the old work aside, start from the new starter
+		bak, err := archivePath(dir)
+		if err == nil {
+			err = os.Rename(dir, bak)
+		}
+		if err != nil {
+			return dir, err
+		}
 	}
 	return dir, resetWorkspace(b, dataDir, lang, q)
 }
 
+// starterStamp is the file in a learner workspace recording which starter it was made from.
+const starterStamp = ".exam-starter"
+
+func starterHash(b *Bank, lang string, q *Question) string {
+	return treeStamp(b.FS, b.questionDir(lang, q.ID, "starter"))
+}
+
 func resetWorkspace(b *Bank, dataDir, lang string, q *Question) error {
-	return materialize(b, lang, q, "starter", workspaceDir(dataDir, lang, q.ID))
+	dir := workspaceDir(dataDir, lang, q.ID)
+	if err := materialize(b, lang, q, "starter", dir); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, starterStamp), []byte(starterHash(b, lang, q)), 0o644)
+}
+
+// archivePath is where dir moves when it is set aside; it never overwrites an earlier archive.
+func archivePath(dir string) (string, error) {
+	base := dir + ".bak-" + time.Now().Format("2006-01-02")
+	p := base
+	for i := 2; ; i++ {
+		_, err := os.Stat(p)
+		if errors.Is(err, fs.ErrNotExist) {
+			return p, nil
+		}
+		if err != nil { // e.g. permission denied: every candidate would fail the same way
+			return "", err
+		}
+		p = fmt.Sprintf("%s-%d", base, i)
+	}
 }
 
 // materialize writes one part (starter or solution) of q into dir, replacing whatever was there.

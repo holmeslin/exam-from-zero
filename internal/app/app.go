@@ -271,20 +271,9 @@ func (m *model) allPassed(lang string) bool {
 	return lp != nil && !slices.ContainsFunc(m.bank.Chapters[lang], func(c *Chapter) bool { return !slices.Contains(lp.Passed, c.Key) })
 }
 
-// archiveDir is where a reset moves the old workspace; it never overwrites an earlier archive.
+// archiveDir is where a reset moves the old workspace.
 func (m *model) archiveDir(lang string) (string, error) {
-	base := filepath.Join(m.cfg.DataDir, "workspace", lang+".bak-"+time.Now().Format("2006-01-02"))
-	p := base
-	for i := 2; ; i++ {
-		_, err := os.Stat(p)
-		if errors.Is(err, fs.ErrNotExist) {
-			return p, nil
-		}
-		if err != nil { // e.g. permission denied: every candidate would fail the same way
-			return "", err
-		}
-		p = fmt.Sprintf("%s-%d", base, i)
-	}
+	return archivePath(filepath.Join(m.cfg.DataDir, "workspace", lang))
 }
 
 func (m *model) reset() {
@@ -473,7 +462,7 @@ func (m *model) loadQuestion() {
 func (m *model) loadEditor() {
 	raw, err := os.ReadFile(m.editFile)
 	if err != nil {
-		m.editFile = ""
+		m.editFile, m.err = "", err // say why the editor is missing instead of silently hiding it
 		return
 	}
 	m.editor.SetValue(string(raw))
