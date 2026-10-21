@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"math/rand/v2"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -26,23 +28,33 @@ const (
 	scrMenu screen = iota
 	scrChapters
 	scrQuestion
+	scrRedoIntro
+	scrCleared
 )
 
 type model struct {
 	cfg  Config
 	bank *Bank
+	rng  *rand.Rand
+	prog map[string]*LangProgress
 
 	scr     screen
 	langs   []Lang // langs present in the bank
 	langCur int
 	chapCur int
-	q       *Question
-	wsDir   string
-	grading bool
-	result  *Result
-	err     error
-	width   int
-	out     viewport.Model // scrollable grading output
+
+	// current challenge
+	run         *Run
+	q           *Question
+	wsDir       string
+	grading     bool
+	result      *Result
+	err         error
+	confirmQuit bool
+	clearedRun  *Run // the run that just finished, for the cleared screen
+
+	width int
+	out   viewport.Model // scrollable grading output
 }
 
 type gradedMsg struct {
@@ -55,7 +67,13 @@ func New(cfg Config) (tea.Model, error) {
 	if err != nil {
 		return nil, err
 	}
-	m := &model{cfg: cfg, bank: b, out: viewport.New(0, 0)}
+	m := &model{
+		cfg:  cfg,
+		bank: b,
+		rng:  rand.New(rand.NewPCG(cfg.Seed, cfg.Seed)),
+		prog: map[string]*LangProgress{},
+		out:  viewport.New(0, 0),
+	}
 	for _, l := range langs {
 		if len(b.Chapters[l.ID]) > 0 {
 			m.langs = append(m.langs, l)
@@ -68,12 +86,32 @@ func (m *model) Init() tea.Cmd { return nil }
 
 func (m *model) lang() Lang           { return m.langs[m.langCur] }
 func (m *model) chapters() []*Chapter { return m.bank.Chapters[m.lang().ID] }
+func (m *model) chapter() *Chapter    { return m.chapters()[m.chapCur] }
+
+func (m *model) lp() *LangProgress {
+	id := m.lang().ID
+	if m.prog[id] == nil {
+		m.prog[id] = &LangProgress{}
+	}
+	if m.prog[id].Runs == nil {
+		m.prog[id].Runs = map[string]*Run{}
+	}
+	return m.prog[id]
+}
+
+func (m *model) passed(i int) bool { return slices.Contains(m.lp().Passed, m.chapters()[i].Key) }
+
+// unlocked: chapters open strictly in order.
+func (m *model) unlocked(i int) bool { return i == 0 || m.passed(i-1) }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case gradedMsg:
 		m.grading = false
 		m.result, m.err = &msg.res, msg.err
+		if msg.err == nil {
+			m.run.Record(msg.res.Pass())
+		}
 		m.setOutput(resultBody(msg.res))
 		return m, nil
 	case tea.WindowSizeMsg:
@@ -89,6 +127,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateChapters(msg)
 		case scrQuestion:
 			return m.updateQuestion(msg)
+		case scrRedoIntro:
+			if msg.String() == "enter" {
+				m.loadQuestion()
+			}
+		case scrCleared:
+			return m.updateCleared(msg)
 		}
 	}
 	return m, nil
@@ -113,20 +157,49 @@ func (m *model) updateChapters(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "up", "k":
 		m.chapCur = max(m.chapCur-1, 0)
 	case "down", "j":
-		m.chapCur = min(m.chapCur+1, len(m.chapters())-1)
+		if m.chapCur+1 < len(m.chapters()) && m.unlocked(m.chapCur+1) {
+			m.chapCur++
+		}
 	case "enter":
-		c := m.chapters()[m.chapCur]
-		m.q = &c.Questions[0]
-		m.result, m.err = nil, nil
-		m.wsDir, m.err = prepareWorkspace(m.bank, m.cfg.DataDir, m.lang().ID, m.q)
-		m.scr = scrQuestion
+		m.enterChapter()
 	case "esc":
 		m.scr = scrMenu
 	}
 	return m, nil
 }
 
+// enterChapter resumes the chapter's unfinished run, or samples a new one.
+func (m *model) enterChapter() {
+	c, lp := m.chapter(), m.lp()
+	if lp.Runs[c.Key] == nil {
+		lp.Runs[c.Key] = newRun(c, m.rng, func(string) bool { return false })
+	}
+	m.run, lp.Last = lp.Runs[c.Key], c.Key
+	m.loadQuestion()
+}
+
+func (m *model) loadQuestion() {
+	m.scr, m.confirmQuit = scrQuestion, false
+	m.q = m.bank.byID[m.run.Current()]
+	m.result, m.err = nil, nil
+	if m.run.Cleared {
+		m.result = &Result{Kind: KindPass}
+	}
+	if m.q.Type == "code" {
+		m.wsDir, m.err = prepareWorkspace(m.bank, m.cfg.DataDir, m.lang().ID, m.q)
+	}
+}
+
 func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.confirmQuit {
+		switch msg.String() {
+		case "y":
+			m.scr = scrChapters
+		case "n", "esc":
+			m.confirmQuit = false
+		}
+		return m, nil
+	}
 	switch msg.String() {
 	case "pgup", "pgdown":
 		var cmd tea.Cmd
@@ -136,11 +209,54 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.grading {
 			return m, nil
 		}
+		if m.run.Cleared {
+			m.next()
+			return m, nil
+		}
 		m.grading, m.result, m.err = true, nil, nil
 		b, lang, q, dir := m.bank, m.lang().ID, m.q, m.wsDir
 		return m, func() tea.Msg {
 			res, err := gradeCode(context.Background(), b, lang, q, dir)
 			return gradedMsg{res, err}
+		}
+	case "esc":
+		m.confirmQuit = true
+	}
+	return m, nil
+}
+
+func (m *model) next() {
+	startedRedo, done := m.run.Next()
+	switch {
+	case done:
+		lp, key := m.lp(), m.chapter().Key
+		if !slices.Contains(lp.Passed, key) {
+			lp.Passed = append(lp.Passed, key)
+		}
+		delete(lp.Runs, key)
+		m.clearedRun, m.scr = m.run, scrCleared
+	case startedRedo:
+		for _, id := range m.run.Wrong {
+			if q := m.bank.byID[id]; q.Type == "code" {
+				if err := resetWorkspace(m.bank, m.cfg.DataDir, m.lang().ID, q); err != nil {
+					m.err = err
+				}
+			}
+		}
+		m.scr = scrRedoIntro
+	default:
+		m.loadQuestion()
+	}
+}
+
+func (m *model) updateCleared(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		if m.chapCur+1 < len(m.chapters()) {
+			m.chapCur++
+			m.enterChapter()
+		} else {
+			m.scr = scrChapters
 		}
 	case "esc":
 		m.scr = scrChapters
@@ -162,6 +278,10 @@ func (m *model) View() string {
 		return m.viewChapters()
 	case scrQuestion:
 		return m.viewQuestion()
+	case scrRedoIntro:
+		return m.viewRedoIntro()
+	case scrCleared:
+		return m.viewCleared()
 	}
 	return m.viewMenu()
 }
@@ -173,40 +293,67 @@ func cursor(on bool) string {
 	return "  "
 }
 
+// pad right-pads s to display width w (CJK-aware).
+func pad(s string, w int) string {
+	return s + strings.Repeat(" ", max(w-lipgloss.Width(s), 0))
+}
+
+func help(s string) string { return "\n" + helpStyle.Render("  "+s) }
+
 func (m *model) viewMenu() string {
 	var s strings.Builder
 	s.WriteString(titleStyle.Render("exam-from-zero\n你真的學會了嗎？") + "\n\n  選擇今天要測驗的語言\n\n")
 	for i, l := range m.langs {
 		fmt.Fprintf(&s, "  %s%s\n", cursor(i == m.langCur), l.Name)
 	}
-	s.WriteString("\n" + helpStyle.Render("  ↑/↓ 選擇   enter 進入   q 離開"))
+	s.WriteString(help("↑/↓ 選擇   enter 進入   q 離開"))
 	return s.String()
+}
+
+func chapterLabel(c *Chapter) string {
+	if c.Chapter == "" {
+		return "-"
+	}
+	return c.Chapter
 }
 
 func (m *model) viewChapters() string {
 	var s strings.Builder
-	s.WriteString(titleStyle.Render(m.lang().Name) + "\n\n")
+	header := fmt.Sprintf("%s   %d/%d 過關", m.lang().Name, len(m.lp().Passed), len(m.chapters()))
+	s.WriteString(titleStyle.Render(header) + "\n\n")
+	fmt.Fprintf(&s, "    %3s  %s  %s  %s\n", "#", pad("關卡", 36), "題數", "狀態")
 	for i, c := range m.chapters() {
-		fmt.Fprintf(&s, "  %s%3s  %s\n", cursor(i == m.chapCur), cmpOrDash(c.Chapter), c.Title)
+		status := ""
+		switch run := m.lp().Runs[c.Key]; {
+		case run != nil:
+			status = fmt.Sprintf("▸ 進行中 %d/%d", run.done(), len(run.IDs))
+		case m.passed(i):
+			status = "✓"
+		case !m.unlocked(i):
+			status = "🔒"
+		}
+		fmt.Fprintf(&s, "  %s%3s  %s  %4d  %s\n", cursor(i == m.chapCur), chapterLabel(c), pad(c.Title, 36), c.Sample, status)
 	}
-	s.WriteString("\n" + helpStyle.Render("  ↑/↓ 選擇   enter 進入   esc 回主選單"))
+	s.WriteString(help("↑/↓ 選擇   enter 進入／接續   esc 回主選單"))
 	return s.String()
 }
 
-func cmpOrDash(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
-}
+func stars(d int) string { return strings.Repeat("★", d) + strings.Repeat("☆", max(3-d, 0)) }
 
 func (m *model) viewQuestion() string {
-	c := m.chapters()[m.chapCur]
-	var body strings.Builder
-	body.WriteString(strings.TrimRight(m.q.Prompt, "\n") + "\n\n📁 " + tildePath(m.wsDir))
+	c, r := m.chapter(), m.run
+	pos := fmt.Sprintf("第 %d/%d 題", r.Pos+1, len(r.IDs))
+	if r.Redo {
+		pos = fmt.Sprintf("重做 %d/%d", r.Pos+1, len(r.Wrong))
+	}
 	var s strings.Builder
-	s.WriteString(helpStyle.Render(fmt.Sprintf("%s › %s %s", m.lang().Name, cmpOrDash(c.Chapter), c.Title)) + "\n")
-	s.WriteString(m.box(body.String()) + "\n")
+	s.WriteString(helpStyle.Render(fmt.Sprintf("%s › %s %s", m.lang().Name, chapterLabel(c), c.Title)) +
+		"   " + pos + " " + stars(m.q.Difficulty) + "\n")
+	body := strings.TrimRight(m.q.Prompt, "\n")
+	if m.q.Type == "code" {
+		body += "\n\n📁 " + tildePath(m.wsDir)
+	}
+	s.WriteString(m.box(body) + "\n")
 	switch {
 	case m.grading:
 		s.WriteString("  ⏳ 執行中…\n")
@@ -215,25 +362,49 @@ func (m *model) viewQuestion() string {
 	case m.result != nil:
 		s.WriteString(m.viewResult(*m.result))
 	}
-	s.WriteString("\n" + helpStyle.Render("  enter 判定   esc 離開"))
+	s.WriteString("  進度  " + m.progressRow() + "\n")
+	switch {
+	case m.confirmQuit:
+		s.WriteString("\n  確定離開？進度會保留  y 離開   n 繼續作答")
+	case r.Cleared:
+		s.WriteString(help("enter 下一題   esc 離開"))
+	default:
+		s.WriteString(help("enter 判定   esc 離開"))
+	}
 	return s.String()
 }
 
-// box wraps content to the terminal so long lines are not truncated by the renderer.
-func (m *model) box(content string) string {
-	if m.width > 4 {
-		return boxStyle.Width(m.width - 2).Render(content)
+func (m *model) progressRow() string {
+	r := m.run
+	marks := make([]string, len(r.IDs))
+	for i := range r.IDs {
+		marks[i] = r.Mark(i)
 	}
-	return boxStyle.Render(content)
+	row := strings.Join(marks, " ")
+	if r.Redo {
+		row += "   重做 ●"
+	}
+	return row
 }
 
-func tildePath(p string) string {
-	if home, err := os.UserHomeDir(); err == nil {
-		if rest, ok := strings.CutPrefix(p, home); ok {
-			return "~" + rest
-		}
+func (m *model) viewRedoIntro() string {
+	var nums []string
+	for _, id := range m.run.Wrong {
+		nums = append(nums, fmt.Sprint(slices.Index(m.run.IDs, id)+1))
 	}
-	return p
+	body := fmt.Sprintf("⟲ 第 %s 題你曾答錯，workspace 已重設為 starter，\n  請從頭再寫一次。", strings.Join(nums, "、"))
+	return m.box(body) + "\n  進度  " + m.progressRow() + "\n" + help("enter 開始")
+}
+
+func (m *model) viewCleared() string {
+	c, r := m.chapter(), m.clearedRun
+	body := fmt.Sprintf("🎉  第 %s 關「%s」過關\n\n答對 %d/%d   曾錯 %d", chapterLabel(c), c.Title, len(r.IDs), len(r.IDs), len(r.Wrong))
+	if m.chapCur+1 < len(m.chapters()) {
+		n := m.chapters()[m.chapCur+1]
+		body += fmt.Sprintf("\n🔓 已解鎖：第 %s 關 %s", chapterLabel(n), n.Title)
+		return m.box(body) + help("enter 下一關   esc 回關卡清單")
+	}
+	return m.box(body+"\n\n✓ 全部過關") + help("esc 回關卡清單")
 }
 
 var resultTitles = map[string]string{
@@ -274,4 +445,21 @@ func (m *model) setOutput(body string) {
 	m.out.Height = min(lines, maxOutputLines)
 	m.out.SetContent(body)
 	m.out.GotoTop()
+}
+
+// box wraps content to the terminal so long lines are not truncated by the renderer.
+func (m *model) box(content string) string {
+	if m.width > 4 {
+		return boxStyle.Width(m.width - 2).Render(content)
+	}
+	return boxStyle.Render(content)
+}
+
+func tildePath(p string) string {
+	if home, err := os.UserHomeDir(); err == nil {
+		if rest, ok := strings.CutPrefix(p, home); ok {
+			return "~" + rest
+		}
+	}
+	return p
 }

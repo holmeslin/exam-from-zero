@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -122,4 +123,82 @@ func TestInfiniteLoopTimesOut(t *testing.T) {
 	enterFirstQuestion(e, "印出 done")
 	e.key(tea.KeyEnter)
 	e.waitFor("⏱ 逾時")
+}
+
+func goFunc(name, op string) string {
+	return "package main\n\nfunc " + name + "(a, b int) int { return a " + op + " b }\n\nfunc main() {}\n"
+}
+
+func (e *env) workspaceFile(lang, id, file string) string {
+	e.t.Helper()
+	b, err := os.ReadFile(filepath.Join(e.cfg.DataDir, "workspace", lang, id, file))
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return string(b)
+}
+
+func TestChallenge_WrongAnswerIsRedoneThenChapterUnlocks(t *testing.T) {
+	e := start(t, newConfig(t))
+	e.waitFor("選擇今天要測驗的語言")
+	e.key(tea.KeyEnter)
+	e.waitFor("0/2 過關", "基礎", "🔒")
+	e.key(tea.KeyDown) // chapter 2 is locked: cursor must stay on chapter 1
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 Add", "第 1/2 題", "★☆☆")
+
+	e.key(tea.KeyEnter) // starter fails -> marked wrong
+	e.waitFor("測試失敗")
+	e.writeAnswer("go", "go-ch01-q01", "main.go", goFunc("Add", "+"))
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+	e.key(tea.KeyEnter) // next
+	e.waitFor("實作 Sub", "第 2/2 題", "★★☆", "✗ ●")
+
+	e.writeAnswer("go", "go-ch01-q02", "main.go", goFunc("Sub", "-"))
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+	e.key(tea.KeyEnter)
+	e.waitFor("曾答錯", "workspace 已重設")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 Add", "重做 1/1")
+	if got := e.workspaceFile("go", "go-ch01-q01", "main.go"); !strings.Contains(got, "return 0") {
+		t.Fatalf("redo workspace not reset to starter:\n%s", got)
+	}
+	e.writeAnswer("go", "go-ch01-q01", "main.go", goFunc("Add", "+"))
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+	e.key(tea.KeyEnter)
+	e.waitFor("過關", "曾錯 1", "已解鎖", "函式")
+
+	e.key(tea.KeyEsc) // back to chapter list
+	e.waitFor("1/2 過關", "✓")
+	e.key(tea.KeyDown)
+	e.key(tea.KeyEnter)
+	e.waitFor("第 1/1 題") // chapter 2 samples 1 of 2
+}
+
+func TestChallenge_LeavingNeedsConfirmAndResumes(t *testing.T) {
+	e := start(t, newConfig(t))
+	e.waitFor("選擇今天要測驗的語言")
+	e.key(tea.KeyEnter)
+	e.waitFor("基礎")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 Add")
+	e.writeAnswer("go", "go-ch01-q01", "main.go", goFunc("Add", "+"))
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 Sub")
+
+	e.key(tea.KeyEsc)
+	e.waitFor("確定離開")
+	e.press("n")
+	e.waitFor("enter 判定") // only changed lines are repainted, so wait on the help line
+	e.key(tea.KeyEsc)
+	e.waitFor("確定離開")
+	e.press("y")
+	e.waitFor("進行中 1/2")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 Sub", "第 2/2 題")
 }

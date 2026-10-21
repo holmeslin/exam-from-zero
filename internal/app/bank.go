@@ -55,6 +55,7 @@ type Question struct {
 type Bank struct {
 	FS       fs.FS
 	Chapters map[string][]*Chapter
+	byID     map[string]*Question
 }
 
 // LoadBank reads <lang>/<NN-slug>.yaml files; question payloads live in <lang>/<id>/{starter,test,solution}.
@@ -63,7 +64,7 @@ func LoadBank(fsys fs.FS) (*Bank, error) {
 	if err != nil {
 		return nil, err
 	}
-	b := &Bank{FS: fsys, Chapters: map[string][]*Chapter{}}
+	b := &Bank{FS: fsys, Chapters: map[string][]*Chapter{}, byID: map[string]*Question{}}
 	for _, f := range files { // Glob returns lexical order, which is chapter order
 		raw, err := fs.ReadFile(fsys, f)
 		if err != nil {
@@ -79,6 +80,9 @@ func LoadBank(fsys fs.FS) (*Bank, error) {
 			return nil, fmt.Errorf("%s: lang %q does not match directory", f, c.Lang)
 		}
 		b.Chapters[lang] = append(b.Chapters[lang], c)
+		for i := range c.Questions {
+			b.byID[c.Questions[i].ID] = &c.Questions[i]
+		}
 	}
 	return b, nil
 }
