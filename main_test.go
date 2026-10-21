@@ -15,6 +15,9 @@ func verify(t *testing.T, bank fs.FS, args ...string) (string, error) {
 }
 
 func TestVerify_EmbeddedBankPasses(t *testing.T) {
+	if testing.Short() {
+		t.Skip("verifies every question in the embedded bank; run without -short")
+	}
 	bank, _ := fs.Sub(exams, "_exams")
 	if out, err := verify(t, bank); err != nil {
 		t.Fatalf("embedded bank failed verify: %v\n%s", err, out)
