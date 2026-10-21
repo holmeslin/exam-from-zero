@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -649,7 +650,18 @@ var (
 	helpStyle  = lipgloss.NewStyle().Faint(true)
 	okStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true)
 	badStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true)
+	codeStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	boldStyle  = lipgloss.NewStyle().Bold(true)
+
+	codeSpan = regexp.MustCompile("`([^`\n]+)`")
+	boldSpan = regexp.MustCompile(`\*\*([^*\n]+)\*\*`)
 )
+
+// md renders the inline markdown bank text uses: `code` and **bold**.
+func md(s string) string {
+	s = codeSpan.ReplaceAllStringFunc(s, func(m string) string { return codeStyle.Render(m[1 : len(m)-1]) })
+	return boldSpan.ReplaceAllStringFunc(s, func(m string) string { return boldStyle.Render(m[2 : len(m)-2]) })
+}
 
 func (m *model) View() string {
 	switch m.scr {
@@ -770,7 +782,7 @@ func (m *model) viewQuestion() string {
 	var s strings.Builder
 	s.WriteString(helpStyle.Render(fmt.Sprintf("%s › %s %s", m.lang().Name, chapterLabel(c), c.Title)) +
 		"   " + pos + " " + stars(m.q.Difficulty) + "\n")
-	body := strings.TrimRight(m.q.Prompt, "\n")
+	body := md(strings.TrimRight(m.q.Prompt, "\n"))
 	switch m.q.Type {
 	case "code":
 		body += "\n\n📁 " + tildePath(m.wsDir)
@@ -781,7 +793,7 @@ func (m *model) viewQuestion() string {
 			if i == m.choiceCur {
 				mark = "(•)"
 			}
-			body += fmt.Sprintf("\n%s%s %s", cursor(i == m.choiceCur), mark, c)
+			body += fmt.Sprintf("\n%s%s %s", cursor(i == m.choiceCur), mark, md(c))
 		}
 	case "short":
 		body += "\n\n" + m.input.View()
@@ -804,7 +816,7 @@ func (m *model) viewQuestion() string {
 	}
 	if m.hintLevel > 0 {
 		s.WriteString(m.titledBox(fmt.Sprintf("💡 提示 %d/%d", m.hintLevel, len(m.q.Hints)),
-			strings.Join(m.q.Hints[:m.hintLevel], "\n")+"\n📖 "+m.q.Ref) + "\n")
+			md(strings.Join(m.q.Hints[:m.hintLevel], "\n"))+"\n📖 "+m.q.Ref) + "\n")
 	}
 	if m.showRef {
 		s.WriteString(m.titledBox("參考答案", m.refAnswer()) + "\n")

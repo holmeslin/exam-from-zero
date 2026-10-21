@@ -210,7 +210,7 @@ func TestChoiceAndShortQuestions(t *testing.T) {
 	cfg := newConfig(t)
 	cfg.Bank = os.DirFS("testdata/quiz")
 	e := start(t, cfg)
-	enterFirstQuestion(e, "哪個 receiver", "func (r *T) M()")
+	enterFirstQuestion(e, "哪個 receiver 能修改原本的 struct", "func (r *T) M()") // inline markdown is rendered, not shown raw
 
 	e.key(tea.KeyEnter) // first option is wrong
 	e.waitFor("✗ 答錯")
