@@ -301,7 +301,7 @@ func (m *model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		switch {
 		case m.missing[m.lang().ID]:
-		case !langReady(m.lang().ID, m.langRoot()):
+		case !langReady(m.bank, m.lang().ID, m.langRoot()):
 			m.scr = scrSetup
 			return m, m.startSetup()
 		default:
@@ -707,7 +707,7 @@ func (m *model) viewMenu() string {
 	for i, l := range m.langs {
 		chs, lp := m.bank.Chapters[l.ID], m.prog[l.ID]
 		done, status := 0, ""
-		if !langReady(l.ID, filepath.Join(m.cfg.DataDir, "workspace", l.ID)) {
+		if !langReady(m.bank, l.ID, filepath.Join(m.cfg.DataDir, "workspace", l.ID)) {
 			status = "⚙ 首次進入將安裝依賴"
 		}
 		if m.allPassed(l.ID) {

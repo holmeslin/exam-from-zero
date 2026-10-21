@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -84,13 +86,28 @@ var runners = map[string]runner{
 
 const setupTimeout = 10 * time.Minute
 
-// langReady reports whether the lang root has finished its one-time setup.
-func langReady(lang, root string) bool {
+// langReady reports whether the lang root has finished setup for the bank's current shared workspace files.
+func langReady(b *Bank, lang, root string) bool {
 	if runners[lang].setup == nil {
 		return true
 	}
-	_, err := os.Stat(filepath.Join(root, ".ready"))
-	return err == nil
+	stamp, err := os.ReadFile(filepath.Join(root, ".ready"))
+	return err == nil && string(stamp) == workspaceStamp(b, lang)
+}
+
+// workspaceStamp hashes <lang>/_workspace so a bank release that changes dependencies triggers a reinstall.
+func workspaceStamp(b *Bank, lang string) string {
+	h := sha256.New()
+	_ = fs.WalkDir(b.FS, path.Join(lang, "_workspace"), func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		data, err := fs.ReadFile(b.FS, p)
+		fmt.Fprintf(h, "%s\x00%d\x00", p, len(data))
+		h.Write(data)
+		return err
+	})
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // setupLang copies the bank's shared workspace files into root and installs dependencies; the output explains a failure.
@@ -102,7 +119,7 @@ func setupLang(ctx context.Context, b *Bank, lang, root string) (string, error) 
 	if err != nil || !res.Pass() {
 		return res.Output, cmp.Or(err, fmt.Errorf("%s 失敗", strings.Join(runners[lang].setup, " ")))
 	}
-	return "", os.WriteFile(filepath.Join(root, ".ready"), nil, 0o644)
+	return "", os.WriteFile(filepath.Join(root, ".ready"), []byte(workspaceStamp(b, lang)), 0o644)
 }
 
 // Workspace is where a learner edits one question.

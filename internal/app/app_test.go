@@ -502,6 +502,37 @@ func TestNodeLang_InstallsOnFirstEntryThenGrades(t *testing.T) {
 	e.waitFor("✓ 通過")
 }
 
+func TestNodeLang_ReinstallsWhenBankWorkspaceChanges(t *testing.T) {
+	bank := t.TempDir() // typescript only, so the ⚙ marker can only be its own
+	if err := os.CopyFS(filepath.Join(bank, "typescript"), os.DirFS("testdata/node/typescript")); err != nil {
+		t.Fatal(err)
+	}
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS(bank)
+	e := start(t, cfg)
+	e.waitFor("TypeScript", "⚙ 首次進入將安裝依賴")
+	e.key(tea.KeyEnter)
+	e.waitFor("安裝 TypeScript 依賴中")
+	e.waitFor("第一步") // chapter list after npm install
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+
+	// a new release of the bank adds a dependency
+	pkg := filepath.Join(bank, "typescript", "_workspace", "package.json")
+	raw, err := os.ReadFile(pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(pkg, bytes.Replace(raw, []byte(`"private": true,`), []byte(`"private": true, "description": "v2",`), 1), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e = start(t, cfg)
+	e.waitFor("TypeScript", "⚙ 首次進入將安裝依賴")
+	e.key(tea.KeyEnter)
+	e.waitFor("安裝 TypeScript 依賴中")
+}
+
 func TestNodeLang_FailedInstallCanBeRetried(t *testing.T) {
 	cfg := newConfig(t)
 	cfg.Bank = os.DirFS("testdata/badnode")
