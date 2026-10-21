@@ -696,6 +696,29 @@ func TestEditorOpensSourceFileNotManifest(t *testing.T) {
 	}
 }
 
+func TestRust_FirstGradeNoteUntilABuildSucceeds(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/rust")
+	e := start(t, cfg)
+	e.waitFor("Rust", "⚙ 首次判定會下載並編譯依賴")
+	e.key(tea.KeyEnter)
+	e.waitFor("1")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 add")
+	e.writeAnswer("rust", "rust-add", "src/lib.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n")
+	e.key(tea.KeyEnter)
+	e.waitFor("執行中", "第一次編譯可能需要一到兩分鐘")
+	e.waitFor("✓ 通過")
+
+	e.key(tea.KeyEnter)
+	e.waitFor("印出 hello")
+	e.writeAnswer("rust", "rust-hello", "src/main.rs", "fn main() { println!(\"hello\"); }\n")
+	e.key(tea.KeyEnter)
+	if out := e.waitFor("✓ 通過"); strings.Contains(out, "第一次編譯") {
+		t.Fatalf("the first-build note stayed after a successful build:\n%s", out)
+	}
+}
+
 func TestInlineEditor_EditSaveAndGrade(t *testing.T) {
 	e := start(t, newConfig(t))
 	enterFirstQuestion(e, "實作 Add", "return 0", "tab 編輯")

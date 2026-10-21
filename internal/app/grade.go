@@ -50,6 +50,8 @@ type runner struct {
 	inRoot bool
 	// setup runs once in the lang root after <lang>/_workspace from the bank is copied there
 	setup []string
+	// slowFirstBuild: the first build downloads and compiles dependencies, so warn until one build has succeeded
+	slowFirstBuild bool
 }
 
 func nodeRunner() runner {
@@ -72,10 +74,11 @@ var runners = map[string]runner{
 		scaffold: map[string]string{"go.mod": "module q\n\ngo 1.25\n"},
 	},
 	"rust": {
-		build:   []string{"cargo", "build", "-q"},
-		test:    []string{"cargo", "test", "-q"},
-		run:     []string{"cargo", "run", "-q"},
-		timeout: 120 * time.Second, // first build also downloads and compiles dependencies
+		build:          []string{"cargo", "build", "-q"},
+		test:           []string{"cargo", "test", "-q"},
+		run:            []string{"cargo", "run", "-q"},
+		timeout:        120 * time.Second, // first build also downloads and compiles dependencies
+		slowFirstBuild: true,
 		// every question is its own package; a shared target dir lets them reuse compiled deps
 		env: func(dir string) []string {
 			return []string{"CARGO_TARGET_DIR=" + filepath.Join(filepath.Dir(dir), ".target")}
@@ -115,6 +118,18 @@ func treeStamp(fsys fs.FS, dir string) string {
 		return err
 	})
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// builtMarker in the lang root records that a build has succeeded there.
+const builtMarker = ".built"
+
+// firstBuildPending reports whether the lang's slow first build is still ahead.
+func firstBuildPending(lang, root string) bool {
+	if !runners[lang].slowFirstBuild {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(root, builtMarker))
+	return err != nil
 }
 
 // setupLang copies the bank's shared workspace files into root and installs dependencies; the output explains a failure.

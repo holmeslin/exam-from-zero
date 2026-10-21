@@ -185,6 +185,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err == nil {
 			m.record(msg.res)
 		}
+		if msg.err == nil && msg.res.Kind != KindCompile && msg.res.Kind != KindTimeout && firstBuildPending(m.lang().ID, m.langRoot()) {
+			_ = os.WriteFile(filepath.Join(m.langRoot(), builtMarker), nil, 0o644) // if this fails the note just shows again
+		}
 		m.setOutput(resultBody(msg.res))
 		return m, nil
 	case editorDoneMsg:
@@ -773,8 +776,11 @@ func (m *model) viewMenu() string {
 	for i, l := range m.langs {
 		chs, lp := m.bank.Chapters[l.ID], m.prog[l.ID]
 		done, status := 0, ""
-		if !langReady(m.bank, l.ID, filepath.Join(m.cfg.DataDir, "workspace", l.ID)) {
+		root := filepath.Join(m.cfg.DataDir, "workspace", l.ID)
+		if !langReady(m.bank, l.ID, root) {
 			status = "⚙ 首次進入將安裝依賴"
+		} else if firstBuildPending(l.ID, root) {
+			status = "⚙ 首次判定會下載並編譯依賴"
 		}
 		if m.allPassed(l.ID) {
 			done, status = len(chs), "✓ 全部過關"
@@ -884,7 +890,11 @@ func (m *model) viewQuestion() string {
 	}
 	switch {
 	case m.grading:
-		s.WriteString("  ⏳ 執行中…\n")
+		note := ""
+		if firstBuildPending(m.lang().ID, m.langRoot()) {
+			note = "（第一次編譯可能需要一到兩分鐘）"
+		}
+		s.WriteString("  ⏳ 執行中…" + note + "\n")
 	case m.err != nil:
 		s.WriteString(badStyle.Render("  錯誤：") + m.err.Error() + "\n")
 	case m.result != nil:
