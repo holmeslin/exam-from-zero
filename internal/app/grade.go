@@ -53,7 +53,7 @@ func nodeRunner() runner {
 	return runner{
 		test:    []string{"npx", "--no-install", "vitest", "run", "--dir", "{dir}"},
 		run:     []string{"node", "{dir}/main.ts"}, // node strips TS types natively
-		timeout: 60 * time.Second,
+		timeout: 10 * time.Second,                  // a warm vitest+jsdom run measured under 1s
 		inRoot:  true,
 		setup:   []string{"npm", "install", "--no-audit", "--no-fund"},
 	}
@@ -197,7 +197,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		}
 	}
 	if q.Check == "stdout" {
-		res, stdout, err := execIn(ctx, cwd, r.timeout, env, r.run)
+		res, stdout, err := execIn(ctx, cwd, r.timeout, env, r.run, q.Stdin)
 		if err != nil || res.Kind != KindPass {
 			return res, err
 		}
@@ -223,13 +223,16 @@ func inDir(argv []string, dir string) []string {
 }
 
 // execIn runs argv in dir and returns combined output plus stdout alone; a non-zero exit is a KindTest result, not an error.
-func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []string) (Result, string, error) {
+func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []string, stdin ...string) (Result, string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
 	if env != nil {
 		cmd.Env = append(os.Environ(), env...)
+	}
+	if len(stdin) > 0 {
+		cmd.Stdin = strings.NewReader(stdin[0])
 	}
 	var out, stdout bytes.Buffer
 	cmd.Stdout, cmd.Stderr = io.MultiWriter(&out, &stdout), &out

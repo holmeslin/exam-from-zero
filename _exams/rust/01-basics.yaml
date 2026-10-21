@@ -1,0 +1,28 @@
+# 格式樣本（#14）：#16 產生題庫時會補齊這一章
+lang: rust
+chapter: 1
+title: 基礎
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter1, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 2
+questions:
+  - id: rust-ch01-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 is_adult(age: u32) -> bool：18 歲以上（含）回傳 true，否則回傳 false。
+    hints: ["用比較運算子 >=", "age >= 18"]
+    ref: chapter1/07_comparison_operators.md
+  # 由 EXERCISES.md 第 1 章第 20 集「題 2」轉換；執行範例中使用者輸入的那一行改放進 stdin
+  - id: rust-ch01-q02
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個 FizzBuzz 程式，請使用 for。讓使用者輸入一個正整數 n，從 1 印到 n：
+      同時是 3 和 5 的倍數印 FizzBuzz；只是 3 的倍數印 Fizz；只是 5 的倍數印 Buzz；其他照原樣印出。
+      （判定時會輸入 15）
+    stdin: "15\n"
+    expected_stdout: "請輸入一個正整數：\n1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n"
+    hints: ["要包含 n，range 用 ..=；取餘數用 %", "先判斷 i % 3 == 0 && i % 5 == 0，再判斷單獨的 3 或 5"]
+    ref: chapter1/20_for_range.md

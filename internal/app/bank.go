@@ -43,6 +43,7 @@ type Question struct {
 	Type           string   `yaml:"type"`  // code | choice | short
 	Check          string   `yaml:"check"` // test | stdout (code only)
 	Prompt         string   `yaml:"prompt"`
+	Stdin          string   `yaml:"stdin"` // fed to the program for check=stdout
 	ExpectedStdout string   `yaml:"expected_stdout"`
 	Choices        []string `yaml:"choices"`
 	Answer         int      `yaml:"answer"`  // 0-based index into Choices

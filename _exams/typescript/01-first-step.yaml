@@ -1,0 +1,25 @@
+# 格式樣本（#14）：#17 產生題庫時會補齊這一章
+lang: typescript
+chapter: 1
+title: TypeScript 第一步
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter1, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 2
+questions:
+  - id: ts-ch01-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      在 area.ts 實作 area(width, height)，回傳長方形面積。參數和回傳值都要標註成 number。
+    hints: ["參數寫成 width: number", "export function area(width: number, height: number): number"]
+    ref: chapter1/06_type_annotations.md
+  - id: ts-ch01-q02
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      在 main.ts 宣告 name: string = 'ada' 與 age: number = 36，
+      用 template literal 印出「ada is 36」。
+    expected_stdout: "ada is 36\n"
+    hints: ["template literal 用反引號，變數寫成 ${name}", "console.log(`${name} is ${age}`)"]
+    ref: chapter1/06_type_annotations.md

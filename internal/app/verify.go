@@ -48,8 +48,15 @@ func Verify(ctx context.Context, fsys fs.FS, only string, w io.Writer) error {
 			}
 		}
 		for _, c := range b.Chapters[l.ID] {
+			key := l.ID + "/" + c.Key
 			if c.Sample < 1 || len(c.Questions) < c.Sample {
-				report(l.ID+"/"+c.Key, "題庫 %d 題少於 sample %d", len(c.Questions), c.Sample)
+				report(key, "題庫 %d 題少於 sample %d", len(c.Questions), c.Sample)
+			}
+			if c.Title == "" {
+				report(key, "缺少 title")
+			}
+			if c.Source.SHA == "" || c.Source.SHA == "TODO" { // the SHA is what tells us which chapters to regenerate later
+				report(key, "source.sha 不可為空或 TODO")
 			}
 			for i := range c.Questions {
 				q := &c.Questions[i]
