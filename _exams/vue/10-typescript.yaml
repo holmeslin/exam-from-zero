@@ -1,0 +1,143 @@
+lang: vue
+chapter: "10"
+title: TypeScript
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter10, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch10-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      把 `<script setup>` 改成 `<script setup lang="ts">` 並加上型別後，下列關於「型別」的說法哪一個正確？
+    choices:
+      - "Vite 建置時會把型別拿掉，瀏覽器執行的是普通 JavaScript，型別在執行時不存在"
+      - "瀏覽器會在執行時檢查型別，型別對不上就丟出錯誤"
+      - "Vite 建置時會檢查型別，有錯就停止，所以 npx vite build 成功就代表型別都對"
+      - "型別會讓網頁在執行時變慢，因為每次指定值都要多做一次檢查"
+    answer: 0
+    hints: ["想想瀏覽器看不看得懂 TypeScript", "型別是「寫程式時的檢查」，檢查的是編輯器和 vue-tsc"]
+    ref: chapter10/01_why_typescript.md
+  - id: vue-ch10-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      在 create-vue 建立的 TypeScript 專案裡，`src/practice/typo.ts` 有一個型別錯誤。下列哪個指令執行後**不會**因為這個錯誤而失敗？
+    choices:
+      - "npm run type-check"
+      - "npm run build"
+      - "npx vite build"
+      - "npx vue-tsc --build"
+    answer: 2
+    hints: ["哪個指令只做建置、完全不跑 vue-tsc？", "npm run build 會同時跑型別檢查和 Vite 建置；直接呼叫 Vite 就只有建置"]
+    ref: chapter10/02_create_ts_project.md
+  - id: vue-ch10-q03
+    difficulty: 2
+    type: short
+    prompt: |
+      在 create-vue 的 TypeScript 專案裡，下面這段程式沒有標任何型別：
+          const userName = "小明";
+          let city = "台北";
+      把滑鼠移到 `userName` 上，VS Code 會顯示 TypeScript 推論出的型別是什麼？請直接寫出型別（不是概念名稱）。
+    answers:
+      - "^[\"'`「『]?小明[\"'`」』]?$"
+    hints: ["const 永遠不會變，所以 TypeScript 可以推得比 string 更精準", "這種「某個特定值」的型別叫字面型別，型別就是那個值本身"]
+    ref: chapter10/04_type_inference.md
+  - id: vue-ch10-q04
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 裡的 `show` 收到 `string | number`：數字要用 `toFixed(2)` 印到小數第二位，字串要用 `toUpperCase()` 轉成大寫。
+      `greet` 收到 `User | null`：是 `null` 時回傳「請先登入」，否則回傳「你好，」加上名字。
+      請用型別縮小（`typeof`、`=== null`）完成這兩個函式，讓程式印出：
+          3.00
+          ABC
+          1.50
+          VUE
+          你好，小明
+          請先登入
+    hints: ["`if (typeof value === \"number\")` 裡面 value 一定是數字，後面剩下的一定是字串", "greet 先寫 `if (user === null) { return \"請先登入\"; }`，之後才用 user.name"]
+    ref: chapter10/06_union_types.md
+    expected_stdout: "3.00\nABC\n1.50\nVUE\n你好，小明\n請先登入\n"
+  - id: vue-ch10-q05
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      讓 UserCard.vue 用 `defineProps<{ ... }>()` 收兩個 props：必填的字串 `name`，以及選填的數字 `age`。
+      用解構給 `age` 預設值 18，畫面顯示「{name}，{age} 歲」，例如只傳 name="小明" 時顯示「小明，18 歲」。
+    hints: ["選填屬性在名稱後面加 `?`：`age?: number`", "`const { name, age = 18 } = defineProps<{ name: string; age?: number }>();`"]
+    ref: chapter10/07_props_types.md
+  - id: vue-ch10-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      TodoItem.vue 有兩個按鈕，請用 `defineEmits<{ ... }>()` 宣告兩個事件並接上按鈕：
+      - `remove`：帶一個數字 id。按 class 為 `remove` 的按鈕時發出 `remove`，帶 props 的 id。
+      - `rename`：帶數字 id 與字串 text。按 class 為 `rename` 的按鈕時發出 `rename`，帶 id 和「原本的 text 加上全形驚嘆號 ！」。
+    hints: ["事件型別寫成 `remove: [id: number]`、`rename: [id: number, text: string]`", "`const emit = defineEmits<{ ... }>();`，按鈕寫 `@click=\"emit('remove', id)\"`"]
+    ref: chapter10/08_emits_types.md
+  - id: vue-ch10-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      SignupForm.vue 用 `reactive` 建立表單，型別 `SignupForm` 裡的 `age` 是 `number | null`。
+      請完成 `canSubmit` 這個 computed：只有在 email 含有「@」、age 不是 `null`、而且勾了同意（agree 為 true）時才是 true，送出按鈕才能按。
+    hints: ["用 `includes(\"@\")` 檢查 email，用 `!== null` 檢查 age", "`return form.email.includes(\"@\") && form.age !== null && form.agree;`"]
+    ref: chapter10/09_ref_reactive_computed.md
+  - id: vue-ch10-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 SearchBox.vue 的三個 TODO：
+      - 掛載後讓 `useTemplateRef<HTMLInputElement>("search-input")` 拿到的輸入框取得焦點（注意它可能是 `null`）。
+      - `handleInput(event: Event)`：用 `as` 把 `event.target` 當成 `HTMLInputElement`，把它的 value 放進 `text`。
+      - `handleKeydown(event: KeyboardEvent)`：按下 Enter 時發出 `search` 事件，帶目前的 `text`；其他按鍵不發出。
+    hints: ["焦點用 `input.value?.focus()`；按鍵用 `event.key === \"Enter\"` 判斷", "`const target = event.target as HTMLInputElement; text.value = target.value;`"]
+    ref: chapter10/10_template_ref_and_events.md
+  - id: vue-ch10-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      keys.ts 已經有一把帶型別的 key：`themeKey`（`InjectionKey<Ref<Theme>>`）。
+      ThemeLabel.vue 現在用字串 `"theme"` 去 `inject`，外層用 `themeKey` 提供的主題拿不到。
+      請改成用 `themeKey` 來 `inject`，並給預設值 `ref("light")`，讓沒有外層提供時也顯示「目前是 淺色」。
+    hints: ["從 `./keys` 匯入 themeKey，`inject` 的第一個引數換成它", "`const theme = inject(themeKey, ref(\"light\"));`，別忘了從 vue 匯入 ref"]
+    ref: chapter10/11_provide_inject.md
+  - id: vue-ch10-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      generics.ts 已經有泛型型別 `ApiResult<T>` 和泛型函式 `first<T>`。請照同樣的寫法完成三個泛型函式：
+      - `last<T>(items: T[]): T | undefined`：回傳陣列最後一個東西，空陣列回傳 `undefined`。
+      - `ok<T>(data: T): ApiResult<T>`：回傳 `{ data, error: null }`。
+      - `fail<T>(error: string): ApiResult<T>`：回傳 `{ data: null, error }`。
+    hints: ["最後一個的索引是 `items.length - 1`；空陣列時 `items[-1]` 剛好是 undefined", "`return { data, error: null };` 和 `return { data: null, error };`"]
+    ref: chapter10/12_generics_intro.md
+  - id: vue-ch10-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      把 ItemList.vue 改成泛型元件：
+      - 在 `<script setup lang="ts">` 加上 `generic="T extends { id: number }"`，props 的 `items` 型別改成 `T[]`。
+      - 宣告 `select` 事件（帶一個 `T`），點某個 `<li>` 時發出 `select`，帶那一整項。
+      - 每個 `<li>` 裡放作用域 slot `<slot :item="item" />`，讓父元件決定怎麼顯示。
+    hints: ["事件型別寫成 `select: [item: T]`", "`<li v-for=\"item in items\" :key=\"item.id\" @click=\"emit('select', item)\"><slot :item=\"item\" /></li>`"]
+    ref: chapter10/13_generic_components.md
+  - id: vue-ch10-q12
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 todos.ts 的 setup store `useTodoStore`：
+      - `remaining`：還沒完成（done 為 false）的待辦件數。
+      - `addTodo(text: string)`：加入一筆 `{ id, text, done: false }`。id 不能和其他筆重複（連續呼叫兩次時 `Date.now()` 可能一樣，要想辦法避開）。
+      - `toggleTodo(id: number)`：切換那一筆的 done；找不到就什麼都不做。
+    hints: ["`find` 可能回傳 undefined，先 `if (todo)` 再改 `todo.done`", "id 可以用 `Date.now() + todos.value.length`，或另外用一個遞增的計數器"]
+    ref: chapter10/14_pinia_types.md

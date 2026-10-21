@@ -1,0 +1,142 @@
+lang: react
+chapter: ""
+title: 附錄一
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/appendix1, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ap1-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `BuyButton` 用字串拼接產生 Tailwind 的背景類別，建置時 Tailwind 掃不到完整的類別名稱。
+      請改成把完整的類別名稱寫出來：`active` 為 true 時用 `bg-blue-600`，否則用 `bg-gray-400`；
+      `rounded px-4 py-2 text-white` 這幾個共用類別要保留。
+    hints: ["Tailwind 只會產生程式碼裡完整出現過的類別，不能寫 bg-${color}-600", "用三元運算子選出整個類別名稱：active ? 'bg-blue-600' : 'bg-gray-400'"]
+    ref: appendix1/a_tailwind.md
+  - id: react-ap1-q02
+    difficulty: 1
+    type: short
+    prompt: |
+      專案已經用 `npm install -D prettier` 裝好 Prettier。
+      要讓 Prettier **直接整理** `src` 資料夾裡所有檔案的排版（不是只檢查），要執行哪一行指令？
+    answers:
+      - "^(npx )?prettier (--write|-w) (src|\\./src|src/)$"
+      - "^(npx )?prettier (src|\\./src|src/) (--write|-w)$"
+    hints: ["只檢查格式用的是 --check，直接改寫檔案用的是另一個選項", "npx prettier --write src"]
+    ref: appendix1/b_eslint_prettier.md
+  - id: react-ap1-q03
+    difficulty: 2
+    type: choice
+    prompt: |
+      執行 `npx eslint .` 檢查下面的元件，`eslint-plugin-react-hooks` 會回報哪一條規則？
+
+          export function Timer({ step }) {
+            const [n, setN] = useState(0);
+            useEffect(() => {
+              const id = setInterval(() => setN(n + step), 1000);
+              return () => clearInterval(id);
+            }, []);
+            return <p>{n}</p>;
+          }
+    choices:
+      - "react-hooks/exhaustive-deps：Effect 用到了 n 和 step，卻沒有寫進依賴陣列"
+      - "react-hooks/rules-of-hooks：useState 被放在條件式裡呼叫"
+      - "no-unused-vars：id 宣告了卻沒有使用"
+      - "沒有問題，不會印出任何訊息"
+    answer: 0
+    hints: ["看看 useEffect 裡面用到了哪些 props 和 state", "依賴陣列是空的 []，但 Effect 用到了 n 和 step"]
+    ref: appendix1/b_eslint_prettier.md
+  - id: react-ap1-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Form` 裡用了兩次 `Field`，可是 `Field` 的 id 寫死成 `"field"`，兩個 `<input>` 的 id 重複，點「信箱」會跑到第一個輸入框。
+      請用 React 的 Hook 幫每個 `Field` 產生唯一的 id，讓每個 `<label>` 都連到自己的 `<input>`。
+    hints: ["React 有一個專門產生唯一 id 的 Hook", "在 Field 裡寫 const id = useId()，label 用 htmlFor={id}，input 用 id={id}"]
+    ref: appendix1/c_other_hooks.md
+  - id: react-ap1-q05
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 `OnlineStatus.tsx`：
+      - `subscribe(callback)`：在 `window` 註冊 `online` 和 `offline` 事件，事件發生時呼叫 `callback`，並回傳把兩個監聽都移除的清除函式。
+      - `useOnlineStatus()`：用 `useSyncExternalStore` 讀取 `navigator.onLine`，伺服器上的值給 `true`。
+      網路狀態改變時，`OnlineStatus` 要跟著顯示「有網路」或「沒有網路」。
+    hints: ["useSyncExternalStore 需要 subscribe、getSnapshot，還有第三個參數「伺服器上的值」", "return useSyncExternalStore(subscribe, () => navigator.onLine, () => true)"]
+    ref: appendix1/c_other_hooks.md
+  - id: react-ap1-q06
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `FancyInput` 現在把 `ref` 直接接到 `<input>`，父元件拿到的是整個 DOM 元素。
+      請改成父元件從 `ref.current` 只能拿到一個物件，上面只有兩個方法：
+      `focus()` 讓輸入框取得焦點、`clear()` 清空輸入框的文字。
+    hints: ["內部另外用 useRef 拿 <input>，再用 useImperativeHandle 決定 ref 上要放什麼", "useImperativeHandle(ref, () => ({ focus() { inputRef.current.focus() }, clear() { inputRef.current.value = '' } }))"]
+    ref: appendix1/c_other_hooks.md
+  - id: react-ap1-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Modal` 被放在 `overflow: hidden` 的容器裡會被切掉。
+      請改用 Portal，讓 `<div role="dialog">` 渲染成 `document.body` 的直接子元素，「關閉」按鈕照樣呼叫 `onClose`。
+    hints: ["createPortal(內容, 目標節點)，記得要從 react-dom 引入", "return createPortal(<div role=\"dialog\">...</div>, document.body)"]
+    ref: appendix1/d_create_portal.md
+  - id: react-ap1-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      這個舊式類別元件 `Counter` 一按按鈕就出錯，數字也不會增加。
+      請修好它（保持類別元件的寫法），讓按鈕從「按讚：0」開始，每按一次加一。
+    hints: ["把 this.handleClick 單獨傳給 onClick 時，函式裡的 this 會丟失", "在 constructor 裡加上 this.handleClick = this.handleClick.bind(this)"]
+    ref: appendix1/e_class_components.md
+  - id: react-ap1-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成錯誤邊界類別元件 `ErrorBoundary`：
+      子元件渲染時丟出錯誤，就改顯示 `fallback` prop 的內容；沒有錯誤時照常顯示 `children`。
+    hints: ["加一個 static getDerivedStateFromError()，回傳要更新的 state", "static getDerivedStateFromError() { return { hasError: true } }，render 裡 hasError 為 true 就回傳 this.props.fallback"]
+    ref: appendix1/e_class_components.md
+  - id: react-ap1-q10
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      這段從舊教學抄來的 `Greeting` 用 `defaultProps` 設預設值，在 React 19 畫面卻顯示「你好，undefined」。
+      請改用現在的寫法，讓沒傳 `name` 時顯示「你好，訪客」。
+    hints: ["React 19 會悄悄忽略函式元件的 defaultProps", "用解構的預設值：function Greeting({ name = '訪客' })，並拿掉 defaultProps"]
+    ref: appendix1/f_legacy_apis.md
+  - id: react-ap1-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      把一份 React 18 的舊教學範例照抄到 React 19 專案執行，下面哪一種寫法會直接出錯、不能用？
+    choices:
+      - "ReactDOM.render(<App />, document.getElementById(\"root\"))"
+      - "用 forwardRef 包起來的元件接收 ref"
+      - "<ThemeContext.Provider value=\"dark\"> 提供 Context 的值"
+      - "到處使用 useMemo 和 useCallback"
+    answer: 0
+    hints: ["有些舊寫法在 React 19 還能用，只是不建議；有一個已經整個移除了", "ReactDOM.render 已移除，現在用 createRoot(...).render(<App />)"]
+    ref: appendix1/f_legacy_apis.md
+  - id: react-ap1-q12
+    difficulty: 1
+    type: choice
+    prompt: |
+      小書店的專案裡，「加入購物車」按鈕和頁首的購物車數量在元件樹上離得很遠，沒有共同的父元件方便傳 props，用 Context 又覺得太繁瑣。
+      依照本書的建議，最適合考慮哪一個函式庫？
+    choices:
+      - "Zustand"
+      - "TanStack Query"
+      - "Tailwind CSS"
+      - "Prettier"
+    answer: 0
+    hints: ["這是「很多不相干的元件要共用同一份狀態」的情況", "TanStack Query 管的是伺服器資料；建立 store、不需要 Provider 的是 Zustand"]
+    ref: appendix1/g_ecosystem.md

@@ -1,0 +1,137 @@
+lang: react
+chapter: "13"
+title: Server Components
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter13, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch13-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      在 Next.js App Router 的 `app/books/page.tsx`（沒有寫 `"use client"`）裡加了一行 `console.log("BooksPage 在渲染")`。執行 `npm run dev` 後打開 `/books`，這行字會出現在哪裡？
+    choices:
+      - 瀏覽器開發者工具的 Console
+      - 執行 `npm run dev` 的終端機
+      - 兩個地方都會出現
+      - 哪裡都不會出現，Server Component 不能用 `console.log`
+    answer: 1
+    hints: ["App Router 裡的元件預設是 Server Component，它在哪台電腦上執行？", "程式在伺服器（開發時就是你的電腦）上跑，輸出就在那個終端機"]
+    ref: chapter13/01_server_and_browser.md
+  - id: react-ch13-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面哪一件事**可以**在 Server Component 裡做？
+    choices:
+      - 用 `useState` 記錄計數器的數字
+      - 在按鈕加上 `onClick`
+      - 直接讀資料庫，或使用祕密的 API 金鑰
+      - 把使用者選的主題存進 `localStorage`
+    answer: 2
+    hints: ["Server Component 只執行一次，算出結果就結束，不會等使用者操作", "需要讀取資料、保護祕密的事交給伺服器"]
+    ref: chapter13/02_server_component.md
+  - id: react-ch13-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      完成 `LikeButton.tsx`：接收 `initialLikes: number`，顯示「👍 數字」，每點一下數字加一。
+      這個元件要用 `useState` 和 `onClick`，所以要把它變成 Client Component：在檔案**最上面**（所有 `import` 之前）寫上該寫的指令。
+    hints: ["檔案第一行寫 \"use client\"，再 import { useState } from 'react'", "const [likes, setLikes] = useState(initialLikes)，按鈕 onClick={() => setLikes(likes + 1)}"]
+    ref: chapter13/04_use_client.md
+  - id: react-ch13-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      把 `BookList` 改成 `async` 的 Server Component：直接 `await getBooks()` 拿到書的陣列，用 `<ul>` 與 `<li>` 列出每本書，每一項的文字是「書名（作者）」，例如 `貓咪程式設計（小花）`，`key` 用 `book.id`。
+      （為了能在沒有 Next.js 的環境測試，`getBooks` 用 props 傳進來；真實專案裡是直接 `import`。測試會把元件當函式呼叫，再 `await` 它的結果。）
+    hints: ["export default async function BookList(...) { const books = await getBooks(); ... }", "<li key={book.id}>{book.title}（{book.author}）</li>，不需要 useState 或 useEffect"]
+    ref: chapter13/03_async_component.md
+  - id: react-ch13-q05
+    difficulty: 2
+    type: choice
+    prompt: |
+      `like-button.tsx` 第一行寫了 `"use client"`，並且 `import Heart from "./heart"`；`heart.tsx` 自己**沒有**寫 `"use client"`。`Heart` 會怎樣？
+    choices:
+      - "`Heart` 仍是 Server Component，只在伺服器上執行"
+      - "`Heart` 也變成 Client Component，跟著送到瀏覽器"
+      - 建置時報錯，因為 `heart.tsx` 也必須寫 `"use client"`
+      - "`Heart` 會被渲染兩次，伺服器一次、瀏覽器一次，但程式碼不會送到瀏覽器"
+    answer: 1
+    hints: ["\"use client\" 不是替單一元件貼標籤，而是一條邊界", "從這個檔案開始，它 import 的所有東西都會被包進瀏覽器要下載的 JavaScript"]
+    ref: chapter13/05_boundary.md
+  - id: react-ch13-q06
+    difficulty: 2
+    type: short
+    prompt: |
+      `app/lib/secret.ts` 裡放了 API 金鑰。要在這個檔案最上面加哪一行，才能讓它萬一被 Client Component 引入時，建置直接報錯？請寫出完整的那一行。
+    answers:
+      - "^import ['\"]server-only['\"];?$"
+    hints: ["這是一個只有副作用的 import，沒有引入任何名稱", "套件名稱是 server-only"]
+    ref: chapter13/05_boundary.md
+  - id: react-ch13-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 Client Component `Collapsible`：它只負責展開、收起，用 `children` 接收要顯示的內容（例如在 Server Component 裡算好的 `<Summary />`）。
+      - 一開始收起來：不顯示 `children`，按鈕文字是「看簡介」。
+      - 點按鈕切換：展開時顯示 `children`，按鈕文字是「收起來」；再點一次收起。
+    hints: ["const [open, setOpen] = useState(false)，按鈕 onClick={() => setOpen(!open)}", "按鈕文字 {open ? '收起來' : '看簡介'}，內容 {open && <div>{children}</div>}"]
+    ref: chapter13/06_children_pattern.md
+  - id: react-ch13-q08
+    difficulty: 3
+    type: choice
+    prompt: |
+      `Collapsible` 是 Client Component，`Summary` 是會讀資料的 Server Component。哪一種寫法能讓 `Summary` 留在伺服器上渲染？
+    choices:
+      - 在 `collapsible.tsx` 裡 `import Summary from "./summary"`，再在裡面渲染 `<Summary />`
+      - 在 Server Component 的頁面裡寫 `<Collapsible><Summary id={id} /></Collapsible>`
+      - 在 `summary.tsx` 第一行也加上 `"use client"`
+      - 在 `collapsible.tsx` 第一行改寫成 `"use server"`
+    answer: 1
+    hints: ["被 Client Component import 的東西會被拉進邊界裡", "在 Server Component 裡「使用」它，再用 children 傳給 Client Component 外殼"]
+    ref: chapter13/06_children_pattern.md
+  - id: react-ch13-q09
+    difficulty: 2
+    type: choice
+    prompt: |
+      Server Component 要把下面哪一個值當 props 傳給 Client Component 時，**會**報錯？
+    choices:
+      - "`new Date(\"2026-01-01\")`"
+      - "`new Map([[\"a\", 1]])`"
+      - 在 Server Component 裡定義的函式 `handleLike`
+      - "`{ title: \"書\", price: 380 }`"
+    answer: 2
+    hints: ["props 要從伺服器傳到瀏覽器，必須能序列化成文字再還原", "函式是程式碼不是資料，而且它只存在伺服器上"]
+    ref: chapter13/07_props_serialization.md
+  - id: react-ch13-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      資料庫查出來的是 `BookRecord` 類別的實體，裡面還有不該公開的 `internalNote`。要把它傳給 Client Component 之前，先用 `toCardProps` 轉換：
+      - 回傳用 `{}` 建立的**純物件**（類別的實體不能傳給 Client Component）。
+      - 只放 Client Component 需要的 `id`、`title`、`likes`，不要放 `internalNote`。
+    hints: ["類別的實體會得到 Classes or null prototypes are not supported 的錯誤", "return { id: book.id, title: book.title, likes: book.likes }"]
+    ref: chapter13/07_props_serialization.md
+  - id: react-ch13-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Server Component 呼叫 `getReviews(id)` 時**不** `await`，直接把 Promise 當 props 傳給 Client Component `ReviewList`。完成 `ReviewList`：用 React 的 `use` 讀出 Promise 的結果，用 `<ul>`、`<li>` 列出每則評論的 `text`（`key` 用 `review.id`）。
+      資料還沒到時，元件要「暫停」，讓外層 `<Suspense>` 顯示 fallback。
+    hints: ["import { use } from 'react'", "const list = use(reviews)，Promise 還沒完成時 use 會自動交給最近的 <Suspense>"]
+    ref: chapter13/08_streaming_suspense.md
+  - id: react-ch13-q12
+    difficulty: 1
+    type: short
+    prompt: |
+      頁面裡有一個要等 3 秒的 `async` 元件 `Reviews`。要讓書名、按鈕等其他部分先顯示，只讓 `Reviews` 的位置先顯示「評論載入中……」，要把 `Reviews` 包在哪個 React 元件裡？請寫出元件名稱。
+    answers:
+      - "^<?suspense ?/?>?(</suspense>)?$"
+      - "^react\\.suspense$"
+    hints: ["它有一個 fallback prop，放載入中的畫面", "loading.tsx 其實就是替整個頁面包一層這個元件"]
+    ref: chapter13/08_streaming_suspense.md

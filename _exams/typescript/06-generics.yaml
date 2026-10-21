@@ -1,0 +1,169 @@
+lang: typescript
+chapter: "6"
+title: 泛型
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter6, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  - id: ts-ch06-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      在 repeat.ts 完成泛型函式 `repeat<T>(value: T, times: number): T[]`，
+      把 value 重複 times 次放進新陣列回傳。例如 `repeat("哈", 3)` 回傳 `["哈", "哈", "哈"]`，
+      times 為 0 時回傳空陣列。
+    hints: ["函式裡的 result: T[] 和回傳型別的 T[] 是同一個 T", "用 for 迴圈跑 times 次，每次 result.push(value)"]
+    ref: chapter6/02_generic_functions.md
+  - id: ts-ch06-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這個函式用 `any` 寫，`npx tsc` 不報錯，執行卻出現 TypeError。
+      和改寫成泛型 `first<T>(items: T[]): T` 相比，問題出在哪裡？
+
+          function first(items: any[]): any {
+            return items[0];
+          }
+          const n = first([1, 2, 3]);
+          console.log(n.toUpperCase());
+    choices:
+      - "any 等於關掉檢查，資料經過函式後型別資訊就丟光了；泛型會讓 n 保持 number，TypeScript 就能擋下 toUpperCase"
+      - "any[] 不能接收數字陣列，要改成 number[] 才能編譯"
+      - "泛型版本會在執行時自動把數字轉成字串，所以 toUpperCase 就能用"
+      - "問題在 items[0] 可能是 undefined，跟 any 無關"
+    answer: 0
+    hints: ["想想 n 在 any 版本和泛型版本裡分別是什麼型別", "泛型讓「傳進來什麼型別，就回傳什麼型別」，型別資訊會一路保留"]
+    ref: chapter6/01_why_generics.md
+  - id: ts-ch06-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 zip.ts 完成有兩個型別參數的泛型函式 `zip<A, B>(as: A[], bs: B[]): [A, B][]`，
+      依位置把兩個陣列配成 `[A, B]` 元組，長度以較短的那個為準。
+      例如 `zip(["小明", "小華"], [90, 85])` 回傳 `[["小明", 90], ["小華", 85]]`。
+    hints: ["先用 Math.min(as.length, bs.length) 算出要配幾組", "迴圈裡 result.push([as[i], bs[i]])，result 的型別寫成 [A, B][]"]
+    ref: chapter6/02_generic_functions.md
+  - id: ts-ch06-q04
+    difficulty: 2
+    type: short
+    prompt: |
+      下面的程式呼叫 `createList()` 時沒有寫型別引數，參數裡也沒有 `T` 可以推論。
+      這時 `T` 會被推論成什麼型別？（只填型別名稱）
+
+          function createList<T>(): T[] {
+            return [];
+          }
+          const names = createList();
+    answers: ["^unknown$", "^t\\s*(是|為|=)?\\s*unknown$"]
+    hints: ["錯誤訊息是 TS2571: Object is of type '...'", "第 2 章學過，這種型別的值在檢查之前什麼都不能做"]
+    ref: chapter6/03_type_argument_inference.md
+  - id: ts-ch06-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      result.ts 已經定義好泛型型別 `Result<T>`（成功有 value: T，失敗有 error: string）。
+      完成 `parseAge(text: string): Result<number>`：
+        - 轉不成數字（`Number.isNaN`）：回傳 `{ ok: false, error: "「<text>」不是數字" }`
+        - 是負數：回傳 `{ ok: false, error: "年齡不能是負數" }`
+        - 其他：回傳 `{ ok: true, value: 數字 }`
+    hints: ["先 const age = Number(text)，再依序檢查 NaN 和負數", "錯誤訊息用 template literal：`「${text}」不是數字`"]
+    ref: chapter6/04_generic_types.md
+  - id: ts-ch06-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 find.ts 完成有約束的泛型函式
+      `findById<T extends { id: number }>(items: T[], id: number): T | undefined`，
+      回傳 id 相符的那個物件（原本的物件，屬性都要保留）；找不到就回傳 undefined。
+    hints: ["因為 T extends { id: number }，函式裡可以安心讀 item.id", "items.find((item) => item.id === id)"]
+    ref: chapter6/05_constraints.md
+  - id: ts-ch06-q07
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      在 main.ts 寫出泛型函式 `longest<T extends { length: number }>(a: T, b: T): T`，
+      回傳 length 比較大的那個；一樣長時回傳 a。然後依序印出：
+
+          console.log(longest("apple", "kiwi"));
+          console.log(longest([1, 2], [1, 2, 3]));
+          console.log(longest("ab", "cd"));
+    expected_stdout: "apple\n[ 1, 2, 3 ]\nab\n"
+    hints: ["約束 extends { length: number } 讓你可以讀 a.length", "return a.length >= b.length ? a : b;"]
+    ref: chapter6/05_constraints.md
+  - id: ts-ch06-q08
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面哪一個型別宣告會出現 TS2706「Required type parameters may not follow optional type parameters」？
+    choices:
+      - "type Pair<A = string, B> = { first: A; second: B };"
+      - "type Pair<A, B = string> = { first: A; second: B };"
+      - "type ApiResponse<T = string> = { status: number; data: T };"
+      - "type Named<T extends { name: string } = { name: string }> = { items: T[] };"
+    answer: 0
+    hints: ["跟函式參數的預設值一樣，有預設值的要放在哪裡？", "有預設值的型別參數要放在沒有預設值的後面"]
+    ref: chapter6/06_default_type_parameters.md
+  - id: ts-ch06-q09
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 已經從標準輸入讀進所有單字（以空白或換行分隔）放在 words。
+      用 `new Map<string, number>()` 統計每個單字出現幾次，
+      依「第一次出現」的順序，每行印出 `單字: 次數`。
+      例如輸入 `to be or not to be` 的前兩行是 `to: 2`、`be: 2`。
+    stdin: "to be or not to be\nthat is\n"
+    expected_stdout: "to: 2\nbe: 2\nor: 1\nnot: 1\nthat: 1\nis: 1\n"
+    hints: ["get 回傳 number | undefined，可以寫 (counts.get(word) ?? 0) + 1", "Map 會照插入順序走訪：for (const [word, count] of counts)"]
+    ref: chapter6/07_map_and_set.md
+  - id: ts-ch06-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 wait.ts 完成泛型函式 `wait<T>(ms: number, value: T): Promise<T>`：
+      回傳一個 Promise，等 ms 毫秒之後用 value 完成。
+      例如 `await wait(10, "好了")` 會在約 10 毫秒後拿到 `"好了"`。
+    hints: ["用 new Promise((resolve) => { ... }) 自己建立 Promise", "回傳型別已寫 Promise<T>，裡面 setTimeout(() => resolve(value), ms) 即可"]
+    ref: chapter6/08_promise.md
+  - id: ts-ch06-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      在 toolkit.ts 完成兩個泛型函式：
+        - `groupBy<T>(items: T[], getKey: (item: T) => string): Map<string, T[]>`：
+          依 getKey 的結果分組，每組保留原本的元素和順序。
+        - `uniqueBy<T>(items: T[], getKey: (item: T) => string): T[]`：
+          依 getKey 的結果去除重複，每個鍵只保留第一次出現的元素。
+    hints: ["groupBy 先 get 出那組陣列；undefined 就 set 一個新陣列，否則 push 進去", "uniqueBy 用 new Set<string>() 記錄看過的鍵，沒看過才放進結果"]
+    ref: chapter6/09_practice.md
+  - id: ts-ch06-q12
+    difficulty: 1
+    type: short
+    prompt: |
+      陣列型別 `number[]` 是哪個內建泛型型別寫法的簡寫？請寫出完整的寫法（含型別引數）。
+    answers: ["^array\\s*<\\s*number\\s*>$"]
+    hints: ["Array 是 TypeScript 內建的泛型型別，T 是元素的型別", "寫成 Array<元素型別>"]
+    ref: chapter6/04_generic_types.md
+  - id: ts-ch06-q13
+    difficulty: 3
+    type: choice
+    prompt: |
+      想替下面的 async 函式標註回傳型別，哪一種寫法正確？
+
+          async function getAge() {
+            return 20;
+          }
+    choices:
+      - "async function getAge(): Promise<number>"
+      - "async function getAge(): number"
+      - "async function getAge(): Promise"
+      - "async function getAge(): Promise<unknown>"
+    answer: 0
+    hints: ["async 函式不管 return 什麼，實際回傳的都是 Promise", "寫成 number 會出現 TS1064，錯誤訊息會問你是不是想寫 Promise<number>"]
+    ref: chapter6/08_promise.md

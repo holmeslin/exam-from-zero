@@ -1,0 +1,147 @@
+lang: vue
+chapter: "8"
+title: Pinia
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter8, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch08-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      用 `provide` / `inject` 讓標題列和商品清單共用購物車資料，下列哪一項**不是**這種做法會遇到的麻煩？
+    choices:
+      - "資料得放在共同的祖先元件裡，App.vue 會越來越肥"
+      - "inject 只能在元件裡用，普通的 .js 檔拿不到"
+      - "名字是字串，打錯只會拿到 undefined，不會馬上發現"
+      - "provide 出去的 ref 不是響應式的，畫面不會更新"
+    answer: 3
+    hints: ["回想第 1 集的範例：點「加入購物車」時，標題列的數字有沒有跟著變？", "provide 出去的是 ref，所以它是響應式的；其他三項才是書上列的麻煩"]
+    ref: chapter8/01_why_store.md
+
+  - id: vue-ch08-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `createShopApp.ts` 的 `createShopApp(root)` 會建立並回傳一個 Vue App，但目前用到 store 的元件一掛載就出現「no active Pinia」錯誤。
+      請在函式裡啟用 Pinia，讓回傳的 App 可以使用 store。
+    hints: ["從 pinia 匯入 createPinia", "在 return 之前寫 app.use(createPinia())"]
+    ref: chapter8/02_install_pinia.md
+
+  - id: vue-ch08-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      完成 `counter.ts` 的 setup store `useCounterStore`（名字是 "counter"）：
+      加上 `increment` 函式讓 `count` 加一，並把它放進 `return`。
+    hints: ["在 store 檔案裡，ref 要寫 .value：count.value++", "return { count, increment }，沒有 return 的東西外面拿不到"]
+    ref: chapter8/03_define_store.md
+
+  - id: vue-ch08-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      `useCounter()` 是第 6 章的 composable，`useCounterStore()` 是 Pinia 的 store，兩者裡面都有 `const count = ref(0)`。
+      元件 A 和元件 B 各自呼叫一次，然後 A 把 count 加一。B 看到的 count 分別是多少？
+    choices:
+      - "composable：0；store：1"
+      - "composable：1；store：1"
+      - "composable：1；store：0"
+      - "composable：0；store：0"
+    answer: 0
+    hints: ["composable 每呼叫一次就建立一份新的 ref", "store 不管呼叫幾次，拿到的都是同一個 store"]
+    ref: chapter8/03_define_store.md
+
+  - id: vue-ch08-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 `todos.ts` 的 `useTodoStore`：
+      - getter `doneCount`：已完成（`done` 為 true）的項目數
+      - action `addTodo(text)`：加入 `{ id: 長度加一, text, done: false }`
+      - action `toggleTodo(id)`：把指定 id 的 `done` 反過來
+    hints: ["doneCount 用 filter 篩出 done 的項目，再取 length", "toggleTodo 先用 find 找到項目，再寫 todo.done = !todo.done"]
+    ref: chapter8/04_state_getters_actions.md
+
+  - id: vue-ch08-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `UserCard.vue` 應該顯示「小明 有 100 點」，按按鈕後變成 110 點，但現在名字是空白、點數也不見了。
+      `user.ts` 和 `UserCard.vue` 各有一個錯，請修好它們。
+    hints: ["Pinia 只認得 return 出去的東西，檢查每個 state 都有回傳", "store 是 reactive 物件，在元件裡讀 store.屬性 不用 .value"]
+    ref: chapter8/04_state_getters_actions.md
+
+  - id: vue-ch08-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `CounterDisplay.vue` 把 store 解構成 `count`、`doubleCount`、`increment`，結果按「加一」之後畫面一直停在「目前是 0，兩倍是 0」。
+      請修改 `CounterDisplay.vue`，讓畫面跟著 store 更新（模板可以不動）。
+    hints: ["直接從 store 解構 state 或 getter，拿到的只是當下的值", "用 storeToRefs(counter) 解構 count 和 doubleCount；increment 是 action，直接從 counter 解構"]
+    ref: chapter8/05_store_to_refs.md
+
+  - id: vue-ch08-q08
+    difficulty: 2
+    type: choice
+    prompt: |
+      `useCounterStore` 回傳 `{ count, doubleCount, increment }`。元件裡這樣寫：
+
+          const counter = useCounterStore();
+          const { count, increment } = storeToRefs(counter);
+
+      按下綁定 `increment` 的按鈕時會怎樣？
+    choices:
+      - "正常加一，因為 storeToRefs 會把 action 包成 ref"
+      - "出錯，因為 storeToRefs 不包含 actions，increment 是 undefined"
+      - "count 會加一，但畫面不會更新"
+    answer: 1
+    hints: ["storeToRefs 只處理哪兩種東西？", "actions 要直接從 store 解構：const { increment } = counter"]
+    ref: chapter8/05_store_to_refs.md
+
+  - id: vue-ch08-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `ticket.ts` 用 `useUserStore` 判斷會員打八折，可是 App 一載入就出現「no active Pinia」錯誤，即使 Pinia 已經在 main.ts 啟用了。
+      請修改 `ticket.ts`，讓它在 Pinia 啟用前被 import 也不會出錯，而且折扣照樣正確。
+    hints: ["import 時檔案最外層的程式碼會立刻執行，那時還沒 app.use(createPinia())", "把 const user = useUserStore() 移到 defineStore 的函式裡面"]
+    ref: chapter8/06_stores_using_stores.md
+
+  - id: vue-ch08-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成購物車 `cart.ts` 的 `useCartStore`。`items` 只記 `{ id, quantity }`，名稱和價格要去 `products.ts` 的 `useProductStore` 查：
+      - getter `totalCount`：所有商品數量的加總
+      - getter `totalPrice`：每項的價格乘數量再加總
+      - action `addItem(id)`：已在購物車就數量加一，否則加入 `{ id, quantity: 1 }`
+      - action `removeItem(id)`：數量減一，減到 0 就從 `items` 移除
+      - action `clear()`：清空購物車
+    hints: ["加總用 reduce；totalPrice 裡用 productStore.products.find 找出商品的 price", "removeItem 減到 0 時，用 filter 產生不含該商品的新陣列，指定回 items.value"]
+    ref: chapter8/07_practice_shopping_cart.md
+
+  - id: vue-ch08-q11
+    difficulty: 1
+    type: short
+    prompt: |
+      在 setup store 裡，`ref()` 對應 Pinia 的 state、函式對應 actions。那 `computed()` 對應 Pinia 的什麼？（填英文名稱）
+    answers: ["^getters?$"]
+    hints: ["它是「從 state 算出來的值」", "和 computed 一樣是唯讀的，英文名稱 g 開頭"]
+    ref: chapter8/04_state_getters_actions.md
+
+  - id: vue-ch08-q12
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `cart.ts` 已經寫好。請完成 `order.ts` 的 action `checkout()`：
+      購物車是空的就什麼都不做；否則在 `orders` 加入一筆 `{ count: 購物車總件數 }`，再呼叫購物車的 `clear()` 清空購物車。
+    hints: ["在 defineStore 的函式裡 import 並呼叫 useCartStore()，和在元件裡用 store 一樣", "讀 cart.totalCount 判斷，push 之後呼叫 cart.clear()"]
+    ref: chapter8/06_stores_using_stores.md

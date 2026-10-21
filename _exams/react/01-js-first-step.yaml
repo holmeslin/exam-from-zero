@@ -1,0 +1,240 @@
+lang: react
+chapter: "1"
+title: JavaScript 第一步
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter1, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch01-q01
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 執行到第三行就出錯了。請修正程式，讓它依序印出 0、1、2（每個數字一行）。
+      只需要改一個地方，不要刪掉任何一行。
+    hints: ['錯誤訊息是 `TypeError: Assignment to constant variable.`，意思是不能對 `const` 重新指定值。', '需要改變的變數要用 `let` 宣告：把第一行改成 `let count = 0;`。']
+    ref: chapter1/04_const_and_let.md
+    expected_stdout: "0\n1\n2\n"
+
+  - id: react-ch01-q02
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 要算三科成績的總分與平均，但平均算錯了（印出 201）。請修正，讓輸出變成：
+
+          總分：253
+          平均：84.3
+
+      平均要用 `toFixed(1)` 只留一位小數。
+    hints: ['先乘除後加減：`a + b + c / 3` 只有 `c` 被除以 3。', '寫成 `(math + english + science) / 3`，印的時候用 `average.toFixed(1)`。']
+    ref: chapter1/06_numbers_and_arithmetic.md
+    expected_stdout: "總分：253\n平均：84.3\n"
+
+  - id: react-ch01-q03
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 裡有 `firstName` 和 `language` 兩個變數。請用**樣板字面值**和字串方法印出下面三行
+      （名字、字母數、大寫都要從變數算出來，不要直接寫死）：
+
+          你好，小明！
+          REACT 有 5 個字母
+          包含 act：true
+
+      第三行是 `language` 是否包含 `"act"` 的結果。
+    hints: ['樣板字面值用反引號包起來，`${}` 裡放變數或運算，例如 `${firstName}`。', '字母數用 `language.length`，大寫用 `language.toUpperCase()`，是否包含用 `language.includes("act")`。']
+    ref: chapter1/07_strings_and_template_literals.md
+    expected_stdout: "你好，小明！\nREACT 有 5 個字母\n包含 act：true\n"
+
+  - id: react-ch01-q04
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這段程式碼會依序印出什麼？
+
+          console.log("1" == 1);
+          console.log("1" === 1);
+          console.log(typeof "1");
+    choices:
+      - "true、false、string"
+      - "true、true、number"
+      - "false、false、string"
+      - "false、true、number"
+    answer: 0
+    hints: ['`==` 會先偷偷轉換型別再比，`===` 不會。', '`"1"` 有引號，所以它是字串，`typeof` 會得到 `string`。']
+    ref: chapter1/08_booleans_and_comparison.md
+
+  - id: react-ch01-q05
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 要把每個分數分成「優等」（90 分以上）、「及格」（60 分以上）、「不及格」三級，
+      但 95 分和 90 分都被印成「及格」。請修正判斷，讓輸出變成：
+
+          95 分：優等
+          72 分：及格
+          40 分：不及格
+          60 分：及格
+          90 分：優等
+          59 分：不及格
+    hints: ['`if` / `else if` 由上往下檢查，碰到第一個成立的就停，後面全部跳過。', '把 `score >= 90` 的判斷移到最前面，`score >= 60` 放第二個。']
+    ref: chapter1/09_if_else.md
+    expected_stdout: "95 分：優等\n72 分：及格\n40 分：不及格\n60 分：及格\n90 分：優等\n59 分：不及格\n"
+
+  - id: react-ch01-q06
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      入場規則：**成年人（18 歲以上）或有家長陪同的人**可以進場，但前提是**一定要有票**。
+      main.ts 的判斷寫錯了，沒票的小美也能進場。請修正 `canEnter` 的條件，讓輸出變成：
+
+          小明：可以進入
+          小華：可以進入
+          小美：不能進入
+          阿強：不能進入
+    hints: ['`&&` 比 `||` 先算，所以 `a || b && c` 的意思是 `a || (b && c)`。', '用括號標清楚順序：`(visitor.age >= 18 || visitor.hasParent) && visitor.hasTicket`，或先存成中間變數再組合。']
+    ref: chapter1/10_logical_operators.md
+    expected_stdout: "小明：可以進入\n小華：可以進入\n小美：不能進入\n阿強：不能進入\n"
+
+  - id: react-ch01-q07
+    difficulty: 2
+    type: short
+    prompt: |
+      下面這段程式碼會印出什麼？請完整寫出印出的那一行。
+
+          const count = 0;
+          console.log(`你有 ${count} 則${count > 0 ? "新" : ""}訊息`);
+    answers: ['^你有 ?0 ?則訊息$']
+    hints: ['三元運算子 `條件 ? A : B`：條件成立得到 A，不成立得到 B。', '`0 > 0` 是 `false`，所以那一段會變成空字串 `""`。']
+    ref: chapter1/11_ternary.md
+
+  - id: react-ch01-q08
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 用陣列記錄排隊的人，加入小美之後要印出人數、第一位和最後一位，
+      但第一位和最後一位都印錯了。請修正索引，讓輸出變成：
+
+          排隊人數：3
+          第一位：小明
+          最後一位：小美
+
+      最後一位要用 `length` 算出來，不要直接寫死索引。
+    hints: ['索引從 0 開始數，第一個是 `queue[0]`。', '最後一個的索引永遠是 `length - 1`：`queue[queue.length - 1]`。']
+    ref: chapter1/12_arrays.md
+    expected_stdout: "排隊人數：3\n第一位：小明\n最後一位：小美\n"
+
+  - id: react-ch01-q09
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 要算出所有存款的總金額，以及 200 元以上的「大額」有幾筆，
+      但現在每一輪都印出一次，而且數字都不對。請修正，讓整個程式只印出兩行：
+
+          總金額：860
+          大額筆數：2
+    hints: ['在迴圈裡宣告的 `let total = 0` 每一輪都會從 0 重新開始。', '把兩個 `let` 移到 `for...of` 外面，`console.log` 也移到迴圈結束之後。']
+    ref: chapter1/13_for_of.md
+    expected_stdout: "總金額：860\n大額筆數：2\n"
+
+  - id: react-ch01-q10
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 裡有一個 `product` 物件。請依序完成：
+
+      1. 把 `price` 改成 990。
+      2. 新增屬性 `inStock`，值是 `true`。
+      3. 用 `push` 在 `tags` 陣列最後加上 `"特價"`。
+
+      然後**從 product 讀值**印出下面四行（不要直接寫死）：
+
+          鍵盤：990 元
+          有庫存：true
+          產地：台灣
+          最後一個標籤：特價
+    hints: ['用點修改或新增屬性：`product.price = 990;`、`product.inStock = true;`。', '一層一層點進去：`product.maker.country`；最後一個標籤是 `product.tags[product.tags.length - 1]`。']
+    ref: chapter1/14_objects.md
+    expected_stdout: "鍵盤：990 元\n有庫存：true\n產地：台灣\n最後一個標籤：特價\n"
+
+  - id: react-ch01-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      執行下面這段程式碼，會發生什麼事？
+
+          const user = { name: "小明", nickname: null };
+          console.log(user.nickname);
+          console.log(user.email);
+          console.log(user.address.city);
+    choices:
+      - "印出 null、undefined，然後第四行出錯：Cannot read properties of undefined (reading 'city')"
+      - "印出 null、undefined、undefined"
+      - "第三行就出錯，因為 user 沒有 email 屬性"
+      - "印出 undefined、undefined，然後第四行出錯：Cannot read properties of null (reading 'city')"
+    answer: 0
+    hints: ['`null` 是主動放進去的「沒有」，讀不存在的屬性則會得到 `undefined`，不會出錯。', '`user.address` 是 `undefined`，再對它用 `.city` 才會當場出錯。']
+    ref: chapter1/15_null_undefined.md
+
+  - id: react-ch01-q12
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 走訪 `users` 印出每個人住的城市，但執行到小華就出錯了。
+      有些人根本沒有 `address` 欄位，有些人的 `address` 是 `null`。請修正，讓輸出變成：
+
+          小明：台北
+          小華：沒有地址欄位
+          小美：地址未填
+          阿強：高雄
+
+      沒有欄位（`undefined`）印「沒有地址欄位」，`null` 印「地址未填」。
+    hints: ['錯誤是 `Cannot read properties of undefined`：先確認 `user.address` 存在，才能用 `.city`。', '在迴圈裡用 `if (user.address === undefined) { ... } else if (user.address === null) { ... } else { ... }`。']
+    ref: chapter1/15_null_undefined.md
+    expected_stdout: "小明：台北\n小華：沒有地址欄位\n小美：地址未填\n阿強：高雄\n"
+
+  - id: react-ch01-q13
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 裡有一台購物車 `cart`，每一項有 `name`、`price`（單價）、`quantity`（數量）。請印出：
+
+      1. 全部商品的總件數（數量加總）。
+      2. 總金額（單價乘以數量再加總）。
+      3. 總金額滿 3000 元打九折，印出有沒有打折，以及應付金額。
+      4. 單價最低的商品名稱。
+
+      數字都要從 `cart` 算出來，不要直接寫死。預期輸出：
+
+          共 7 件商品
+          總金額：4300 元
+          滿 3000 元，打九折
+          應付金額：3870 元
+          最便宜的商品：傳輸線
+
+      沒打折時第三行印「未滿 3000 元，不打折」。
+    hints: ['一個 `for...of` 就能同時累加件數與金額，`let` 變數宣告在迴圈外面；打折用 `if` / `else`，九折是乘以 0.9。', '找最低單價：先用 `let lowestPrice = cart[0].price;` 和 `let cheapestName = cart[0].name;`，迴圈裡碰到更便宜的就兩個一起更新。']
+    ref: chapter1/16_practice.md
+    expected_stdout: "共 7 件商品\n總金額：4300 元\n滿 3000 元，打九折\n應付金額：3870 元\n最便宜的商品：傳輸線\n"
+
+  - id: react-ch01-q14
+    difficulty: 1
+    type: choice
+    prompt: |
+      網頁由 HTML、CSS、JavaScript 三種東西組成。按下按鈕後跳出一個視窗，這個「行為」是由哪一種負責的？
+    choices:
+      - "HTML"
+      - "CSS"
+      - "JavaScript"
+      - "Node.js"
+    answer: 2
+    hints: ['HTML 管「有什麼」，CSS 管「長什麼樣子」。', '決定網頁「會做什麼」的是 JavaScript。']
+    ref: chapter1/01_how_web_pages_work.md

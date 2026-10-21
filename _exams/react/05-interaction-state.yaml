@@ -1,0 +1,214 @@
+lang: react
+chapter: "5"
+title: 互動與 state
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter5, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch05-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `BuyButtons` 收到 `onBuy(name)`，有「買鍵盤」「買滑鼠」兩個按鈕。現在的寫法一渲染就呼叫了 `onBuy`，點按鈕反而沒反應。
+      修正它：點「買鍵盤」時呼叫 `onBuy("鍵盤")`，點「買滑鼠」時呼叫 `onBuy("滑鼠")`，渲染時不可以呼叫。
+    hints: ["`onClick` 要拿到的是函式本身，`onBuy('鍵盤')` 是「現在就呼叫」", "用箭頭函式包起來：`onClick={() => onBuy('鍵盤')}`"]
+    ref: chapter5/01_event_handling.md
+
+  - id: react-ch05-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面的元件，連續點三次按鈕，Console 依序印出 1、2、3，但畫面一直是「已點 0 次」。最主要的原因是什麼？
+
+          function App() {
+            let count = 0;
+            function handleClick() {
+              count = count + 1;
+              console.log(count);
+            }
+            return <button onClick={handleClick}>已點 {count} 次</button>;
+          }
+    choices:
+      - "改普通變數不會通知 React，而且重新渲染時它會被重設成 0"
+      - "`handleClick` 沒有被呼叫，Console 印出的是渲染時的值"
+      - "`count` 應該宣告成 `const` 才會被 React 追蹤"
+      - "JSX 裡的 `{count}` 只會在第一次渲染時讀取，之後要手動更新 DOM"
+    answer: 0
+    hints: ["React 什麼時候才會重新執行元件函式？", "重新執行元件函式時，函式裡的普通變數會發生什麼事？"]
+    ref: chapter5/02_why_plain_variables_fail.md
+
+  - id: react-ch05-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `Toggle` 用普通變數記錄開關，點了畫面不會變。改用 `useState`，讓它：
+      - 一開始按鈕顯示「展開」，內容「這是被藏起來的內容。」不顯示
+      - 點一下顯示內容，按鈕變成「收起」；再點一下收回去
+      - 畫面上放兩個 `Toggle` 時，各自獨立
+    hints: ["`const [isOpen, setIsOpen] = useState(false)`，記得從 react 匯入", "點擊時呼叫 `setIsOpen(!isOpen)`"]
+    ref: chapter5/03_use_state.md
+
+  - id: react-ch05-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的元件，**連續點兩次**按鈕。第二次點的時候，Console 印出什麼？點完之後畫面顯示什麼？
+
+          function App() {
+            const [count, setCount] = useState(0);
+            function handleClick() {
+              setCount(count + 5);
+              console.log("count 是", count);
+            }
+            return <button onClick={handleClick}>count：{count}</button>;
+          }
+    choices:
+      - "Console 印出「count 是 5」，畫面顯示 count：10"
+      - "Console 印出「count 是 10」，畫面顯示 count：10"
+      - "Console 印出「count 是 0」，畫面顯示 count：5"
+      - "Console 印出「count 是 10」，畫面顯示 count：5"
+    answer: 0
+    hints: ["事件處理函式看到的 `count`，是它所屬那一次渲染的快照", "`setCount` 不會立刻改掉手上的 `count`，只是安排下一次渲染用新值"]
+    ref: chapter5/04_state_is_a_snapshot.md
+
+  - id: react-ch05-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Counter` 的「加三」按鈕呼叫了三次 `setCount(count + 1)`，結果每次只加 1。
+      修正 `handleAddThree`，讓每點一次 count 真的加 3（保留三次 `setCount`，每次加 1 的寫法）。
+    hints: ["三次 `setCount(count + 1)` 用的都是同一張快照裡的 `count`", "改傳更新函式：`setCount((current) => current + 1)`"]
+    ref: chapter5/05_updater_functions.md
+
+  - id: react-ch05-q06
+    difficulty: 3
+    type: short
+    prompt: |
+      `count` 目前是 0，點一次按鈕執行下面的 `handleClick`。下一次渲染時 `count` 是多少？（只填數字）
+
+          function handleClick() {
+            setCount((current) => current + 1);
+            setCount(count + 5);
+            setCount((current) => current * 2);
+          }
+    answers: ["^10$", "^count\\s*[:：=]?\\s*10$"]
+    hints: ["React 會把同一個事件裡的更新依序排成佇列處理", "第二行的 `count` 是快照裡的 0，等於「換成 5」，把前面的結果蓋掉"]
+    ref: chapter5/05_updater_functions.md
+
+  - id: react-ch05-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Profile` 的「過生日」和「搬家」直接修改了 state 物件，點了畫面不會更新。
+      改成每次都做一個新物件再傳給 `setUser`：
+      - 「過生日」：年齡加 1，其他欄位不變
+      - 「搬家」：`address.city` 改成「高雄」，`zip` 和其他欄位不變
+    hints: ["`setUser({ ...user, age: user.age + 1 })`", "巢狀物件每一層都要複製：`address: { ...user.address, city: '高雄' }`"]
+    ref: chapter5/06_object_state.md
+
+  - id: react-ch05-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `listOps.ts` 裡有四個處理購物清單陣列的函式，現在都直接修改了傳進來的陣列。
+      改寫它們，一律回傳**新陣列**、不修改原陣列：
+      - `addItem(items, item)`：把 `item` 接在最後
+      - `removeItem(items, id)`：刪掉該 `id` 的項目
+      - `toggleItem(items, id)`：切換該項目的 `bought`，被改的那一項要是新物件，其他項目沿用原物件
+      - `sortByName(items)`：依 `name` 用 `localeCompare` 排序
+    hints: ["新增用 `[...items, item]`，刪除用 `filter`，修改用 `map`", "`sort` 會改原陣列，要先 `[...items]` 複製再排"]
+    ref: chapter5/07_array_state.md
+
+  - id: react-ch05-q09
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      完成 `PriceCalculator`：
+      - 標示為「單價」的數字輸入框是受控輸入，打得進字
+      - 下方顯示「三個一共 N 元」，N 是單價乘以 3
+      - 按「清除」把輸入框清空，總價回到 0
+    hints: ["補上 `onChange={(event) => setPrice(event.target.value)}`", "輸入框的值永遠是字串，計算時用 `Number(price) * 3`"]
+    ref: chapter5/08_controlled_inputs.md
+
+  - id: react-ch05-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `SignupForm` 用一個物件 state 管理姓名、信箱、方案（select）和同意條款（核取方塊），但共用的 `handleChange` 寫錯了，所有欄位都寫進同一個屬性，送出後也沒有重設。
+      修正它：
+      - `handleChange` 依輸入元素的 `name` 更新對應的屬性；核取方塊要取 `checked`，其他取 `value`
+      - 送出時呼叫 `onSubmit(form)`，然後把表單重設成初始值
+    hints: ["用變數當屬性名稱要加中括號：`{ ...form, [name]: ... }`", "用 `type === 'checkbox' ? checked : value` 決定要存哪個值；重設就是 `setForm(initialForm)`"]
+    ref: chapter5/09_multi_field_forms.md
+
+  - id: react-ch05-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Accordion` 有兩個 `Panel`（「關於」與「營業時間」），現在每個 `Panel` 自己記住是否展開，所以做不到「同一時間只開一個」。
+      把 state 提升到 `Accordion`：
+      - 一開始展開「關於」
+      - 按某個面板的「顯示」，它展開，另一個自動收起
+      - `Panel` 改成從 props 收到 `isOpen` 和 `onShow`，自己不再有 state
+    hints: ["在 `Accordion` 放 `const [activeIndex, setActiveIndex] = useState(0)`", "`<Panel isOpen={activeIndex === 1} onShow={() => setActiveIndex(1)}>`"]
+    ref: chapter5/10_lifting_state_up.md
+
+  - id: react-ch05-q12
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的程式，點兩次「漲價」之後，畫面上的 `PriceTag` 顯示什麼？
+
+          function PriceTag({ price }) {
+            const [shown, setShown] = useState(price);
+            return <p>{shown} 元</p>;
+          }
+
+          function App() {
+            const [price, setPrice] = useState(100);
+            return (
+              <div>
+                <PriceTag price={price} />
+                <button onClick={() => setPrice(price + 50)}>漲價</button>
+              </div>
+            );
+          }
+    choices:
+      - "100 元"
+      - "150 元"
+      - "200 元"
+      - "React 會報錯，因為 `setShown` 沒有被用到"
+    answer: 0
+    hints: ["`useState` 的初始值什麼時候會被使用？", "把 props 複製進 state，之後 props 再變也不會跟著更新；直接用 `price` 就好"]
+    ref: chapter5/11_where_to_put_state.md
+
+  - id: react-ch05-q13
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `ChatApp` 可以切換聯絡人「小明」「小華」，下方的 `Chat` 有一個草稿輸入框。現在切換聯絡人時，寫給小明的草稿會留在小華的輸入框。
+      修正 `ChatApp`，讓切換到不同聯絡人時，`Chat` 的草稿重設成空的（不要修改 `Chat` 元件本身）。
+    hints: ["React 靠位置、元件類型和 `key` 判斷是不是同一個元件", "給 `<Chat>` 一個隨聯絡人變化的 `key`：`<Chat key={contact} contact={contact} />`"]
+    ref: chapter5/12_keys_and_resetting_state.md
+
+  - id: react-ch05-q14
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 `TodoApp` 待辦清單（畫面已經寫好，補完標了 TODO 的地方）：
+      - 送出表單時，文字去掉頭尾空白後新增一個事項 `{ id, title, done: false }`，空的不新增，新增後清空輸入框
+      - 勾選核取方塊切換 `done`
+      - 顯示「還有 N 項未完成」
+      - 篩選「全部」「未完成」「已完成」
+      - 「清除已完成」一次刪掉所有已完成的事項
+    hints: ["`remaining` 和 `visibleTodos` 都用 `filter` 在渲染時算，不要另外存成 state", "新增用 `[...todos, 新事項]`、切換用 `map` 加 `{ ...todo, done: !todo.done }`，id 可用 `crypto.randomUUID()`"]
+    ref: chapter5/13_practice_todo_list.md

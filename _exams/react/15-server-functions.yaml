@@ -1,0 +1,181 @@
+# 第 14 章：Server Functions
+# Next.js 沒有安裝，所以程式題只考「FormData 進、結果出」的純邏輯，
+# 需要 Next.js 的 API（revalidatePath、redirect、cookies）改用參數傳入。
+lang: react
+chapter: "14"
+title: Server Functions
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter14, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch14-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這個 Server Function 在使用者按下「簽名」後執行，`console.log` 的內容會出現在哪裡？
+
+          async function sign(formData: FormData) {
+            "use server";
+            console.log("收到簽名：", formData.get("name"));
+          }
+    choices:
+      - "瀏覽器開發者工具的 Console"
+      - "執行 `npm run dev` 的那個終端機"
+      - "兩邊都會出現"
+      - "哪裡都不會出現，Server Function 不能用 console.log"
+    answer: 1
+    hints: ["有 `\"use server\"` 的函式在哪一邊執行？", "Server Function 只在伺服器上執行，所以印在執行 `npm run dev` 的終端機"]
+    ref: chapter14/01_first_server_function.md
+
+  - id: react-ch14-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      `app/guestbook/actions.ts` 最上面寫了 `"use server"`。下面哪一行放進這個檔案後，執行 `npm run build` 會出錯？
+    choices:
+      - "`export async function sign(formData: FormData) { ... }`"
+      - "`export type FormState = { error?: string };`"
+      - "`export const MAX_LENGTH = 20;`"
+      - "`import { addMessage } from \"@/app/lib/guestbook\";`"
+    answer: 2
+    hints: ["`\"use server\"` 檔案匯出的東西，都會被當成 Server Function", "只有 `async function` 能匯出；型別建置時會被拿掉所以可以，常數不行"]
+    ref: chapter14/02_use_server_file.md
+
+  - id: react-ch14-q03
+    difficulty: 1
+    type: short
+    prompt: |
+      `getMessages` 用 `readFile` 讀 `data/messages.json`。第一次執行時檔案還不存在，`readFile` 會丟出錯誤，這個錯誤的 `code` 是什麼？（只要寫出代碼）
+    answers: ["^[\"'`]?enoent[\"'`]?$"]
+    hints: ["是 Node.js 的錯誤代碼，意思是 Error NO ENTry", "E 開頭、五個英文字母"]
+    ref: chapter14/03_read_write_json.md
+
+  - id: react-ch14-q04
+    difficulty: 1
+    type: short
+    prompt: |
+      `sign` 已經把留言寫進 JSON 檔，可是 `/guestbook` 畫面沒有更新，要重新整理才看得到。應該在 `sign` 結尾呼叫 `next/cache` 的哪個函式，通知 Next.js 這個網址的資料過期了？（只寫函式名稱）
+    answers: ["^revalidatepath(\\(.*\\))?;?$"]
+    hints: ["函式名稱有「重新驗證」和「路徑」兩個意思", "`revalidatePath(\"/guestbook\")`"]
+    ref: chapter14/04_revalidate_path.md
+
+  - id: react-ch14-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 `actions.ts` 的 `sign`，讓它可以搭配 `useActionState` 使用（第一個參數是上一次的狀態，第二個才是 `FormData`）：
+
+      - 先把 `name`、`text` 去掉前後空白。
+      - 名字是空的：回傳 `{ error: "請輸入名字", name, text }`，不要存檔。
+      - 留言是空的：回傳 `{ error: "請輸入留言內容", name, text }`，不要存檔。
+      - 兩個都有填：呼叫 `addMessage(name, text)`，回傳 `{}`。
+
+      錯誤時把使用者填的內容一起回傳，表單才能放進 `defaultValue`。`store.ts` 用記憶體代替 JSON 檔，不用修改；因為沒有 Next.js，這題省略 `revalidatePath`。
+    hints: ["用 `String(formData.get(\"name\")).trim()` 取得去掉空白的字串", "預期中的錯誤用 `return` 回傳狀態，不要 `throw`；檢查都通過才 `await addMessage(name, text)`"]
+    ref: chapter14/05_use_action_state.md
+
+  - id: react-ch14-q06
+    difficulty: 2
+    type: choice
+    prompt: |
+      用 `useActionState` 搭配 `sign` 後，使用者只填了名字就送出：錯誤訊息出現了，但剛剛填的名字被清空。這一章的做法是什麼？
+    choices:
+      - "在 `sign` 裡用 `throw new Error(\"請輸入留言內容\")`，讓表單不要重設"
+      - "失敗時把 `name`、`text` 一起回傳，再放進欄位的 `defaultValue={state.name}`"
+      - "把欄位改成 `value={state.name}`，不用寫 `onChange`"
+      - "在 `<form>` 上加 `noValidate`，React 就不會重設欄位"
+    answer: 1
+    hints: ["action 結束後 React 會把欄位重設成初始值", "讓「初始值」等於使用者剛剛填的內容：回傳它，再當成 `defaultValue`"]
+    ref: chapter14/05_use_action_state.md
+
+  - id: react-ch14-q07
+    difficulty: 2
+    type: choice
+    prompt: |
+      留言板用 `useOptimistic` 在送出的瞬間先顯示新留言。如果伺服器最後**寫入失敗**，那則樂觀顯示的留言會怎樣？
+    choices:
+      - "一直留在列表上，直到使用者重新整理頁面"
+      - "樂觀的資料被丟掉，列表自動回到伺服器給的真實資料"
+      - "React 會丟出錯誤，整個畫面換成 `error.tsx`"
+      - "要自己寫程式碼把它從陣列裡刪掉"
+    answer: 1
+    hints: ["`useOptimistic` 的第一個參數是「真實的資料」", "action 結束後，畫面改回用真實資料渲染，樂觀的版本不管成功失敗都會被取代"]
+    ref: chapter14/06_use_optimistic.md
+
+  - id: react-ch14-q08
+    difficulty: 1
+    type: short
+    prompt: |
+      Server Function 存完資料後，要用 `redirect("/guestbook")` 把使用者帶回列表。`redirect` 要從哪個模組匯入？
+    answers: ["^[\"'`]?next/navigation[\"'`]?;?$"]
+    hints: ["不是 `next/cache`", "和「導覽」有關的模組：`next/...`"]
+    ref: chapter14/07_redirect.md
+
+  - id: react-ch14-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `actions.ts` 的 `signThenLeave` 有 bug：留言存進去了，使用者卻**沒有被導向** `/guestbook`。因為沒有 Next.js，`addMessage`、`revalidatePath`、`redirect` 改由 `deps` 傳進來，`deps.redirect` 和真的 `redirect` 一樣是丟出例外來運作。
+
+      修好它：
+
+      - 只有 `addMessage` 放在 `try` 裡，寫入失敗時用 `console.error` 印出並 `return`。
+      - 寫入成功才依序呼叫 `revalidatePath("/guestbook")`、`redirect("/guestbook")`，而且 `redirect` 丟出的例外要能傳出函式外。
+    hints: ["`redirect` 丟出的 `NEXT_REDIRECT` 被你的 `catch` 接住了", "把 `revalidatePath` 和 `redirect` 搬到 `try`/`catch` 的下面，`redirect` 放最後"]
+    ref: chapter14/07_redirect.md
+
+  - id: react-ch14-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Server Function 是公開的入口，收到的資料都不可信。修改 `validate.ts` 的 `validateMessage(rawName, rawText)`：
+
+      - 參數不是字串（例如 `null`、檔案）就當成空字串，不要變成 `"null"`；是字串就去掉前後空白。
+      - 依序檢查：名字空的回傳 `請輸入名字`；名字超過 20 個字回傳 `名字最多 20 個字`；留言空的回傳 `請輸入留言內容`；留言超過 200 個字回傳 `留言最多 200 個字`。
+      - 失敗回傳 `{ ok: false, error, name, text }`，通過回傳 `{ ok: true, name, text }`。
+    hints: ["`typeof rawName === \"string\" ? rawName.trim() : \"\"`", "長度用 `name.length > maxNameLength` 判斷，錯誤訊息可以用樣板字串 `` `名字最多 ${maxNameLength} 個字` ``"]
+    ref: chapter14/08_validation_and_security.md
+
+  - id: react-ch14-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `actions.ts` 的 `deleteMessage` 只有管理者能用。因為沒有 Next.js，`process.env.ADMIN_TOKEN` 和 cookie 的值改由 `deps.expected`、`deps.token` 傳進來。目前的版本有兩個漏洞，請修好：
+
+      - 忘了設定 `ADMIN_TOKEN`（`expected` 是 `undefined`）時，沒帶 cookie 的人也能刪除。身分不通過一律 `throw new Error("Unauthorized")`。
+      - 表單的 `id` 不是字串（例如沒有這個欄位）時，應該什麼都不做，而不是刪除 `"null"`。
+
+      通過檢查後才呼叫 `removeMessage(id)` 和 `revalidatePath("/guestbook")`。
+    hints: ["`undefined !== undefined` 是 `false`，所以要先檢查 `!deps.expected`", "`const id = formData.get(\"id\"); if (typeof id !== \"string\") return;`"]
+    ref: chapter14/08_validation_and_security.md
+
+  - id: react-ch14-q12
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      幫留言板加上按讚。完成 `likes.ts` 的 `likeMessage(messages, id)`，回傳一個**新的陣列**：
+
+      - 每則留言都要有 `likes`；舊留言沒有這個欄位，當成 `0`。
+      - `id` 相符的那則留言 `likes` 加一。
+      - `id` 不是字串或找不到時，不加任何讚。
+      - 不要修改傳進來的陣列和物件。
+    hints: ["用 `messages.map(...)` 產生新陣列，每個元素用 `{ ...message, likes: ... }` 複製", "`message.likes ?? 0` 補預設值；`typeof id === \"string\" && message.id === id` 時再加一"]
+    ref: chapter14/09_practice.md
+
+  - id: react-ch14-q13
+    difficulty: 2
+    type: choice
+    prompt: |
+      留言表單的欄位已經加上 `maxLength={200}`，非管理者的頁面也沒有畫出刪除按鈕。下面哪個說法正確？
+    choices:
+      - "這樣就夠了，使用者只能透過表單呼叫 Server Function"
+      - "Next.js 會檢查 `Origin`，所以伺服器端不用再驗證輸入"
+      - "Server Function 是公開的 `POST` 端點，任何人都能直接呼叫，所以函式裡要自己驗證輸入、檢查權限"
+      - "只要 Server Function 寫在 `\"use server\"` 檔案裡，別人就猜不到代號，無法呼叫"
+    answer: 2
+    hints: ["`curl` 可以不經過你的網頁直接送 `POST`", "前端檢查是給使用者的體貼，伺服器的檢查才是真正的防線"]
+    ref: chapter14/08_validation_and_security.md

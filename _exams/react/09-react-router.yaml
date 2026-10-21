@@ -1,0 +1,134 @@
+lang: react
+chapter: "9"
+title: React Router
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter9, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch09-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `App.tsx` 目前只有首頁的路由。請在 `Routes` 裡加一個路由，讓網址 `/about` 顯示 `About` 元件（標題「關於我們」），`/` 仍然顯示首頁。
+      測試會用 `MemoryRouter` 把 `App` 包起來，所以不需要自己加 `BrowserRouter`。
+    hints: ["`Route` 有兩個屬性：`path` 是網址路徑，`element` 是要顯示的 JSX", "<Route path=\"about\" element={<About />} />"]
+    ref: chapter9/01_first_route.md
+  - id: react-ch09-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      想讓網址 `/about` 顯示 `About` 元件，下面哪一種 `Route` 的寫法是對的？
+    choices:
+      - "<Route path=\"about\" element={<About />} />"
+      - "<Route path=\"about\" element={About} />"
+      - "<Route path=\"about\" component=\"About\" />"
+      - "<Route href=\"about\" element={<About />} />"
+    answer: 0
+    hints: ["`element` 放的是 JSX，不是元件的名字", "屬性是 `path` 和 `element`，而 `element` 的值要寫成 `<About />`"]
+    ref: chapter9/01_first_route.md
+  - id: react-ch09-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Nav.tsx` 有兩個 `NavLink`：「商品列表」（`/products`）和「新增商品」（`/products/new`）。目前在 `/products/new` 時，兩個連結**都**被加上了 `active` class。
+      請修正，讓「商品列表」只在網址剛好是 `/products` 時才是 active；「新增商品」的行為不變。
+    hints: ["`NavLink` 預設用「開頭符合」判斷，`/products/new` 也是從 `/products` 開頭", "在「商品列表」的 `NavLink` 加上 `end`，意思是必須完全一樣才算"]
+    ref: chapter9/02_link_navlink.md
+  - id: react-ch09-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Tabs.tsx` 有兩個 `NavLink`。請改寫它們的 `className`：目前所在的那一頁 class 是 `"tab tab-on"`，其他的是 `"tab"`。
+      不要另外讀網址，交給 `NavLink` 判斷。
+    hints: ["`className` 可以傳一個函式，參數物件裡有 `isActive`", "className={({ isActive }) => (isActive ? \"tab tab-on\" : \"tab\")}"]
+    ref: chapter9/02_link_navlink.md
+  - id: react-ch09-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Layout.tsx` 是外層的版面元件，會用在這樣的路由表裡：
+
+          <Route element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="about" element={<About />} />
+          </Route>
+
+      目前不管網址是什麼，`<main>` 裡都是空的。請修改 `Layout`，讓內層路由的內容出現在 `<main>` 裡面，導覽列保留。
+    hints: ["React Router 有個元件專門標出「內層路由的內容渲染在這裡」", "從 `react-router` 匯入 `Outlet`，在 `<main>` 裡放 `<Outlet />`"]
+    ref: chapter9/03_nested_routes_outlet.md
+  - id: react-ch09-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `ProductDetail.tsx` 用在路由 `products/:id`。請修正它：
+      - 網址 `/products/2` 要顯示標題「無線滑鼠」和「售價 890 元」。
+      - 找不到商品時（例如 `/products/99`），顯示 `<p>找不到商品 99</p>`（99 換成網址上的 id），不要讓畫面壞掉。
+      商品資料在 `products.ts`，`id` 是數字。
+    hints: ["`useParams()` 讀到的 `id` 是字串 `\"2\"`，而 `2 === \"2\"` 不成立", "用 `Number(id)` 比對；`find` 找不到會回傳 `undefined`，先用 `if (product === undefined)` 提早 return"]
+    ref: chapter9/04_use_params.md
+  - id: react-ch09-q07
+    difficulty: 1
+    type: short
+    prompt: |
+      路由設定是 `path="products/:id"`，網址是 `/products/2`。元件裡執行 `const { id } = useParams()` 之後，`typeof id` 的結果是什麼？
+    answers: ["^\"?'?string'?\"?$", "^字串$", "^string（字串）$"]
+    hints: ["網址本身就是一串文字", "網址上的值一律是字串，所以是 string"]
+    ref: chapter9/04_use_params.md
+  - id: react-ch09-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `Products.tsx` 用查詢參數 `category` 篩選商品（`all`、`keyboard`、`mouse`），請完成兩件事：
+      1. 依網址上的 `category` 篩選列表；沒有這個參數時當作 `all`，列出全部。
+      2. 按分類按鈕時只改 `category`，網址上其他的查詢參數要保留。例如 `/products?sort=price` 按了 `mouse` 之後，`sort=price` 還在。
+    hints: ["`searchParams.get(\"category\")` 拿到值後用 `filter` 算出要顯示的商品，不要另外存 state", "`setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set(\"category\", name); return next; })`"]
+    ref: chapter9/05_use_search_params.md
+  - id: react-ch09-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `Contact.tsx` 是聯絡表單，請完成：
+      - 按「送出」後換到 `/thanks`。
+      - 按「回上一頁」回到瀏覽紀錄的上一頁，而且**不能**順便送出表單。
+    hints: ["`const navigate = useNavigate()`，再呼叫 `navigate(\"/thanks\")`；`navigate(-1)` 是上一頁", "表單裡的按鈕預設是送出按鈕，「回上一頁」要加 `type=\"button\"`"]
+    ref: chapter9/06_use_navigate.md
+  - id: react-ch09-q10
+    difficulty: 2
+    type: choice
+    prompt: |
+      登入成功後要換到首頁，而且不希望使用者按瀏覽器的上一頁又回到登入表單。下面哪一個寫法最適合？
+    choices:
+      - "navigate(\"/\", { replace: true })"
+      - "navigate(\"/\")"
+      - "navigate(-1)"
+      - "<Link to=\"/\">回首頁</Link>"
+    answer: 0
+    hints: ["預設情況下 `navigate` 會在瀏覽紀錄裡新增一筆", "用新網址取代目前這一筆紀錄，要加 `{ replace: true }`"]
+    ref: chapter9/06_use_navigate.md
+  - id: react-ch09-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `App.tsx` 已經寫好 `Layout` 和 `NotFound`。請加一個路由，讓所有沒有對應的網址（例如 `/xyz`、`/a/b/c`）都顯示 `NotFound`，而且導覽列還在；`/about` 等已有的網址不受影響。
+    hints: ["`*` 是萬用字元，代表「任何東西」", "在 `Layout` 那一層裡面加 `<Route path=\"*\" element={<NotFound />} />`"]
+    ref: chapter9/07_not_found.md
+  - id: react-ch09-q12
+    difficulty: 3
+    type: choice
+    prompt: |
+      路由表裡有 `<Route path="products/:id" element={<ProductDetail />} />` 和 `<Route path="*" element={<NotFound />} />`。使用者打開 `/products/99`，但沒有 id 是 99 的商品。這時該由誰顯示「找不到」？
+    choices:
+      - "`ProductDetail` 自己處理：`find` 回傳 `undefined` 時顯示找不到"
+      - "`path=\"*\"` 的 `NotFound` 會自動接手"
+      - "React Router 會自動顯示內建的 404 頁面"
+      - "`Routes` 什麼都不渲染，畫面是空白"
+    answer: 0
+    hints: ["`:id` 什麼都接受，所以路由本身是符合的", "「網址沒有對應頁面」交給 `*`；「頁面有但資料找不到」由頁面元件處理"]
+    ref: chapter9/07_not_found.md

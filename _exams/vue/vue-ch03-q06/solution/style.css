@@ -1,0 +1,19 @@
+p {
+  color: gray;
+}
+
+.warning {
+  color: red;
+}
+
+#footer {
+  font-size: 12px;
+}
+
+nav a {
+  color: white;
+}
+
+h1, h2 {
+  color: navy;
+}

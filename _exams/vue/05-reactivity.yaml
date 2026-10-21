@@ -1,0 +1,149 @@
+lang: vue
+chapter: "5"
+title: 響應式與互動
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter5, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch05-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      Counter.vue 的「加一」按鈕點了之後，畫面上的數字一直停在 0。
+      修好它：每點一次，`<p>` 顯示的「目前：N」就加一，而且每個 Counter 有自己的計數。
+    hints: ["普通變數改了，Vue 不知道，畫面不會重新渲染", "從 vue 匯入 ref：const count = ref(0)，在 script 裡改 count.value++"]
+    ref: chapter5/03_ref.md
+  - id: vue-ch05-q02
+    difficulty: 1
+    type: short
+    prompt: |
+      `<button v-on:click="handleClick">` 裡的 `v-on:click`，用簡寫要怎麼寫？（只填簡寫的部分）
+    hints: ["v-bind: 可以簡寫成 :，v-on: 也有一個符號的簡寫", "把 v-on: 換成一個符號"]
+    answers: ['^@click$', '^@click="handleclick"$']
+    ref: chapter5/01_v_on.md
+  - id: vue-ch05-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Feedback.vue 有一個表單。讓它在送出時（按「送出」或在表單裡按 Enter）：
+      - 不要讓瀏覽器重新載入頁面
+      - 呼叫 `handleSubmit`，把 `sent` 加一，畫面顯示「已送出 N 次」
+    hints: ["事件要掛在 <form> 的 submit 上，不是按鈕的 click", "<form @submit.prevent=\"handleSubmit\">，函式裡寫 sent.value++"]
+    ref: chapter5/01_v_on.md
+  - id: vue-ch05-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的元件，畫面會顯示什麼？
+
+          <script setup>
+          import { ref } from "vue";
+          const counter = { count: ref(1) };
+          </script>
+          <template>
+            <p>{{ counter.count + 1 }}</p>
+          </template>
+    hints: ["模板只會自動打開最外層的 ref", "counter 是普通物件，counter.count 還是一個 ref 盒子"]
+    choices:
+      - "2"
+      - "11"
+      - "[object Object]1"
+      - "畫面會報錯，什麼都不顯示"
+    answer: 2
+    ref: chapter5/04_ref_value_unwrap.md
+  - id: vue-ch05-q05
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的程式，點按鈕之後畫面會怎樣？
+
+          const original = ["蘋果", "香蕉"];
+          const fruits = ref(original);
+          function handleAdd() {
+            original.push("芭樂");
+          }
+          // 模板：<p>{{ fruits.join('、') }}</p>
+    hints: ["Vue 是靠代理人（Proxy）知道資料被改了", "original.push 繞過了 fruits.value 這個代理人"]
+    choices:
+      - "畫面不會更新，因為改動繞過了代理人，沒有人通知 Vue"
+      - "畫面顯示「蘋果、香蕉、芭樂」，因為 ref 會一直監看原本的陣列"
+      - "會丟出錯誤，因為 ref 裡的陣列不能被改"
+      - "畫面變成空的，因為原本的陣列被換掉了"
+    answer: 0
+    ref: chapter5/05_how_reactivity_works.md
+  - id: vue-ch05-q06
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      Adder.vue 是一個加法器，但輸入 1 和 2 時顯示的是「= 12」。
+      只改模板，讓它正確顯示「= 3」。
+    hints: ["從輸入框拿到的都是字串，\"1\" + \"2\" 是把字串接起來", "在 v-model 後面加上 .number 修飾符"]
+    ref: chapter5/08_v_model.md
+  - id: vue-ch05-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Profile.vue 用 `reactive` 裝表單，但按「清空」之後，輸入框和下面的文字都沒有變。
+      修好 `handleReset`，讓它把 `form` 重設成 `blank()` 的內容，之後輸入的內容也要繼續顯示在畫面上。
+    hints: ["把 reactive 變數整個換成新物件，模板還在看舊的那一個", "用 const 宣告，重設時寫 Object.assign(form, blank())"]
+    ref: chapter5/06_reactive.md
+  - id: vue-ch05-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      PriceList.vue 要同時顯示「原本的順序」（`.original`）和「由便宜到貴」（`.sorted`）兩份清單，再顯示總計。
+      目前兩個問題：原本的順序被排序搞亂了，總計也一直是 0。修好 `cheapFirst` 和 `total`，加了商品之後兩個都要自動重算。
+    hints: ["computed 只負責讀資料、回傳結果，sort 會改到原本的陣列", "改用 toSorted；總計可以用 reduce((sum, item) => sum + item.price, 0)"]
+    ref: chapter5/07_computed.md
+  - id: vue-ch05-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Toppings.vue 有三個配料勾選框。勾選後，`<p>` 要顯示「已選：」加上勾選的配料，用「、」接起來，例如「已選：起司、培根」（照勾選的先後順序）。
+      目前勾了之後只顯示 true 或 false，請修好它。
+    hints: ["一組勾選框 v-model 到同一個陣列，就會拿到有打勾的 value", "const selected = ref([])，模板寫 selected.join('、')"]
+    ref: chapter5/09_form_inputs.md
+  - id: vue-ch05-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Stepper.vue 從父元件收到 prop `count`，但它想直接改 props，這是不行的。
+      改成按「+」時發出 `change` 事件並附帶 `1`，按「-」時發出 `change` 並附帶 `-1`，讓父元件自己去改資料。
+    hints: ["props 是唯讀的：資料是誰的，就由誰來改", "const emit = defineEmits(['change'])，按鈕寫 @click=\"emit('change', 1)\""]
+    ref: chapter5/11_define_emits.md
+  - id: vue-ch05-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Rating.vue 顯示 5 顆星（★ 表示選到、☆ 表示沒選到），父元件想用 `<Rating v-model="score" />` 使用它。
+      目前它把 prop 複製成自己的 `ref`，點星星不會通知父元件，父元件改值時星星也不會跟著變。
+      改成讓元件支援 `v-model`：點第 n 顆星，父元件的值變成 n；父元件改值，星星跟著變。
+    hints: ["元件上的 v-model 等於 modelValue prop 加上 update:modelValue 事件", "const stars = defineModel()，點擊時寫 stars = n，不用自己宣告 props"]
+    ref: chapter5/12_define_model.md
+  - id: vue-ch05-q12
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Chat.vue 的 `handleSend` 加入一則訊息後，想讀出畫面上（DOM 裡）`#messages` 現在有幾個 `<li>`，存進 `seen`。
+      可是每次讀到的都少一則。修好它，讓「畫面上有 N 則」顯示加入之後的正確數量。
+    hints: ["改了響應式資料後，Vue 會等這段程式跑完才一次更新 DOM", "從 vue 匯入 nextTick，在讀 DOM 之前 await nextTick()"]
+    ref: chapter5/13_next_tick.md
+  - id: vue-ch05-q13
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Todos.vue 是待辦清單的一部分。目前有兩個問題：
+      - 勾選或取消事項時，「還有 N 項未完成」不會變，「清除已完成」按鈕也不會跟著出現或消失（只在有已完成事項時出現）
+      - `handleClearDone` 還沒寫：要一次刪掉所有已完成的事項
+      修好它們。
+    hints: ["能從 todos 算出來的值，用 computed，不要另外存一份", "remaining 和 hasDone 改成 computed；清除用 todos.value = todos.value.filter((todo) => !todo.done)"]
+    ref: chapter5/14_practice_todo_list.md

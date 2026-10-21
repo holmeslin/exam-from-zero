@@ -1,0 +1,166 @@
+lang: react
+chapter: "12"
+title: Next.js 入門
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter12, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch12-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      在 Vite 做的 React 專案裡，用 `view-source:` 看首頁原始碼，伺服器送來的 `<body>` 裡主要是什麼？
+    choices:
+      - "一個空的 `<div id=\"root\"></div>` 和一個載入 JavaScript 的 `<script>`"
+      - "已經把所有元件算好的完整 HTML，文字都在裡面"
+      - "只有 CSS，畫面由 CSS 畫出來"
+      - "完全沒有 HTML，瀏覽器直接執行 `.jsx` 檔"
+    answer: 0
+    hints: ["Vite 專案的畫面要等 JavaScript 執行完才出現。", "瀏覽器先拿到空殼，再由 React 把畫面畫進 `#root`；Next.js 才會先在伺服器上算好 HTML。"]
+    ref: chapter12/01_why_framework.md
+  - id: react-ch12-q02
+    difficulty: 1
+    type: short
+    prompt: |
+      Next.js 專案要用 `npm run start` 啟動「正式上線的樣子」之前，一定要先執行哪個指令？（寫出完整指令）
+    answers: ['^npm run build$', '^next build$', '^npm build$']
+    hints: ["`start` 是用某個指令的結果來啟動伺服器。", "先「建置」網站：`npm run ___`。"]
+    ref: chapter12/02_create_next_app.md
+  - id: react-ch12-q03
+    difficulty: 1
+    type: choice
+    prompt: |
+      Next.js 專案裡常看到這樣的 import，其中 `@/` 代表什麼？
+
+          import { books } from "@/app/lib/books";
+    choices:
+      - "專案的根目錄"
+      - "`node_modules` 裡一個叫 `@` 的套件"
+      - "目前這個檔案所在的資料夾"
+      - "`public/` 資料夾"
+    answer: 0
+    hints: ["它是在 `tsconfig.json` 的 `paths` 裡設定的。", "`\"@/*\": [\"./*\"]`，`./` 指的是專案最上層。"]
+    ref: chapter12/03_project_structure.md
+  - id: react-ch12-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      根 layout `app/layout.tsx` 的導覽列裡有一個搜尋框（用 `useState` 記住輸入的文字）。使用者在框裡打了「貓」，然後點連結從 `/books` 換到 `/about`。搜尋框會怎樣？
+    choices:
+      - "還是「貓」：換頁時 layout 不會重新渲染，裡面的狀態會保留，只有 `children` 換成新頁面"
+      - "變成空的：每次換頁，layout 都會整個重新建立"
+      - "搜尋框消失，因為 `/about` 沒有自己的 layout"
+      - "會出現錯誤，因為 layout 裡不能有狀態"
+    answer: 0
+    hints: ["想想 layout 和「每個頁面都自己放一個 `<header>`」最大的差別。", "換頁時只有 `children` 的部分會換掉。"]
+    ref: chapter12/04_page_and_layout.md
+  - id: react-ch12-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 `routes.ts` 完成 `pageFileToUrl(file)`，依照 Next.js 的檔案路由規則，把 `app/` 底下的檔案路徑換成網址：
+
+      - `app/page.tsx` → `/`
+      - `app/about/page.tsx` → `/about`
+      - `app/books/hot/page.tsx` → `/books/hot`
+      - 不是 `page.tsx` 的檔案（例如 `app/lib/books.ts`、`app/books/layout.tsx`）不會變成網址，回傳 `null`
+    hints: ["先判斷是不是以 `app/` 開頭、以 `/page.tsx` 結尾，不是就回傳 `null`；`app/page.tsx` 要特別處理成 `/`。", "其餘情況把開頭的 `app` 和結尾的 `/page.tsx` 切掉：`file.slice(3, -'/page.tsx'.length)`。"]
+    ref: chapter12/05_file_routing.md
+  - id: react-ch12-q06
+    difficulty: 2
+    type: choice
+    prompt: |
+      動態路由頁面 `app/books/[id]/page.tsx` 裡有這一行。使用者打開 `/books/2` 時，下面哪個說法正確？
+
+          const { id } = await props.params;
+    choices:
+      - "`params` 是 Promise，所以要 `await`；取出的 `id` 是字串 `\"2\"`"
+      - "`params` 是普通物件，`await` 只是習慣寫法；`id` 是數字 `2`"
+      - "`params` 是 Promise；Next.js 會自動把 `id` 轉成數字 `2`"
+      - "`params` 是陣列，`id` 是它的第一個元素"
+    answer: 0
+    hints: ["網址是請求到達時才知道的資訊，Next.js 把它當成「還沒準備好的資料」。", "網址裡的值永遠是字串。"]
+    ref: chapter12/06_dynamic_routes.md
+  - id: react-ch12-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      模擬動態路由的比對。在 `matchRoute.ts` 完成 `matchRoute(pattern, pathname)`：
+
+      - `pattern` 裡用中括號包起來的段（例如 `[id]`）是變數，對應的那段網址放進回傳的物件，例如 `matchRoute('/books/[id]', '/books/2')` 回傳 `{ id: '2' }`
+      - 可以有好幾個動態段：`'/shops/[shop]/books/[id]'` 對上 `'/shops/taipei/books/7'` 得到 `{ shop: 'taipei', id: '7' }`
+      - 固定段要完全相同；段數不同或固定段不同就回傳 `null`
+      - 完全沒有動態段而且對得上時，回傳空物件 `{}`
+    hints: ["用 `split('/')` 把兩邊切成陣列，長度不同就直接回傳 `null`。", "一段一段比：`seg.startsWith('[') && seg.endsWith(']')` 時把 `seg.slice(1, -1)` 當成名字存值，否則兩段必須相等。"]
+    ref: chapter12/06_dynamic_routes.md
+  - id: react-ch12-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      這份書籍資料的 `id` 是**數字**，但網址裡的值永遠是**字串**。修正 `books.ts`：
+
+      - `generateStaticParams()` 要回傳每本書一組 params，值是字串：`[{ id: '1' }, { id: '2' }, { id: '3' }]`
+      - `getBook(id)` 的 `id` 來自網址，要把書號轉成字串再比對；找不到時回傳 `undefined`（例如 `'999'`，或是 `'01'` 也不算書號 `1`）
+    hints: ["`String(book.id)` 可以把數字轉成字串。", "`generateStaticParams` 回傳 `{ id: String(book.id) }`；`getBook` 用 `String(book.id) === id` 比對。"]
+    ref: chapter12/06_dynamic_routes.md
+  - id: react-ch12-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      做一個會標示「目前在哪一頁」的導覽連結。在 `NavLink.tsx` 完成 `NavLink`：
+
+      - 渲染 `<a href={href}>{children}</a>`
+      - 當 `pathname`（目前的網址路徑）等於 `href` 時，加上 `aria-current="page"`；不相等時**不要**有 `aria-current` 屬性
+
+      （在 Next.js 裡 `pathname` 會用 `usePathname()` 取得，這裡改成用 props 傳進來，方便測試。）
+    hints: ["先算出 `const active = pathname === href`。", "`aria-current={active ? 'page' : undefined}`：值是 `undefined` 時 React 不會輸出這個屬性。"]
+    ref: chapter12/07_link.md
+  - id: react-ch12-q10
+    difficulty: 1
+    type: short
+    prompt: |
+      `loading.tsx` 和 `error.tsx` 這兩個特殊檔案裡，哪一個**一定**要在檔案最上面寫 `"use client"`？（寫檔名）
+    answers: ['^error(\.tsx)?$', '^app/books/error\.tsx$']
+    hints: ["哪一個檔案裡有按鈕、需要 `onClick`？", "錯誤邊界會拿到 `retry` 函式，按下按鈕要在瀏覽器裡執行。"]
+    ref: chapter12/08_loading_and_error.md
+  - id: react-ch12-q11
+    difficulty: 2
+    type: short
+    prompt: |
+      使用者打開 `/books/999`，路由 `[id]` 存在，但是 `getBook("999")` 找不到書。要讓 Next.js 顯示 404 畫面，頁面元件裡應該呼叫哪個從 `next/navigation` 引入的函式？（寫函式名稱）
+    answers: ['^notfound(\(\))?;?$']
+    hints: ["網址符合路由、但資料不存在時，Next.js 不會自己知道這該算 404。", "函式名稱和自訂 404 畫面的檔名 `not-found.tsx` 意思一樣，是駝峰式寫法。"]
+    ref: chapter12/09_not_found.md
+  - id: react-ch12-q12
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      模擬 metadata 的標題範本。根 layout 設定了：
+
+          title: { default: "小書店", template: "%s｜小書店" }
+
+      在 `main.ts` 完成 `resolveTitle(root, pageTitle)`：頁面有設定標題時，把它代入 `template` 的 `%s`；沒有設定（空字串）時用 `default`。
+
+      程式從標準輸入讀進每一行頁面標題（空行代表沒有設定），每行印出最後的分頁標題。輸入
+
+          關於我們
+          （空行）
+          貓咪的程式課
+
+      要印出 `關於我們｜小書店`、`小書店`、`貓咪的程式課｜小書店`。
+    stdin: "關於我們\n\n貓咪的程式課\n找不到這本書\n"
+    expected_stdout: "關於我們｜小書店\n小書店\n貓咪的程式課｜小書店\n找不到這本書｜小書店\n"
+    hints: ["空字串在條件判斷裡是 falsy，可以直接 `pageTitle ? ... : ...`。", "`root.template.replace('%s', pageTitle)`。"]
+    ref: chapter12/10_metadata.md
+  - id: react-ch12-q13
+    difficulty: 3
+    type: short
+    prompt: |
+      `<Image src="https://example.com/photo.jpg" ... />` 用了別人網站的圖片，Next.js 預設會拒絕處理。要在 `next.config.ts` 的 `images` 裡設定哪個欄位，列出允許的網站？（寫欄位名稱）
+    answers: ['^(images\.)?remotepatterns$']
+    hints: ["欄位的值是一個陣列，例如 `[{ protocol: \"https\", hostname: \"example.com\" }]`。", "「遠端」的「樣式」：`remote____`。"]
+    ref: chapter12/11_image_and_font.md

@@ -1,0 +1,147 @@
+lang: react
+chapter: "7"
+title: 管理複雜 state
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter7, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch07-q01
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      完成 main.ts 裡的 `counterReducer(count, action)`：
+      - `incremented` 回傳 count + 1
+      - `decremented` 回傳 count - 1
+      - `reset` 回傳 0
+      - 其他 type 要丟出錯誤（throw new Error），訊息是「未知的 action：」接上那個 type，例如 `未知的 action：doubled`
+      檔案下半部會依序套用一串 action 並印出每一步的 state，那部分不用修改。
+    hints: ["用 switch (action.type) 分別處理每一種 action，每個 case 都 return 新的值", "default 分支丟出錯誤，訊息可以用樣板字串把 action.type 接在「未知的 action：」後面"]
+    ref: chapter7/01_use_reducer.md
+    expected_stdout: "incremented -> 6\nincremented -> 7\ndecremented -> 6\nincremented -> 7\nreset -> 0\ndecremented -> -1\n未知的 action：doubled\n"
+  - id: react-ch07-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      tasksReducer.ts 裡的 `tasksReducer` 會直接修改傳進來的 state（push、改屬性、splice），違反 reducer 的規則。
+      請改寫成**不修改原本的陣列與物件**，而是回傳新的值：
+      - `added`：加上 `{ id, text, done: false }`
+      - `toggled`：把對應 id 的 done 反過來，其他項目維持原本的物件
+      - `deleted`：移除對應 id 的項目
+      測試會把傳進去的 state 凍結（Object.freeze），只要直接修改就會失敗。
+    hints: ["新增用展開語法 [...tasks, 新項目]，刪除用 filter", "勾選用 tasks.map(task => task.id === action.id ? { ...task, done: !task.done } : task)"]
+    ref: chapter7/01_use_reducer.md
+  - id: react-ch07-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Counter.tsx 已經用 `useReducer(counterReducer, 0)` 建立了計數器，但還不會動。請完成兩件事：
+      1. `counterReducer` 處理 `incremented`（加 1）、`decremented`（減 1，但不能小於 0）、`reset`（回到 0）。
+      2. 三顆按鈕「+1」「-1」「歸零」在點擊時，用 `dispatch` 送出對應的 action。
+      畫面上的文字格式維持 `目前：N`。
+    hints: ["按鈕寫成 <button onClick={() => dispatch({ type: 'incremented' })}>+1</button>", "不能小於 0 可以用 Math.max(0, count - 1)"]
+    ref: chapter7/01_use_reducer.md
+  - id: react-ch07-q04
+    difficulty: 1
+    type: short
+    prompt: |
+      看下面這行：
+
+          const [tasks, xxx] = useReducer(tasksReducer, initialTasks)
+
+      第二個回傳值是一個函式，元件呼叫它並傳入 action 來「報告發生了什麼事」，React 再交給 reducer 算出新的 state。
+      這個函式習慣上取什麼名字？（填英文名稱）
+    hints: ["它的英文意思是「派送、發出」", "用法是 xxx({ type: 'added', ... })"]
+    ref: chapter7/01_use_reducer.md
+    answers: ["^`?dispatch`?(\\(\\))?$"]
+  - id: react-ch07-q05
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      Greeting.tsx 已經建立了 `LangContext = createContext('zh-TW')`。
+      請修改 `Greeting`，用 `useContext` 讀取 `LangContext`：值是 `'en'` 時顯示 `<p>Hello</p>`，其他情況顯示 `<p>你好</p>`。
+      測試會把 Greeting 放在 Provider 裡（中間隔著別的元件），也會把它放在沒有 Provider 的地方。
+    hints: ["在元件裡寫 const lang = useContext(LangContext)", "沒有 Provider 時，useContext 會拿到 createContext 的預設值 'zh-TW'"]
+    ref: chapter7/02_use_context.md
+  - id: react-ch07-q06
+    difficulty: 2
+    type: choice
+    prompt: |
+      `ThemeContext = createContext('light')`，`Label` 元件會顯示 `useContext(ThemeContext)` 的值。下面的 App 畫面上，三個 Label 依序顯示什麼？
+
+          <>
+            <ThemeContext value="dark">
+              <Label />
+              <ThemeContext value="blue">
+                <Label />
+              </ThemeContext>
+            </ThemeContext>
+            <Label />
+          </>
+    choices:
+      - "dark、blue、light"
+      - "dark、dark、light"
+      - "dark、blue、dark"
+      - "dark、blue、undefined"
+    answer: 0
+    hints: ["useContext 會往上找「最近」的那一個 Provider", "最後一個 Label 在所有 Provider 外面，會拿到 createContext 的預設值"]
+    ref: chapter7/02_use_context.md
+  - id: react-ch07-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      TasksContext.tsx 已經有 `tasksReducer` 和兩個 Context（`TasksContext`、`TasksDispatchContext`）。請完成：
+      - `TasksProvider({ initialTasks, children })`：用 `useReducer(tasksReducer, initialTasks)` 管理資料，把 tasks 放進 `TasksContext`、dispatch 放進 `TasksDispatchContext`，包住 children。
+      - `useTasks()`：回傳 tasks。
+      - `useTasksDispatch()`：回傳 dispatch。
+      測試的元件只透過這兩個自訂 Hook 讀取與更新資料，而且會檢查「只用 dispatch 的元件」不會因為 tasks 改變而重新渲染。
+    hints: ["Provider 寫成 <TasksContext value={tasks}><TasksDispatchContext value={dispatch}>{children}</TasksDispatchContext></TasksContext>", "兩個 Hook 各自只要一行：return useContext(TasksContext) 與 return useContext(TasksDispatchContext)"]
+    ref: chapter7/03_context_reducer.md
+  - id: react-ch07-q08
+    difficulty: 2
+    type: choice
+    prompt: |
+      Context 搭配 Reducer 時，範例把 `tasks` 和 `dispatch` 分別放進 `TasksContext` 與 `TasksDispatchContext` 兩個 Context，而不是放進同一個。主要原因是什麼？
+    choices:
+      - "dispatch 永遠是同一個函式，分開之後只用 dispatch 的元件不會因為 tasks 更新而被迫重新渲染"
+      - "一個 Context 的 value 只能放一個值，不能放物件"
+      - "useReducer 規定 state 和 dispatch 必須由不同的 Provider 提供"
+      - "放在同一個 Context 時，dispatch 會在每次渲染變成新的函式"
+    answer: 0
+    hints: ["想想 tasks 和 dispatch 哪一個會一直變、哪一個永遠不變", "Provider 的 value 改變時，所有讀取這個 Context 的元件都會重新渲染"]
+    ref: chapter7/03_context_reducer.md
+  - id: react-ch07-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Badge.tsx 的 `Badge` 每次父元件重新渲染都會跟著渲染，就算 `label` 完全沒變。
+      請讓 `Badge` 在 props 沒變時跳過渲染，props 變了才重新渲染。保持 `export const Badge`（或 `export function Badge`）這個名稱，`renderLog` 不用動。
+    hints: ["用 memo 包住元件：export const Badge = memo(function Badge(...) { ... })", "memo 會比較新舊 props，每一項都一樣就跳過渲染"]
+    ref: chapter7/04_memo_and_compiler.md
+  - id: react-ch07-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Editor.tsx 的 `SaveButton` 已經用 `memo` 包好了，但每次按「點了 N 次」，它還是跟著重新渲染。
+      原因是 `Editor` 每次渲染都產生新的 `handleSave` 函式。請修改 `Editor`，讓 `handleSave` 在渲染之間保持同一個函式，同時按下「儲存」後畫面仍要顯示「已儲存」。
+      （這個環境沒有啟用 React Compiler，所以要自己手動處理。）
+    hints: ["用 useCallback 包住函式：useCallback(() => setSaved(true), 依賴陣列)", "setSaved 本身在渲染之間不會變，依賴陣列可以是空的 []"]
+    ref: chapter7/04_memo_and_compiler.md
+  - id: react-ch07-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      關於 React Compiler，下列敘述哪一個正確？
+    choices:
+      - "它在建置時分析元件，自動加上等同 memo、useMemo、useCallback 的最佳化"
+      - "它在瀏覽器執行時監看每次渲染，發現太慢才動態加上記憶化"
+      - "啟用之後，應該馬上把舊程式碼裡所有的 useMemo、useCallback 刪掉"
+      - "它會強制改寫不符合 React 規則的元件，讓它們也能被最佳化"
+    answer: 0
+    hints: ["想想它是「編譯器」，在什麼時候運作", "官方建議舊程式碼裡的手動記憶化先留著；遇到無法安全最佳化的元件，編譯器會直接跳過"]
+    ref: chapter7/04_memo_and_compiler.md

@@ -1,0 +1,187 @@
+lang: react
+chapter: "2"
+title: 函式與現代 JavaScript
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter2, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch02-q01
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      修改 main.ts 裡的 `ticketPrice(age, basePrice)`，讓它用 `return` **回傳**票價（函式裡不要自己 `console.log`）：
+
+      - 未滿 6 歲免費，回傳 0
+      - 65 歲以上半價
+      - 其他照原價
+      - 呼叫時沒給 `basePrice`，原價預設是 300
+
+      下面的 `console.log` 不用改。
+    expected_stdout: "0\n300\n150\n500\n450\n"
+    hints: ["沒寫 return 的函式，呼叫結果是 undefined；參數可以寫成 `basePrice = 300` 設預設值", "先處理特殊情況並提早 return：`if (age < 6) { return 0; }`、`if (age >= 65) { return basePrice / 2; }`，最後 `return basePrice;`"]
+    ref: chapter2/02_parameters_and_return.md
+
+  - id: react-ch02-q02
+    difficulty: 3
+    type: choice
+    prompt: |
+      執行下面的程式碼，會印出什麼？
+
+          const makeUser = (name) => { name: name };
+          console.log(makeUser("小明"));
+    choices:
+      - "{ name: '小明' }"
+      - "undefined"
+      - "小明"
+      - "程式出錯，丟出 TypeError"
+    answer: 1
+    hints: ["箭頭右邊緊接著 `{` 時，JavaScript 會把它當成函式內容的開頭，還是物件？", "大括號被當成函式內容，裡面沒有 return，所以回傳 undefined；要回傳物件得寫成 `({ name: name })`"]
+    ref: chapter2/03_arrow_functions.md
+
+  - id: react-ch02-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 products.js 的 `availableLabels(products)`：先挑出 `inStock` 為 true 的商品，
+      再把每一個轉成「名稱：價格 元」的字串，回傳新陣列。例如：
+
+          [ "鍵盤：1200 元", "螢幕：5000 元" ]
+
+      不能改動傳進來的陣列。
+    hints: ["先 `filter` 篩選、再 `map` 轉換，兩個可以串接", "`products.filter((product) => product.inStock)` 之後接 `.map(...)`，callback 回傳 `${product.name}：${product.price} 元` 這種樣板字串"]
+    ref: chapter2/06_filter.md
+
+  - id: react-ch02-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 cart.js 的兩個函式：
+
+      - `cartTotal(cart)`：用 `reduce` 算出每一項 `price × quantity` 的總和，空購物車是 0
+      - `allInStock(cart)`：每一項的 `stock` 都大於 0 才回傳 true（目前寫錯了）
+    hints: ["`reduce` 要給起始值 0，不然空陣列會出錯；「是不是全部都符合」用哪個方法？", "`cart.reduce((sum, item) => sum + item.price * item.quantity, 0)`；`cart.every((item) => item.stock > 0)`"]
+    ref: chapter2/07_other_array_methods.md
+
+  - id: react-ch02-q05
+    difficulty: 1
+    type: short
+    prompt: |
+      執行下面的程式碼，會印出什麼？
+
+          let a = 1;
+          let b = 2;
+          [a, b] = [b, a];
+          console.log(a, b);
+    answers: ["^2 1$", "^2,\\s?1$"]
+    hints: ["右邊先組出陣列 `[b, a]`，也就是 `[2, 1]`，再依照位置拆給左邊", "陣列解構可以交換兩個變數，印出 `2 1`"]
+    ref: chapter2/09_array_destructuring.md
+
+  - id: react-ch02-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      改寫 introduce.js 的 `introduce(user)`，回傳「名字，年齡 歲，住在城市」：
+
+      - 沒有 `age` 時年齡用 18，沒有 `city` 時城市用「未知」
+      - `age` 是 0 時要保留 0（目前的 `||` 會把 0 換成 18）
+
+      建議在參數位置直接解構並設定預設值。
+    hints: ["解構的預設值只在屬性是 undefined 時才生效，0 會被保留", "參數寫成 `{ name, age = 18, city = \"未知\" }`，函式裡直接用 `name`、`age`、`city` 組出句子"]
+    ref: chapter2/08_object_destructuring.md
+
+  - id: react-ch02-q07
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      settings.js 的 `mergeSettings(defaults, overrides)` 要回傳一個**新物件**：
+      以 `defaults` 為底，`overrides` 裡有的屬性要蓋掉 `defaults` 的同名屬性。
+      目前的寫法結果反了，請修正，而且不能改動傳進來的兩個物件。
+    hints: ["展開物件時，同名屬性「後面的贏」", "把順序對調：`return { ...defaults, ...overrides };`"]
+    ref: chapter2/10_spread.md
+
+  - id: react-ch02-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      todos.js 的三個函式現在都直接改動傳進來的陣列。請改成**不可變更新**，每個都回傳新陣列：
+
+      - `addTodo(todos, todo)`：加到最後
+      - `removeTodo(todos, id)`：刪除該 id
+      - `toggleTodo(todos, id)`：把該 id 的 `done` 反過來；被切換的那一項是新物件，其他項原樣沿用
+
+      原本的陣列和裡面的物件都不能被改到。
+    hints: ["新增用 `[...arr, item]`、刪除用 `filter`、修改用 `map`", "`todos.map((todo) => todo.id === id ? { ...todo, done: !todo.done } : todo)`"]
+    ref: chapter2/11_immutable_updates.md
+
+  - id: react-ch02-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      students.js 的 `updateEnglish(students, id, score)` 要回傳新陣列，把該學生的 `scores.english` 改成 `score`。
+      目前的寫法只複製了外層，結果連原本的 `students` 也被改到。請修正：
+      原本的資料（包含 `scores` 物件）都不能變，其他學生原樣沿用同一個物件。
+    hints: ["展開只複製最外層；從要改的那一層一路往外，每一層都要複製", "`{ ...student, scores: { ...student.scores, english: score } }`，搭配 `map` 和三元運算子"]
+    ref: chapter2/16_practice.md
+
+  - id: react-ch02-q10
+    difficulty: 2
+    type: choice
+    prompt: |
+      執行下面的程式碼，會印出什麼？
+
+          const count = 0;
+          const name = "";
+          console.log(count || 10, count ?? 10);
+          console.log(name || "匿名", name ?? "匿名");
+    choices:
+      - "第一行 10 10，第二行 匿名 匿名"
+      - "第一行 0 0，第二行 （空字串） （空字串）"
+      - "第一行 10 0，第二行 匿名 （空字串）"
+      - "第一行 0 10，第二行 （空字串） 匿名"
+    answer: 2
+    hints: ["`||` 遇到任何假值都會改用右邊；`??` 只在 null 或 undefined 時才用右邊", "0 和空字串都是假值，所以 `||` 換成預設值，`??` 則保留原值：印出 `10 0` 和 `匿名` 加空字串"]
+    ref: chapter2/12_optional_chaining_nullish.md
+
+  - id: react-ch02-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      修正 city.js 的 `getCity(user)`：回傳 `user.address.city`；
+      若 `user` 本身、`address` 或 `city` 不存在（undefined 或 null），回傳「未填寫」，而且不能出錯。
+      `city` 是空字串時要保留空字串。
+    hints: ["用 `?.` 安全地往下讀，用 `??` 給預設值；`||` 會把空字串也換掉", "`return user?.address?.city ?? \"未填寫\";`"]
+    ref: chapter2/12_optional_chaining_nullish.md
+
+  - id: react-ch02-q12
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 用這一行匯入 tools.ts（main.ts 不用改）：
+
+          import hello, { add as sum, VERSION } from "./tools.ts";
+
+      請修改 tools.ts，讓 `greet` 成為**預設匯出**，`add` 和 `VERSION` 成為**具名匯出**，
+      `secret` 維持不匯出。完成後執行 main.ts 應該正常印出結果。
+    expected_stdout: "tools 載入完成\n你好，小明！\n7\n版本 1.0\n"
+    hints: ["預設匯出用 `export default`，匯入時名字可以自己取；具名匯出在宣告前加 `export`", "`export default function greet(name) { ... }`、`export function add(a, b) { ... }`、`export const VERSION = \"1.0\";`"]
+    ref: chapter2/13_import_export.md
+
+  - id: react-ch02-q13
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 user.js 的兩個 async 函式：
+
+      - `loadUser(url)`：`fetch` 該網址；`response.ok` 為 false 時丟出 Error，訊息是「伺服器回應失敗：狀態碼」（例如「伺服器回應失敗：404」），成功時回傳 JSON 轉好的物件
+      - `loadUserName(url)`：呼叫 `loadUser` 並回傳名字；失敗時不丟出錯誤，改成回傳「抓資料失敗：錯誤訊息」
+    hints: ["`response.json()` 要加小括號呼叫，而且要 `await`；`loadUser` 是 async 函式，呼叫它也要 `await`", "`loadUser` 裡先 `if (!response.ok)` 就 `throw new Error(...)`，訊息帶入 `response.status`；`loadUserName` 用 `try...catch`，在 catch 裡回傳 \"抓資料失敗：\" + error.message"]
+    ref: chapter2/15_fetch_json.md

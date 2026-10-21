@@ -1,0 +1,230 @@
+lang: typescript
+chapter: ""
+title: 附錄
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/appendix, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  # ── 看得懂 enum ──
+  - id: ts-ap-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      舊程式碼裡有一個字串列舉：
+
+          enum Status {
+            Active = "active",
+            Inactive = "inactive",
+          }
+
+      在 status.ts 把它改寫成 **as const 物件** `Status`，並 export 函式 `describe(status)`：
+      傳入 `"active"` 回傳 `"使用中"`，否則回傳 `"已停用"`。改寫後直接傳字串 `describe("inactive")` 也要能用。
+    hints:
+      - "const Status = { Active: \"active\", Inactive: \"inactive\" } as const"
+      - "型別可以寫 type Status = (typeof Status)[keyof typeof Status]，describe 裡用 status === Status.Active 判斷"
+    ref: appendix/a_enum.md
+
+  - id: ts-ap-q02
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式碼用 `tsc` 轉成 JavaScript 再執行，會印出什麼？
+
+          enum Direction {
+            Up,
+            Down,
+            Left,
+            Right,
+          }
+
+          console.log(Direction.Left, Direction[1]);
+    choices:
+      - "2 Down"
+      - "3 Up"
+      - "Left Down"
+      - "2 undefined"
+    answer: 0
+    hints:
+      - "沒有指定值的數字列舉從 0 開始依序編號"
+      - "數字列舉可以反向對應：用數字查回名字"
+    ref: appendix/a_enum.md
+
+  - id: ts-ap-q03
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      數字列舉的「反向對應」可以用數字查回名字，但 as const 物件沒有這個功能。
+      main.ts 已經有改寫好的 `Direction` 物件，請完成 `directionName(value)`：
+      找出值等於 `value` 的屬性名稱並回傳，找不到就回傳 `undefined`。
+      完成後執行會印出 `2`、`Left`、`undefined` 三行。
+    expected_stdout: "2\nLeft\nundefined\n"
+    hints:
+      - "Object.keys(Direction) 拿到所有名字，再用 find 找出對應的那一個"
+      - "Direction[key as keyof typeof Direction] === value"
+    ref: appendix/a_enum.md
+
+  # ── 看得懂 namespace ──
+  - id: ts-ap-q04
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      舊程式碼用 `namespace` 包起來：
+
+          namespace Geometry {
+            export const PI = 3.14;
+            export function circleArea(radius: number) {
+              return PI * radius * radius;
+            }
+          }
+
+      把它改寫成現在的寫法：geometry.ts 這個檔案本身就是模組，直接 export `PI` 和 `circleArea`。
+    hints:
+      - "一個檔案就是一個模組，不用再包 namespace"
+      - "export const PI = 3.14，circleArea 回傳 PI * radius * radius"
+    ref: appendix/b_namespace.md
+
+  - id: ts-ap-q05
+    difficulty: 2
+    type: choice
+    prompt: |
+      在開了 `erasableSyntaxOnly` 的專案裡，下面哪一段 **可以** 通過 `npx tsc`，也能讓 Node.js 直接執行？
+    choices:
+      - "namespace Shapes { export type Circle = { radius: number }; }"
+      - "namespace Geometry { export const PI = 3.14; }"
+      - "enum Size { Small = \"S\", Large = \"L\" }"
+      - "class Point { constructor(public x: number) {} }"
+    answer: 0
+    hints:
+      - "要能直接執行，語法必須是「拿掉型別就好」，不能產生新的程式碼"
+      - "只有型別的 namespace 拿掉之後什麼都不剩"
+    ref: appendix/b_namespace.md
+
+  # ── 看得懂參數屬性 ──
+  - id: ts-ap-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      舊程式碼用了參數屬性：
+
+          class Account {
+            constructor(
+              public readonly owner: string,
+              private balance: number,
+            ) {}
+            deposit(amount: number) {
+              this.balance += amount;
+              return this.balance;
+            }
+          }
+
+      account.ts 已經先宣告好屬性，請補完建構子和 `deposit`，讓它的行為和上面完全一樣：
+      `new Account("小明", 100)` 的 `owner` 是 `"小明"`，`deposit(50)` 回傳 `150`。
+    hints:
+      - "每個參數屬性都等於「宣告屬性 + 在建構子裡 this.名稱 = 名稱」"
+      - "deposit 裡寫 this.balance += amount，再 return this.balance"
+    ref: appendix/c_parameter_properties.md
+
+  - id: ts-ap-q07
+    difficulty: 1
+    type: short
+    prompt: |
+      在建構子的參數前面加上 `public`、`private`、`protected` 或 `readonly`，
+      這個參數就會自動變成同名的屬性。這種寫法叫什麼？（中文或英文都可以）
+    answers:
+      - "^參數屬性$"
+      - "^parameter[ -]?propert(y|ies)$"
+    hints:
+      - "名字由「參數」和「屬性」兩個詞組成"
+      - "英文是 parameter property"
+    ref: appendix/c_parameter_properties.md
+
+  # ── 用 Zod 做執行期驗證 ──
+  - id: ts-ap-q08
+    difficulty: 2
+    type: short
+    prompt: |
+      已經有一個 Zod 結構描述：
+
+          const User = z.object({ name: z.string(), age: z.number() });
+
+      要從它推出 TypeScript 型別，`type User = ` 後面要寫什麼？
+    answers:
+      - "^z\\.infer ?< ?typeof user ?> ?;?$"
+    hints:
+      - "先用 typeof 拿到 User 這個值的型別"
+      - "再交給 z.infer 轉換，用角括號包起來"
+    ref: appendix/d_zod.md
+
+  - id: ts-ap-q09
+    difficulty: 2
+    type: choice
+    prompt: |
+      `const Settings = z.object({ theme: z.string() });`
+      執行 `Settings.parse({ theme: 42 })` 會發生什麼事？
+    choices:
+      - "丟出 ZodError，要用 try...catch 接住"
+      - "回傳 { success: false, error }"
+      - "回傳 undefined"
+      - "自動把 42 轉成字串 \"42\" 再回傳"
+    answer: 0
+    hints:
+      - "parse 和 safeParse 處理不合格資料的方式不一樣"
+      - "回傳 success 的可辨識聯集是 safeParse；parse 不合格就丟出錯誤"
+    ref: appendix/d_zod.md
+
+  - id: ts-ap-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      不用安裝 Zod，自己寫一個像 `safeParse` 的驗證函式。在 product.ts 完成 `checkProduct(input: unknown)`：
+
+      - `id` 正整數、`name` 至少一個字的字串、`price` 大於等於 0 的數字、
+        `tags` 字串陣列、`status` 只能是 `"draft"` 或 `"published"`。
+      - 全部合格回傳 `{ success: true, data }`。
+      - 有問題回傳 `{ success: false, issues }`，`issues` 每個元素是 `{ path, message }`，
+        `path` 是屬性名稱、`message` 是不能空白的說明。
+      - 像 Zod 一樣 **一次檢查完全部的屬性**，依 id、name、price、tags、status 的順序列出所有問題，不能碰到第一個錯就停。
+      - `input` 不是物件（或是 `null`）時，回傳只有一個問題、`path` 為空字串 `""`。
+    hints:
+      - "先建立 const issues: Issue[] = []，每個屬性檢查不合格就 push 一筆，最後看 issues.length"
+      - "正整數用 Number.isInteger(id) && id > 0；字串陣列用 Array.isArray(tags) && tags.every((tag) => typeof tag === \"string\")"
+    ref: appendix/d_zod.md
+
+  # ── Vitest 簡介 ──
+  - id: ts-ap-q11
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      price.ts 的型別都對，但隱藏的 Vitest 測試沒過。修正兩個函式：
+
+      - `addTax(price)` 加上 5% 的稅並四捨五入，`addTax(100)` 是 `105`。
+      - `parsePrice(text)` 看得懂數字就回傳數字，看不懂（例如 `"一百"`）回傳 `null`。
+    hints:
+      - "5% 的稅是乘上 1.05，不是 1.5"
+      - "Number(\"一百\") 會得到 NaN，用 Number.isNaN 判斷後回傳 null"
+    ref: appendix/e_vitest.md
+
+  - id: ts-ap-q12
+    difficulty: 3
+    type: choice
+    prompt: |
+      測試檔裡有這一行，而 `parsePrice` 的回傳型別其實是 `number | null`：
+
+          expectTypeOf(parsePrice).returns.toEqualTypeOf<number>();
+
+      分別執行 `npx vitest run` 和 `npx tsc`，結果會是？
+    choices:
+      - "vitest run 顯示全部通過；tsc 回報型別錯誤"
+      - "vitest run 顯示這個測試失敗；tsc 沒有錯誤"
+      - "兩個指令都會回報錯誤"
+      - "兩個指令都不會回報錯誤"
+    answer: 0
+    hints:
+      - "型別在執行時已經不存在了"
+      - "vitest run 不檢查型別，型別測試要靠 tsc 來抓"
+    ref: appendix/e_vitest.md

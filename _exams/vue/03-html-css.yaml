@@ -1,0 +1,203 @@
+# 第 3 章 HTML 與 CSS：以 HTML／CSS 觀念為主，程式題用 jsdom 檢查結構與計算後的樣式
+lang: vue
+chapter: "3"
+title: HTML 與 CSS
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter3, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch03-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `index.html` 少了網頁骨架的幾個部分。把它補完整：
+
+      - 第一行加上 `<!DOCTYPE html>`
+      - `<html>` 標明這是繁體中文網頁（`lang="zh-TW"`）
+      - `<head>` 裡指定文字編碼 UTF-8，並把分頁標題設成「我的第一個網頁」
+
+      `<body>` 裡原本的標題和段落要保留。
+    hints: ["文字編碼用 `<meta charset=\"UTF-8\" />`，分頁標題用 `<title>`，兩個都放在 `<head>`", "`<html lang=\"zh-TW\">`；`<head>` 裡寫 `<meta charset=\"UTF-8\" />` 和 `<title>我的第一個網頁</title>`"]
+    ref: chapter3/01_html_structure.md
+  - id: vue-ch03-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面哪一組標籤**全部**都是「行內」元素（只佔內容的寬度，不會自己換行）？
+    choices:
+      - "`<p>`、`<h1>`、`<div>`"
+      - "`<a>`、`<strong>`、`<span>`"
+      - "`<ul>`、`<li>`、`<span>`"
+      - "`<div>`、`<img>`、`<a>`"
+    answer: 1
+    hints: ["`<div>` 是區塊，`<span>` 是行內", "段落、標題、清單、`<div>` 都會自己獨佔一整行"]
+    ref: chapter3/02_common_tags.md
+  - id: vue-ch03-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      修改 `index.html` 的 `<body>`：
+
+      1. 三個 `<div>` 依角色換成 `<header>`、`<main>`、`<footer>`
+      2. 圖片加上文字說明（不是空字串的 `alt`）
+      3. 維基百科的連結改成在新分頁開啟
+      4. 「送出」按鈕停用，讓它按不下去
+
+      `src`、`href` 和文字內容保持不變。
+    hints: ["新分頁用 `target` 屬性；讓按鈕不能按的是一個不用寫值的布林屬性", "`<a href=\"...\" target=\"_blank\">`、`<button disabled>`、`<img src=\"apple.jpg\" alt=\"一顆紅色的蘋果\" />`"]
+    ref: chapter3/03_attributes.md
+  - id: vue-ch03-q04
+    difficulty: 1
+    type: short
+    prompt: |
+      `class` 和 `id` 都能用在任何標籤上。其中哪一個是元素「獨一無二的名字」，整個頁面裡同一個值只能出現一次？（填屬性名稱）
+    answers: ["^id$", "^id ?屬性$"]
+    hints: ["另一個是用來把元素分組的，可以重複、也可以一次寫好幾個", "CSS 裡選它要在名稱前面加 `#`"]
+    ref: chapter3/03_attributes.md
+  - id: vue-ch03-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `index.html` 是一份報名表，但有幾個問題，請修好：
+
+      - 每個 `<input>` 和 `<select>` 都要有關聯的 `<label>`（點文字就會選到它）
+      - 「信箱」輸入框要用信箱專用的 `type`
+      - 「小」「中」兩個 radio 要變成同一組，`name` 都是 `size`，`value` 維持 `s`、`m`
+      - 「我同意活動辦法」的勾選框，點文字就能打勾
+
+      `id`、`<option>` 和送出按鈕保持原樣。
+    hints: ["`<label>` 的 `for` 要和輸入框的 `id` 一樣；也可以直接把輸入框包在 `<label>` 裡", "`<label for=\"user-name\">`、`<label for=\"user-email\">` 配 `type=\"email\"`；`<label><input type=\"radio\" name=\"size\" value=\"s\" /> 小</label>`"]
+    ref: chapter3/04_form_elements.md
+  - id: vue-ch03-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      修改 `style.css`，讓樣式套用到對的元素上：
+
+      - 所有 `<p>` 是 `gray`
+      - 有 `class="warning"` 的元素是 `red`
+      - `id="footer"` 的元素字體大小是 `12px`
+      - **只有** `<nav>` 裡面的 `<a>` 是 `white`，其他連結不受影響
+      - `<h1>` 和 `<h2>` 都是 `navy`
+    hints: ["class 選擇器前面加點 `.`，id 選擇器前面加 `#`；空格表示「在裡面的」，逗號表示「兩個都套用」", "`.warning`、`#footer`、`nav a`、`h1, h2`"]
+    ref: chapter3/05_css_selectors.md
+  - id: vue-ch03-q07
+    difficulty: 3
+    type: choice
+    prompt: |
+      樣式表裡依序有這三條規則：
+
+          p {
+            color: gray;
+          }
+
+          .warning {
+            color: red;
+          }
+
+          p {
+            color: blue;
+          }
+
+      `<p class="warning">注意</p>` 的文字會是什麼顏色？
+    choices:
+      - "gray"
+      - "red"
+      - "blue"
+      - "瀏覽器預設的黑色，因為規則互相衝突"
+    answer: 1
+    hints: ["衝突時先比「誰比較具體」，一樣具體才看誰寫在後面", "class 選擇器比標籤選擇器具體，所以不管 `p { color: blue; }` 寫在多後面都蓋不過它"]
+    ref: chapter3/05_css_selectors.md
+  - id: vue-ch03-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      修改 `style.css`：
+
+      - 讓**所有元素**的 `width` 都包含 padding 和 border
+      - `.card` 寬度維持 `300px`
+      - `.card` 內距上下 `10px`、左右 `20px`
+      - `.card` 邊框是 `2px` 實線、橘色（`orange`）
+      - `.card` 上下外距 0，並且水平置中
+    hints: ["萬用選擇器 `*` 搭配 `box-sizing`；簡寫兩個值是「上下 左右」；`border` 依序寫粗細、樣式、顏色", "`* { box-sizing: border-box; }`，`.card` 寫 `padding: 10px 20px;`、`border: 2px solid orange;`、`margin: 0 auto;`"]
+    ref: chapter3/06_box_model.md
+  - id: vue-ch03-q09
+    difficulty: 2
+    type: short
+    prompt: |
+      沒有設定 `box-sizing` 的情況下，這個盒子在畫面上實際佔多寬？（填數字，單位是像素）
+
+          .box {
+            width: 200px;
+            padding: 20px;
+            border: 2px solid orange;
+          }
+    answers: ["^244 ?(px|像素)?$"]
+    hints: ["預設 `width` 只是內容的寬度，左右的 padding 和 border 會另外加上去", "200 + 20×2 + 2×2"]
+    ref: chapter3/06_box_model.md
+  - id: vue-ch03-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `style.css` 是一條導覽列的樣式（HTML 結構是 `nav.navbar` 裡有 `span.logo` 和 `div.links`，`div.links` 裡有三個 `<a>`）。修改它：
+
+      - `.navbar`：logo 貼左、連結區貼右，兩者垂直置中
+      - `.links`：三個連結排成一列，項目間距 `16px`
+      - `.links a`：拿掉連結的底線
+    hints: ["兩層 Flexbox：外層用 `justify-content` 和 `align-items`，內層用 `display: flex` 和 `gap`", "`.navbar` 加 `justify-content: space-between; align-items: center;`，`.links` 加 `display: flex; gap: 16px;`，`.links a` 加 `text-decoration: none;`"]
+    ref: chapter3/07_flexbox.md
+  - id: vue-ch03-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      一個 flex 容器的設定如下：
+
+          .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 300px;
+          }
+
+      `justify-content: center` 會讓裡面的項目在哪個方向置中？
+    choices:
+      - "左右（水平方向）"
+      - "上下（垂直方向）"
+      - "水平和垂直兩個方向都置中"
+      - "沒有效果，`justify-content` 只能用在 `row`"
+    answer: 1
+    hints: ["`justify-content` 控制的是沿著「主軸」的對齊", "`flex-direction: column` 讓主軸變成由上到下"]
+    ref: chapter3/07_flexbox.md
+  - id: vue-ch03-q12
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `todo.js` 是只用 JavaScript 操作 DOM 的待辦清單。`addTodo` 已經能用，但 `removeTodo` 只刪了陣列裡的資料，畫面沒有跟著變。
+
+      完成 `removeTodo(index)`，刪掉資料後同步畫面：
+
+      - 把 `#list` 裡對應的 `<li>` 拿掉
+      - `#summary` 更新成「共 N 項」
+      - 清單空了就重新顯示 `#empty`
+      - `index` 超出範圍時什麼都不做
+    hints: ["`list.children[index]` 是第 index 個 `<li>`，`.remove()` 把它從 DOM 拿掉；`hidden = false` 會讓元素重新出現", "先 `if (index >= todos.length) return;`，再 `splice`、`list.children[index].remove()`、更新 `summary.textContent`，最後 `todos.length === 0` 時設 `emptyMessage.hidden = false`"]
+    ref: chapter3/08_dom_and_why_vue.md
+  - id: vue-ch03-q13
+    difficulty: 1
+    type: choice
+    prompt: |
+      和「只用 JavaScript 操作 DOM」相比，Vue 的主要想法是什麼？
+    choices:
+      - "讓程式一定寫得比較短"
+      - "你描述「資料長這樣時畫面該長怎樣」，資料一變，由 Vue 負責去改 DOM"
+      - "Vue 不使用 DOM，畫面直接由 JavaScript 陣列畫出來"
+      - "每次資料變了，你要自己呼叫 `querySelector` 通知 Vue 更新"
+    answer: 1
+    hints: ["想想 `畫面 = 模板(資料)` 這個公式", "Vue 的兩個核心是宣告式模板和響應式資料，同步畫面的工作不用你做"]
+    ref: chapter3/08_dom_and_why_vue.md

@@ -1,0 +1,14 @@
+.card {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.price {
+  color: crimson;
+  font-weight: bold;
+}
+
+.soldOut {
+  opacity: 0.4;
+}

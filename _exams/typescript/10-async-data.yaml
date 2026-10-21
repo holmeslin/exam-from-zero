@@ -1,0 +1,166 @@
+lang: typescript
+chapter: "10"
+title: 非同步與外部資料
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter10, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  - id: ts-ch10-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      用 Node.js 執行下面的程式碼，會印出什麼？
+
+          async function getPrice(): Promise<number> {
+            return 100;
+          }
+
+          const price = getPrice();
+          console.log(price + 1);
+    choices:
+      - "101"
+      - "[object Promise]1"
+      - "NaN"
+      - "程式丟出 TypeError 並停止執行"
+    answer: 1
+    hints:
+      - "少了 `await`，`price` 拿到的是什麼？"
+      - "`Promise` 物件加上 `1`，JavaScript 會先把它轉成字串 `\"[object Promise]\"`"
+    ref: chapter10/01_async_functions.md
+  - id: ts-ch10-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      cart.ts 的 `totalPrice(items)` 要把每個商品的價格加總，回傳 `Promise<number>`。
+      但現在 `await totalPrice(['pen', 'book'])` 拿到的是一串奇怪的字串，而不是 `60`。
+      找出問題並修正。
+    hints:
+      - "`getPrice` 是 `async` 函式，呼叫它拿到的是 `Promise<number>`"
+      - "把 `const price = getPrice(item)` 改成 `const price = await getPrice(item)`"
+    ref: chapter10/01_async_functions.md
+  - id: ts-ch10-q03
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      profile.ts 的 `loadProfile(getName, getAge)` 會呼叫兩個互不相關的非同步函式，回傳「小明 今年 20 歲」這樣的字串。
+      現在的寫法結果正確，但是一個一個 `await`，花了兩倍的時間。
+      改成讓兩件工作同時開始，等全部完成後再組合結果。
+    hints:
+      - "`Promise.all` 收一個裝著 `Promise` 的陣列，結果照原本的順序放在陣列裡"
+      - "`const [name, age] = await Promise.all([getName(), getAge()])`"
+    ref: chapter10/02_promise_all.md
+  - id: ts-ch10-q04
+    difficulty: 1
+    type: choice
+    prompt: |
+      `await Promise.all([a(), b(), c()])` 執行時，`b()` 回傳的 `Promise` 失敗了，`a()` 和 `c()` 都成功。結果會是什麼？
+    choices:
+      - "拿到 `[a 的結果, undefined, c 的結果]`"
+      - "拿到 `[a 的結果, c 的結果]`，失敗的會被略過"
+      - "整個 `Promise.all` 失敗，其他的結果都拿不到"
+      - "`Promise.all` 會自動重試 `b()` 直到成功"
+    answer: 2
+    hints:
+      - "第 2 集「一個失敗，全部失敗」"
+      - "只要其中一個 `Promise` 失敗，整個 `Promise.all` 就算失敗，要用 `try...catch` 接住"
+    ref: chapter10/02_promise_all.md
+  - id: ts-ch10-q05
+    difficulty: 2
+    type: short
+    prompt: |
+      下面的程式碼 `npx tsc` 沒有報錯。用 Node.js 執行，會印出什麼？
+
+          type User = { name: string; age: number };
+
+          const user = JSON.parse('{ "name": "小明" }') as User;
+          console.log(user.age + 1);
+    answers:
+      - "^nan$"
+    hints:
+      - "`as User` 不會真的檢查資料，字串裡有沒有 `age`？"
+      - "`user.age` 是 `undefined`，`undefined + 1` 的結果是什麼？"
+    ref: chapter10/03_json_parse_any.md
+  - id: ts-ch10-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 name.ts 完成 `getName(data: unknown): string | undefined`：
+      `data` 是物件、有 `name` 屬性，而且 `name` 是字串時，回傳 `name`；其他情況一律回傳 `undefined`。
+      現在的寫法傳入 `null` 會讓程式當掉，`name` 是數字時也會照樣回傳。不要用 `as`，改用型別縮小一層一層確認。
+    hints:
+      - "`typeof null` 的結果也是 `\"object\"`，要再加上 `data !== null`"
+      - "條件依序是 `typeof data === 'object' && data !== null && 'name' in data && typeof data.name === 'string'`"
+    ref: chapter10/04_unknown_data.md
+  - id: ts-ch10-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 user.ts 完成型別守衛 `isUser(value: unknown): value is User`，`User` 是 `{ name: string; age: number }`。
+      只有 `name` 是字串、`age` 是數字時才回傳 `true`；少了屬性、型別不對、`null` 都要回傳 `false`。
+    hints:
+      - "每個屬性都要檢查兩件事：用 `in` 確認存在，再用 `typeof` 確認型別"
+      - "`'name' in value && typeof value.name === 'string' && 'age' in value && typeof value.age === 'number'`"
+    ref: chapter10/05_validation_functions.md
+  - id: ts-ch10-q08
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 從標準輸入讀進一個商品陣列（JSON），但資料不太乾淨：有的 `price` 是字串，有的少了 `name`。
+      完成 `isProduct`（`id` 是數字、`name` 是字串、`price` 是數字），並只留下合格的商品：
+
+      - 有不合格的資料時，先印出「略過 N 筆格式不對的資料」
+      - 每個合格商品印一行「名稱：價格 元」
+      - 最後印出「合計：總額 元」
+
+      全程不能用 `any` 和 `as`。
+    stdin: "[{\"id\":1,\"name\":\"筆記本\",\"price\":45},{\"id\":2,\"name\":\"原子筆\",\"price\":\"15\"},{\"id\":3,\"name\":\"橡皮擦\",\"price\":10},{\"id\":4,\"price\":30},{\"id\":5,\"name\":\"尺\",\"price\":20}]\n"
+    expected_stdout: "略過 2 筆格式不對的資料\n筆記本：45 元\n橡皮擦：10 元\n尺：20 元\n合計：75 元\n"
+    hints:
+      - "`Array.isArray` 之後元素是 `any`，要用 `data.filter(isProduct)` 留下合格的商品；略過的筆數是原本長度減掉合格數量"
+      - "`isProduct` 照 `isUser` 的寫法，`id`、`name`、`price` 各用 `in` 和 `typeof` 檢查一次"
+    ref: chapter10/08_practice.md
+  - id: ts-ch10-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 load-user.ts 完成 `async function loadUser(res: Response): Promise<User>`，加上兩道關卡：
+
+      - `res.ok` 是 `false` 時，丟出 `new Error('伺服器回應 狀態碼')`，例如「伺服器回應 404」
+      - `res.json()` 的結果放進 `unknown`，不符合 `isUser` 時丟出 `new Error('資料格式不對')`
+
+      兩道關卡都通過才回傳資料。
+    hints:
+      - "狀態碼不正常時不要去讀內容，先檢查 `res.ok`，錯誤訊息用 `` `伺服器回應 ${res.status}` ``"
+      - "`const data: unknown = await res.json()`，再寫 `if (!isUser(data)) throw new Error('資料格式不對')`"
+    ref: chapter10/06_fetch.md
+  - id: ts-ch10-q10
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      在 describe-error.ts 完成 `describeError(error: unknown): string`，給 `catch` 用來讀出錯誤訊息：
+      是 `Error` 物件就回傳它的 `message`；不是的話（例如 `throw '出事了'`），把它轉成文字回傳。
+    hints:
+      - "用 `error instanceof Error` 把型別縮小成 `Error`，才能讀 `message`"
+      - "不是 `Error` 的情況，回傳 `String(error)`"
+    ref: chapter10/07_catch_unknown.md
+  - id: ts-ch10-q11
+    difficulty: 1
+    type: choice
+    prompt: |
+      在 `"strict": true` 之下，`try...catch` 的 `catch (error)` 裡，`error` 的型別是什麼？為什麼？
+    choices:
+      - "`Error`，因為 `throw` 只能丟 `Error` 物件"
+      - "`unknown`，因為 `throw` 什麼都能丟，TypeScript 不知道會是什麼"
+      - "`any`，而且不能另外標成其他型別"
+      - "`string`，因為錯誤最後都會轉成錯誤訊息"
+    answer: 1
+    hints:
+      - "`throw \"出事了\"` 丟出去的是字串，字串有 `message` 嗎？"
+      - "`catch` 的變數只能標成 `any` 或 `unknown`；strict 模式下預設是 `unknown`，要用 `instanceof Error` 縮小"
+    ref: chapter10/07_catch_unknown.md

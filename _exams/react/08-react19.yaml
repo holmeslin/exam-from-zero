@@ -1,0 +1,136 @@
+lang: react
+chapter: "8"
+title: React 19 的新功能
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter8, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch08-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      MessageBoard 有一個表單和一份訊息清單。請用 React 19 的 `<form action={函式}>` 處理送出：
+      從 `formData` 讀出名字叫 `text` 的欄位，把它加進 `messages`。
+      不要寫 `onSubmit` 或 `preventDefault`，輸入框也不用建立 state（送出後 React 會自動清空它）。
+    hints: ["把 addMessage 傳給 <form> 的 action 屬性", "用 formData.get('text') 讀值，再 setMessages([...messages, { id: nextId++, text }])"]
+    ref: chapter8/01_form_action.md
+  - id: react-ch08-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      用 `useActionState` 完成 NameForm：
+      - 實作 `saveName(previousState, formData)`：名字（去掉頭尾空白）是空的，回傳 `{ name: 舊的名字, error: '名字不能是空的' }`；否則回傳 `{ name, error: null }`。
+      - 在 NameForm 裡呼叫 `useActionState(saveName, initialState)`，把拿到的 state 拿來顯示，formAction 交給 `<form action>`。
+      預期中的錯誤用**回傳值**放進 state，不要 throw。
+    hints: ["const [state, formAction] = useActionState(saveName, initialState)，再寫 <form action={formAction}>", "在 saveName 裡用 (formData.get('name') as string).trim() 取值，空字串就 return { name: previousState.name, error: '名字不能是空的' }"]
+    ref: chapter8/02_use_action_state.md
+  - id: react-ch08-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      SubmitButton 是放在各種 `<form>` 裡共用的送出按鈕，不接收任何 props。
+      請讓它在所在的表單送出中時停用（`disabled`），文字顯示「送出中……」；不在送出時顯示「送出」。
+    hints: ["useFormStatus 是從 react-dom 匯入的，不是 react", "const { pending } = useFormStatus()，它只看得到上層的 <form>，所以要在表單的子元件裡呼叫"]
+    ref: chapter8/03_use_form_status.md
+  - id: react-ch08-q04
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Chat 現在要等 `send(text)` 回應後才把訊息加進清單，網路一慢就覺得卡。
+      請用 `useOptimistic` 做樂觀更新：
+      - 送出時，清單**立刻**多出這一筆，後面帶「（傳送中……）」（樂觀的那一筆加上 `sending: true`）。
+      - 成功後變成正常訊息；失敗時樂觀的那一筆自動消失，並顯示錯誤訊息。
+      清單要改成畫出樂觀的版本。
+    hints: ["const [optimisticMessages, addOptimisticMessage] = useOptimistic(messages, (current, text) => [...current, { id: `sending-${text}`, text, sending: true }])", "在 sendMessage 裡 await 之前呼叫 addOptimisticMessage(text)，並把 <ul> 改成 optimisticMessages.map(...)；失敗時不用自己還原"]
+    ref: chapter8/04_use_optimistic.md
+  - id: react-ch08-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      UserCard 用 `use(loadUser(id))` 讀取使用者，但現在畫面永遠卡在「載入中……」。
+      原因是 `loadUser` 每次都建立新的 Promise。請修改 `loadUser`，用檔案裡的 `cache`（一個 Map）
+      讓同樣的 id 永遠回傳同一個 Promise。
+    hints: ["每次渲染都會重新執行 use(loadUser(id))，傳給 use 的 Promise 在渲染之間必須是同一個", "if (!cache.has(id)) cache.set(id, fetchUser(id)); return cache.get(id)!"]
+    ref: chapter8/05_use.md
+  - id: react-ch08-q06
+    difficulty: 1
+    type: choice
+    prompt: |
+      Albums 的資料要 0.5 秒，Friends 的資料要 2 秒，兩者都用 `use` 讀取，並放在**同一個** Suspense 裡：
+
+          <Suspense fallback={<p>載入中……</p>}>
+            <Albums />
+            <Friends />
+          </Suspense>
+
+      頁面載入後第 1 秒，畫面上這個區塊顯示什麼？
+    choices:
+      - "專輯，以及 Friends 自己的載入中畫面"
+      - "只有「載入中……」，要等兩者都好了才一起出現"
+      - "專輯，Friends 的位置先空白"
+      - "什麼都沒有，要等 2 秒後整個畫面才出現"
+    answer: 1
+    hints: ["同一個邊界裡只要有任何一個元件還在等，就會顯示 fallback", "想讓專輯先出現，要各自用一個 <Suspense> 包起來"]
+    ref: chapter8/06_suspense.md
+  - id: react-ch08-q07
+    difficulty: 2
+    type: choice
+    prompt: |
+      用 `react-error-boundary` 的 `<ErrorBoundary>` 包住一個區塊。下面哪一種錯誤，錯誤邊界**接不到**，要自己用 `try`/`catch` 處理？
+    choices:
+      - "元件渲染時，`use` 讀的 Promise 失敗而丟出的錯誤"
+      - "子元件在渲染時存取 undefined 的屬性而丟出的錯誤"
+      - "按鈕的 onClick 處理函式裡 fetch 失敗丟出的錯誤"
+      - "孫元件在渲染時 throw new Error(...)"
+    answer: 2
+    hints: ["錯誤邊界只負責「渲染過程」中丟出的錯誤", "事件處理函式不是在渲染時執行的"]
+    ref: chapter8/07_error_boundary.md
+  - id: react-ch08-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Tabs 的每個分頁內容都用 `use` 讀取，切換時要等資料。現在一按其他分頁，舊內容馬上被換成「載入中……」，很突兀。
+      請用 `useTransition` 修改：切換分頁時保留舊內容，切換進行中在按鈕下方顯示 `<p>切換中……</p>`，載入完成後一次換成新內容、「切換中……」消失。
+    hints: ["const [isPending, startTransition] = useTransition()", "selectTab 裡寫 startTransition(() => setTab(name))，再用 {isPending && <p>切換中……</p>} 顯示提示"]
+    ref: chapter8/08_use_transition.md
+  - id: react-ch08-q09
+    difficulty: 2
+    type: short
+    prompt: |
+      搜尋結果元件從 props 拿到 `query`，你沒辦法修改更新 `query` 的那一行 `setState`。
+      想讓輸入框照樣即時更新、搜尋結果先保留舊畫面等新結果準備好再換，應該用哪一個 Hook？（只填 Hook 名稱）
+    answers: ["^`?usedeferredvalue(\\(\\))?`?$", "^`?react\\.usedeferredvalue(\\(\\))?`?$"]
+    hints: ["能包住 setState 用 useTransition；只拿到值的時候用另一個", "它回傳值的「延遲版本」：use_____Value"]
+    ref: chapter8/09_use_deferred_value.md
+  - id: react-ch08-q10
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      父元件會寫 `<MyInput placeholder="你的名字" ref={inputRef} />`，再用 `inputRef.current.focus()` 聚焦。
+      請修改 MyInput，讓 `ref` 指到它裡面的 `<input>`。React 19 不需要 `forwardRef`。
+    hints: ["React 19 的函式元件可以像其他 props 一樣，直接在參數裡解構出 ref", "function MyInput({ placeholder, ref }) { return <input placeholder={placeholder} ref={ref} /> }"]
+    ref: chapter8/10_ref_as_prop.md
+  - id: react-ch08-q11
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      讓 BlogPost 顯示時，瀏覽器分頁的標題是 `post.title`，`<head>` 裡的 `<meta name="description">` 內容是 `post.summary`。
+      不要用 useEffect 或 `document.title`，直接在 JSX 裡寫。
+    hints: ["React 19 會把元件裡的 <title> 和 <meta> 自動搬到 <head>", "在 <article> 裡加上 <title>{post.title}</title> 與 <meta name=\"description\" content={post.summary} />"]
+    ref: chapter8/11_title_and_meta.md
+  - id: react-ch08-q12
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Mailbox 用條件渲染切換「收件匣」和「草稿」，切到收件匣再切回來，草稿打到一半的內容就不見了。
+      請改用 `<Activity>`，讓切走時草稿只是藏起來、state 保留下來。
+    hints: ["從 react 匯入 Activity，它的 mode 屬性是 \"visible\" 或 \"hidden\"", "<Activity mode={tab === 'draft' ? 'visible' : 'hidden'}><Draft /></Activity>，收件匣也同樣包起來"]
+    ref: chapter8/12_activity.md

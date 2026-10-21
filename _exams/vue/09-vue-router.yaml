@@ -1,0 +1,162 @@
+lang: vue
+chapter: "9"
+title: Vue Router
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter9, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch09-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `routes.ts` 匯出的 `routes` 陣列目前只有首頁一條路由。
+      請加一條路由，讓網址 `/about` 顯示 `AboutView`（畫面是「關於我們」）。
+      測試會用這份 `routes` 建立 router，再用 `<RouterView />` 顯示目前的頁面。
+    hints: ["每一條路由是一個物件：path 是網址路徑，component 是要顯示的元件", "{ path: '/about', component: AboutView }"]
+    ref: chapter9/01_first_route.md
+
+  - id: vue-ch09-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `NavBar.vue` 的導覽列用的是普通的 `<a>`，點下去整個網頁會重新載入，也不會標示目前在哪一頁。
+      請改成用 Vue Router 的連結元件，讓：
+      - 點連結時只換畫面、不重新載入；
+      - 在 `/about` 時，「關於」連結會自動帶有 `router-link-exact-active` 這個 class。
+    hints: ["從 vue-router 匯入 RouterLink，屬性叫 to 不是 href", "<RouterLink to=\"/about\">關於</RouterLink>"]
+    ref: chapter9/02_router_link.md
+
+  - id: vue-ch09-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `AppLayout.vue` 是共用版面（上面有「我的網站」，裡面放了一個 `<RouterView />`）。
+      請把 `routes.ts` 改成**巢狀路由**：外層路由的 path 是 `/`、元件是 `AppLayout`，
+      內層放首頁與 `/about`，讓兩個頁面都顯示在 `AppLayout` 裡面。
+    hints: ["外層路由加上 children 陣列，寫法和外層一樣", "內層的 path 開頭不加斜線：首頁是 ''，關於頁是 'about'"]
+    ref: chapter9/03_nested_routes.md
+
+  - id: vue-ch09-q04
+    difficulty: 1
+    type: short
+    prompt: |
+      所有頁面都是 `/` 那條路由的 children 時，導覽列的「首頁」連結在每一頁都帶有 `router-link-active`。
+      要讓樣式只在網址**完全一樣**時才套用，應該改用哪一個 class？請輸入 class 名稱。
+    answers: ["^\\.?router-link-exact-active$"]
+    hints: ["router-link-active 只要網址「符合」就會加上", "另一個 class 的名字裡多了 exact"]
+    ref: chapter9/03_nested_routes.md
+
+  - id: vue-ch09-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      路由是 `/products/:id`。`ProductDetailView.vue` 用 `route.params.id` 去 `products` 裡找商品，
+      但不管網址是 `/products/1` 還是 `/products/2`，畫面都只顯示「找不到這個商品」。
+      請修好它，讓 `/products/2` 顯示「無線滑鼠」和「售價 890 元」；找不到的編號（例如 99）仍然顯示「找不到這個商品」。
+    hints: ["網址上的值一律是字串，商品的 id 是數字，=== 不會偷偷轉型別", "比對前先轉型：item.id === Number(route.params.id)"]
+    ref: chapter9/04_dynamic_routes.md
+
+  - id: vue-ch09-q06
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      在 `ProductDetailView.vue` 從 `/products/1` 換到 `/products/2` 時，網址變了，商品名稱卻還是「機械鍵盤」。
+      請修好它，並加上一個功能：
+      - `product` 要跟著 `route.params.id` 改變；
+      - 每次 id 改變時，把 `document.title` 設成「商品 <id>」，例如「商品 2」；
+      - 第一次進頁面時也要設定標題。
+    hints: ["同一條路由只換參數時元件不會重建，<script setup> 只執行一次；從參數算出來的值改用 computed", "watch(() => route.params.id, (id) => { ... }, { immediate: true })"]
+    ref: chapter9/05_params_change.md
+
+  - id: vue-ch09-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `ProductsView.vue` 要依網址的查詢參數篩選商品，例如 `/products?category=mouse` 只列出滑鼠。請完成：
+      - `category` 從 `route.query.category` 算出來，沒有這個參數時是 `'all'`；網址的查詢參數變了，列表要跟著變。
+      - 三個分類連結換分類時，要**保留**網址上其他的查詢參數：
+        在 `/products?sort=price` 點「mouse」，應該到 `/products?sort=price&category=mouse`。
+    hints: ["用 computed 讀 route.query.category，再用 ?? 給預設值 'all'", "連結的 query 寫成 { ...route.query, category: name }"]
+    ref: chapter9/06_query.md
+
+  - id: vue-ch09-q08
+    difficulty: 1
+    type: choice
+    prompt: |
+      登入頁登入成功後要跳到別的頁面，而且使用者按瀏覽器的「上一頁」時，**不應該**再回到登入表單。
+      應該用哪一個方法換頁？
+    choices:
+      - "router.push(網址)"
+      - "router.replace(網址)"
+      - "router.back()"
+      - "route.push(網址)"
+    answer: 1
+    hints: ["push 會在歷史紀錄新增一筆，上一頁回得來", "另一個方法會取代目前這一筆歷史紀錄"]
+    ref: chapter9/07_use_router.md
+
+  - id: vue-ch09-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `GoToProduct.vue` 有一個輸入商品編號的表單。請完成 `goToProduct`：
+      - 輸入 `3` 按「前往」，換頁到 `/products/3`；
+      - 什麼都沒輸入時不換頁。
+      （商品頁的路由是 `{ path: '/products/:id', name: 'product', ... }`，用路徑或名字換頁都可以。）
+    hints: ["在 <script setup> 最外層呼叫 useRouter()，不要在函式裡面才呼叫", "router.push(`/products/${productId.value}`)，或 router.push({ name: 'product', params: { id: productId.value } })"]
+    ref: chapter9/07_use_router.md
+
+  - id: vue-ch09-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      請完成 `guard.ts` 的導覽守衛 `authGuard(to)`（測試會用 `router.beforeEach(authGuard)` 掛上它）：
+      - 要去的路由 `meta.requiresAuth` 為 `true`，而且 auth store 顯示還沒登入時，改去 `/login`，
+        並把原本要去的完整網址放在查詢參數 `redirect`，例如 `/login?redirect=/account?tab=orders`；
+      - 其他情況放行。
+      `auth.ts` 裡的 `useAuthStore` 已經寫好，有 `isLoggedIn`。
+    hints: ["useAuthStore() 要寫在守衛函式裡面，不要寫在檔案最外層", "return { path: '/login', query: { redirect: to.fullPath } }；放行就什麼都不回傳"]
+    ref: chapter9/08_navigation_guards.md
+
+  - id: vue-ch09-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      網址對不到任何路由時，畫面目前是一片空白。請完成 404 頁面：
+      - 在 `routes.ts` 加一條符合任何網址的路由，顯示 `NotFoundView`；`/about` 仍要顯示關於頁。
+      - `NotFoundView.vue` 要顯示「網址 <完整網址路徑> 不存在。」，
+        例如打開 `/abc/def?x=1` 時顯示「網址 /abc/def?x=1 不存在。」（包含查詢參數）。
+    hints: ["符合任何網址的路徑寫成 '/:pathMatch(.*)*'", "用 useRoute() 取得 route，模板寫 {{ route.fullPath }}"]
+    ref: chapter9/09_not_found.md
+
+  - id: vue-ch09-q12
+    difficulty: 2
+    type: choice
+    prompt: |
+      路由設定有 `products/:id` 和 `/:pathMatch(.*)*`（顯示 404 頁面）兩條，商品只有 id 1 到 4。
+      使用者打開 `/products/99` 時會怎樣？
+    choices:
+      - "顯示 404 頁面，因為沒有 id 是 99 的商品"
+      - "顯示 ProductDetailView，商品不存在要在頁面元件裡自己處理"
+      - "畫面一片空白，Console 出現 No match found 的警告"
+      - "Vue Router 自動把網址改回 /products"
+    answer: 1
+    hints: ["Vue Router 只看網址符不符合路由，不知道資料存不存在", "/products/99 符合 products/:id，而且比「什麼都符合」的路由明確"]
+    ref: chapter9/09_not_found.md
+
+  - id: vue-ch09-q13
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      請把 `routes.ts` 裡 `/about` 的頁面改成**延遲載入**（用到才下載），首頁維持一般的匯入。
+      改完後進 `/about` 仍然要顯示「關於我們」。
+    hints: ["component 寫成一個呼叫動態 import 的箭頭函式", "component: () => import('./AboutView.vue')，並刪掉檔案開頭對 AboutView 的匯入"]
+    ref: chapter9/10_lazy_routes.md

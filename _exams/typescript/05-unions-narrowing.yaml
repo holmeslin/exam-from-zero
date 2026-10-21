@@ -1,0 +1,191 @@
+# 第 5 章：聯集與型別縮小
+lang: typescript
+chapter: "5"
+title: 聯集與型別縮小
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter5, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  - id: ts-ch05-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這個函式的參數型別是 `string | number`：
+
+          function show(id: string | number) {
+            // 這裡要寫哪一行？
+          }
+
+      不做任何檢查的情況下，哪一行可以通過 `npx tsc` 的型別檢查？
+    choices:
+      - "return id.toUpperCase();"
+      - "return id.toFixed(0);"
+      - "return `編號：${id}`;"
+      - "return id.length;"
+    answer: 2
+    hints: ["聯集型別的值，只能做「每一種型別都能做」的事。", "字串和數字都能放進樣板字面值，但 toUpperCase、length 只有字串有，toFixed 只有數字有。"]
+    ref: chapter5/01_union_types.md
+  - id: ts-ch05-q02
+    difficulty: 1
+    type: short
+    prompt: |
+      在 VS Code 裡把游標移到 `capital` 上：
+
+          const capital = "台北";
+
+      TypeScript 推論出的型別是什麼？（只要寫型別本身）
+    answers:
+      - '^"台北"$'
+      - "^'台北'$"
+      - "^「台北」$"
+      - "^台北$"
+    hints: ["`const` 宣告的變數永遠不會變，TypeScript 會推論得比 `let` 更精確。", "答案是字面值型別，也就是那個字串本身：\"台北\"。"]
+    ref: chapter5/02_literal_types.md
+  - id: ts-ch05-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      在 format-id.ts 實作 `formatId(id: string | number): string`：
+
+      - `id` 是字串時，回傳轉成大寫的結果，例如 `formatId("a01")` 回傳 `"A01"`。
+      - `id` 是數字時，回傳補零成 4 位數的字串，例如 `formatId(7)` 回傳 `"0007"`。
+
+      用 `typeof` 讓 TypeScript 縮小型別。
+    hints: ["`if (typeof id === \"string\") { return id.toUpperCase(); }`，`if` 裡 return 之後，下面的 `id` 就是 `number`。", "數字用 `id.toFixed(0).padStart(4, \"0\")` 補零。"]
+    ref: chapter5/03_typeof_narrowing.md
+  - id: ts-ch05-q04
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 裡的 `showCount` 用 `if (count)` 判斷有沒有資料，結果 `0` 件也被當成「沒有資料」。
+
+      請修正判斷，讓 `0` 印出 `共 0 件`，而 `null` 和 `undefined` 都印出 `沒有資料`。執行後的輸出應該是：
+
+          共 3 件
+          共 0 件
+          沒有資料
+          沒有資料
+    expected_stdout: "共 3 件\n共 0 件\n沒有資料\n沒有資料\n"
+    hints: ["`0` 是假值，真值縮小會把它跟 `null` 當成同一種情況。", "用 `count == null` 一次排除 `null` 和 `undefined`，`0` 就會走到 `else`。"]
+    ref: chapter5/04_truthiness_and_equality.md
+  - id: ts-ch05-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      describe.ts 裡有兩種物件型別：
+
+          type Book = { title: string; pages: number };
+          type Podcast = { title: string; minutes: number };
+
+      請完成 `describe(item: Book | Podcast): string`，用 `in` 分辨兩者：
+
+      - 書回傳 `小王子，共 96 頁`
+      - Podcast 回傳 `科技早餐，長 42 分鐘`
+
+      注意：頁數是 `0` 的書也要當成書。
+    hints: ["`if (\"pages\" in item)` 裡，`item` 會縮小成 `Book`。", "`in` 只看屬性存不存在，不看值，所以 `pages: 0` 也成立。屬性名稱記得加引號。"]
+    ref: chapter5/05_in_narrowing.md
+  - id: ts-ch05-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 describe-error.ts 完成 `describeError(problem: Error | string | null): string`：
+
+      - `Error` 物件：回傳 `錯誤：` 加上它的 `message`，例如 `錯誤：找不到檔案`
+      - 字串：回傳 `錯誤：` 加上字串本身，例如 `錯誤：網路斷線`
+      - `null`：回傳 `沒有錯誤`
+    hints: ["先用 `problem === null` 排除 `null`，再用 `problem instanceof Error` 分辨 `Error` 物件。", "縮小成 `Error` 之後就能讀 `problem.message`；剩下的就是 `string`。"]
+    ref: chapter5/06_instanceof_narrowing.md
+  - id: ts-ch05-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      area.ts 用可辨識聯集描述三種形狀，標籤欄位是 `kind`：
+
+          type Circle = { kind: "circle"; radius: number };
+          type Rectangle = { kind: "rectangle"; width: number; height: number };
+          type Triangle = { kind: "triangle"; base: number; height: number };
+
+      目前 `area` 只處理了圓形。請在 `switch (shape.kind)` 補上長方形（寬 × 高）和三角形（底 × 高 ÷ 2）。
+    hints: ["`case \"rectangle\":` 裡，`shape` 會縮小成 `Rectangle`，可以讀 `width` 和 `height`。", "三角形：`case \"triangle\": return (shape.base * shape.height) / 2;`"]
+    ref: chapter5/07_discriminated_unions.md
+  - id: ts-ch05-q08
+    difficulty: 2
+    type: choice
+    prompt: |
+      `Shape` 是 `Circle | Rectangle | Triangle`，下面的 `switch` 只處理了兩種：
+
+          switch (shape.kind) {
+            case "circle":
+              console.log("圓形");
+              break;
+            case "rectangle":
+              console.log("長方形");
+              break;
+            default: {
+              const unhandled: never = shape;
+              console.log(unhandled);
+            }
+          }
+
+      執行 `npx tsc` 會發生什麼事？
+    choices:
+      - "沒有錯誤，因為 default 會接住所有沒處理到的情況"
+      - "報錯：Type 'Triangle' is not assignable to type 'never'"
+      - "報錯：Type 'Shape' is not assignable to type 'never'"
+      - "沒有錯誤，但執行到 default 時 never 會自動丟出例外"
+    answer: 1
+    hints: ["`switch` 每處理一個 `case`，剩下的型別就少一種。走到 `default` 時還剩哪一種？", "剩下 `Triangle`，而任何值都不能放進 `never`，錯誤訊息會直接點名漏掉的型別。"]
+    ref: chapter5/08_never_and_exhaustiveness.md
+  - id: ts-ch05-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      books.ts 裡的型別守衛 `isBook(item): item is Book` 目前直接 `return true`，TypeScript 照樣相信它，結果 Podcast 也被當成書。
+
+      請完成兩個函式：
+
+      - `isBook(item: Book | Podcast): item is Book`：真的檢查 `item` 是不是書（有 `pages` 屬性）。
+      - `totalPages(items: (Book | Podcast)[]): number`：用 `items.filter(isBook)` 留下書，回傳頁數總和。
+    hints: ["型別守衛的判斷式要確實檢查：`return \"pages\" in item;`", "`items.filter(isBook)` 的結果型別是 `Book[]`，用 `for...of` 把每本書的 `pages` 加起來。"]
+    ref: chapter5/09_type_guards.md
+  - id: ts-ch05-q10
+    difficulty: 2
+    type: choice
+    prompt: |
+      執行下面這段程式碼（陣列裡沒有 `id` 為 `3` 的使用者）：
+
+          const users = [
+            { id: 1, name: "小明" },
+            { id: 2, name: "小華" },
+          ];
+
+          const user = users.find((u) => u.id === 3)!;
+          console.log(user.name);
+
+      會發生什麼事？
+    choices:
+      - "npx tsc 報錯：'user' is possibly 'undefined'"
+      - "npx tsc 沒有錯誤，執行時印出 undefined"
+      - "npx tsc 沒有錯誤，但執行時丟出 TypeError: Cannot read properties of undefined"
+      - "執行時 ! 會檢查到 undefined，丟出「非空斷言失敗」的錯誤"
+    answer: 2
+    hints: ["`!` 把 `undefined` 從型別裡拿掉，所以 `npx tsc` 不會再提醒你。", "型別和斷言在執行時都會被拿掉，`!` 不做任何檢查，對 `undefined` 讀屬性就當掉。"]
+    ref: chapter5/10_assertions.md
+  - id: ts-ch05-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      orders.ts 用可辨識聯集描述訂單，標籤欄位是 `status`（`"pending"`、`"shipped"`、`"delivered"`、`"cancelled"`）。請完成三個函式：
+
+      - `describeOrder(order: Order): string`：依狀態回傳 `處理中`、`已出貨，追蹤碼 TW123456`、`已送達（2026/10/18）`、`已取消：缺貨`，並在 `default` 加上窮舉檢查。
+      - `isActive(order: Order): order is Pending | Shipped`：處理中和已出貨算進行中。
+      - `countActive(orders: Order[]): number`：用 `filter` 搭配 `isActive` 算出進行中的訂單筆數。
+    hints: ["`switch (order.status)` 的每個 `case` 裡，`order` 會縮小成對應型別；日期用 `order.deliveredAt.toLocaleDateString(\"zh-TW\")`。", "`default: { const unhandled: never = order; return unhandled; }`；`countActive` 寫成 `return orders.filter(isActive).length;`"]
+    ref: chapter5/11_practice.md

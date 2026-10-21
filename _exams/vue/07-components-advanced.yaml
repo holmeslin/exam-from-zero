@@ -1,0 +1,149 @@
+lang: vue
+chapter: "7"
+title: 元件進階
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter7, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch07-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      SizeButton.vue 接收 `label` 和 `size` 兩個 props，畫出「label（size）」，並把 `size` 當成按鈕的 class。
+      請改成用**解構**拿出 props，並讓 `size` 在父元件沒傳時預設為 `"md"`；父元件改了 `size`，畫面也要跟著更新。
+    hints: ["解構時可以用 = 給預設值，屬性是 undefined 時才會用上", "const { label, size = 'md' } = defineProps<{ label?: string; size?: string }>()，模板直接寫 {{ size }}"]
+    ref: chapter7/01_props_destructure.md
+  - id: vue-ch07-q02
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      useHistory.ts 是一個 composable：每次傳進去的來源變化，就把新值記到 `history` 裡（這個檔案不用改）。
+      CountHistory.vue 把解構出來的 prop `count` 交給它，可是父元件把 `count` 從 1 改成 2、再改成 5，`history` 卻一直是空的，也沒有任何錯誤訊息。
+      請修正 CountHistory.vue，讓 `history` 依序記下 2、5。
+    hints: ["解構出來的 prop 直接傳出去，交出去的只是「當下的數字」，不是會變的東西", "改成 useHistory(() => count)，把它包成 getter"]
+    ref: chapter7/01_props_destructure.md
+  - id: vue-ch07-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      TextField.vue 的根元素是 `<label>`，裡面才是 `<input>`。用的人寫
+          <TextField v-model="email" label="信箱" type="email" placeholder="you@example.com" />
+      時，`type` 和 `placeholder` 卻跑到了 `<label>` 上。
+      請修改 TextField.vue，讓這些沒宣告成 props 的屬性改放到 `<input>` 上，`<label>` 不要拿到；`label` 和 `v-model` 照常運作。
+    hints: ["先關掉自動繼承，再自己指定透傳屬性要放在哪個元素上", "defineOptions({ inheritAttrs: false })，然後在 <input> 上寫 v-bind=\"$attrs\""]
+    ref: chapter7/02_fallthrough_attrs.md
+  - id: vue-ch07-q04
+    difficulty: 1
+    type: choice
+    prompt: |
+      MyButton.vue 沒有宣告任何 props，模板是
+          <button class="btn"><slot /></button>
+      父元件這樣用：
+          <MyButton class="danger" title="小心">送出</MyButton>
+      畫出來的 `<button>` 是哪一個？（省略 scoped style 的 data-v- 標記）
+    choices:
+      - "<button class=\"btn danger\" title=\"小心\">送出</button>"
+      - "<button class=\"danger\" title=\"小心\">送出</button>"
+      - "<button class=\"btn\">送出</button>"
+      - "<button class=\"btn\" title=\"小心\">送出</button>"
+    answer: 0
+    hints: ["沒宣告成 props 的屬性會自動加到元件的根元素上", "class 和 style 會和根元素原本的合併，不會把原本的蓋掉"]
+    ref: chapter7/02_fallthrough_attrs.md
+  - id: vue-ch07-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 BaseCard.vue 這張卡片：
+      - `<header>` 裡放一個叫 `header` 的 slot，用的人沒給時顯示「（沒有標題）」。
+      - `.body` 裡是預設 slot（已經寫好）。
+      - 用的人有給 `footer` 時，才畫出 `<footer>`，裡面放叫 `footer` 的 slot；沒給時連 `<footer>` 都不要出現。
+    hints: ["<slot name=\"header\">（沒有標題）</slot> 中間的文字就是預設內容", "<footer v-if=\"$slots.footer\"><slot name=\"footer\" /></footer>"]
+    ref: chapter7/03_named_slots.md
+  - id: vue-ch07-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 DataList.vue，讓父元件決定每一筆長什麼樣子：
+      - 每個 `<li>` 裡放一個叫 `item` 的 slot，把這一筆 `item` 和它的索引 `index` 交給父元件。
+      - 陣列是空的時候，`<p>` 裡放一個叫 `empty` 的 slot，沒給時顯示「沒有資料」。
+      父元件會這樣用：
+          <DataList :items="products">
+            <template #item="{ item, index }">{{ index + 1 }}. {{ item.name }}</template>
+            <template #empty>購物車是空的</template>
+          </DataList>
+    hints: ["像綁 props 一樣把資料綁在 <slot> 上，這些就是 slot props；v-for 要寫成 (item, index) in items", "<slot name=\"item\" :item=\"item\" :index=\"index\" />，以及 <slot name=\"empty\">沒有資料</slot>"]
+    ref: chapter7/04_scoped_slots.md
+  - id: vue-ch07-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      ThemeRoot.vue 用 `provide('theme', ...)` 把主題和切換函式交給底下的元件，底下的按鈕用 `inject('theme')` 拿到 `{ theme, toggleTheme }`。
+      現在按下深處的按鈕，ThemeRoot 自己顯示的「目前主題」會變成 dark，但按鈕上的文字一直停在 light。
+      請修正 ThemeRoot.vue，讓底下的元件也看得到主題的變化。
+    hints: ["交出去的是「當下的值」還是「會變的東西」？", "provide 的物件裡要放 ref 本身：provide('theme', { theme, toggleTheme })，不是 theme.value"]
+    ref: chapter7/05_provide_inject.md
+  - id: vue-ch07-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      ModalButton.vue 按下「打開對話框」會顯示 `.modal`，可是它被埋在父元素裡，常被祖先的 `overflow: hidden`、`transform` 切掉。
+      請修改 ModalButton.vue，讓 `.modal` 直接出現在 `<body>` 底下（最後面），而且「關閉」按鈕照樣能把它關掉。
+    hints: ["Vue 有一個內建元件可以把一段畫面搬到 HTML 的其他位置，不用 import", "用 <Teleport to=\"body\"> 把 <div v-if=\"open\" class=\"modal\"> 包起來"]
+    ref: chapter7/06_teleport.md
+  - id: vue-ch07-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      TabsDemo.vue 用 `<component :is>` 在 TabCounter 和 TabNotes 兩個分頁之間切換，目前切走再切回來，狀態都會歸零。
+      請修改 TabsDemo.vue（另外兩個檔案不用改）：**只保留**筆記分頁，切回來時剛剛打的字還在；計數器則照舊，每次切回來都是「按了 0 次」。
+    hints: ["用 <KeepAlive> 把 <component :is> 包起來，切走的元件就會被暫存", "<KeepAlive include=\"TabNotes\">，<script setup> 元件的名字就是檔名"]
+    ref: chapter7/08_keep_alive.md
+  - id: vue-ch07-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 ErrorBoundary.vue 這個錯誤邊界：包在裡面的任何元件出錯時，把錯誤存進 `error`，模板就會改顯示「這一塊出錯了：錯誤訊息」；而且錯誤要停在這裡，不要再往上傳給 `app.config.errorHandler`。
+      模板和「再試一次」按鈕已經寫好了。
+    hints: ["有一個生命週期 Hook 會在底下的元件出錯時被呼叫，第一個引數就是錯誤本身", "onErrorCaptured((err) => { error.value = err; return false })，記得從 vue import"]
+    ref: chapter7/10_error_handling.md
+  - id: vue-ch07-q11
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面的元素要淡入淡出：
+          <Transition name="fade">
+            <p v-if="show">你好</p>
+          </Transition>
+      CSS 已經寫了 `.fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }`。
+      還要對哪兩個 class 設定 `opacity: 0`，才會有「從透明浮現、淡出到透明」的效果？
+    choices:
+      - "fade-enter-to 和 fade-leave-from"
+      - "fade-enter-from 和 fade-leave-to"
+      - "fade-enter 和 fade-leave"
+      - "v-enter-from 和 v-leave-to"
+    answer: 1
+    hints: ["要設成透明的是「出現的起點」和「消失的終點」", "有寫 name=\"fade\" 時 class 開頭是 fade-，起點是 -enter-from，終點是 -leave-to"]
+    ref: chapter7/07_transition.md
+  - id: vue-ch07-q12
+    difficulty: 2
+    type: short
+    prompt: |
+      用物件寫法設定非同步元件：
+          const HeavyChart = defineAsyncComponent({
+            loader: () => import('./HeavyChart.vue'),
+            loadingComponent: LoadingBox,
+            errorComponent: ErrorBox,
+            ___: 10000,
+          })
+      `___` 這個選項的意思是「超過幾毫秒還沒載完，就當作失敗，改顯示 errorComponent」。它叫什麼？
+    answers: ["^timeout$", "^timeout\\s*:.*$"]
+    hints: ["另一個選項 delay 管的是「多久之後才顯示載入中」，這個管的是「多久之後算失敗」", "英文的「逾時」"]
+    ref: chapter7/09_async_components.md

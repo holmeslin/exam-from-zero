@@ -1,0 +1,193 @@
+lang: typescript
+chapter: "9"
+title: 專案設定與模組
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter9, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  - id: ts-ch09-q01
+    difficulty: 1
+    type: short
+    prompt: |
+      在專案資料夾裡執行 `npx tsc`（後面不接檔名）時，`tsc` 第一件事是在目前的資料夾找一個設定檔。
+      這個設定檔的完整檔名是什麼？
+    answers: ['^`?tsconfig\.json`?$']
+    hints: ["有這個檔案的資料夾，就是 TypeScript 專案的根目錄", "檔名是 ts + config，副檔名是 .json"]
+    ref: chapter9/01_tsconfig.md
+
+  - id: ts-ch09-q02
+    difficulty: 2
+    type: choice
+    prompt: |
+      這本書讓 Node.js 直接執行 `.ts`，Node.js 只會把型別換成空白，處理不了 `enum` 這種需要轉換的語法。
+      `tsconfig.json` 裡哪一個選項，會讓 `tsc` 提早把 `enum` 這類語法當成錯誤抓出來？
+    choices:
+      - "`erasableSyntaxOnly: true`"
+      - "`noEmit: true`"
+      - "`verbatimModuleSyntax: true`"
+      - "`moduleDetection: \"force\"`"
+    answer: 0
+    hints: ["選項名稱的意思是「只允許拿得掉的語法」", "erasable 是「可以擦掉的」"]
+    ref: chapter9/02_practice_config.md
+
+  - id: ts-ch09-q03
+    difficulty: 1
+    type: choice
+    prompt: |
+      `shout.ts` 裡有這段程式碼：
+
+          function shout(text: string | null) {
+            return text.toUpperCase();
+          }
+          console.log(shout(null));
+
+      開著 `strict` 時，`npx tsc` 會報 TS18047（`text` 可能是 `null`）。
+      如果把 `tsconfig.json` 改成 `"strict": false`，再執行 `npx tsc` 和 `node shout.ts`，會發生什麼事？
+    choices:
+      - "`npx tsc` 不再報錯，但 `node shout.ts` 執行時還是丟出 TypeError"
+      - "`npx tsc` 不再報錯，`node shout.ts` 也正常印出結果"
+      - "`npx tsc` 照樣報 TS18047，因為 `strictNullChecks` 不屬於 `strict`"
+      - "`npx tsc` 會自動幫 `text` 加上 null 檢查，所以執行不會出錯"
+    answer: 0
+    hints: ["`strictNullChecks` 是 `strict` 這個總開關打開的其中一項", "關掉 `strict` 只會讓 `tsc` 閉嘴，程式本身沒有變"]
+    ref: chapter9/03_strict.md
+
+  - id: ts-ch09-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      假設專案打開了 `noUncheckedIndexedAccess`，用 `[]` 讀出來的值都要當成可能是 `undefined`。
+      修正 stock.ts 裡的兩個函式：
+
+      - `lastItem(items)`：回傳陣列最後一個元素；空陣列回傳 `undefined`。
+      - `stockOf(stock, name)`：回傳 `stock[name]` 的數量；查不到時回傳 `0`（庫存剛好是 0 也要回傳 0）。
+    hints: ["陣列最後一個元素的索引是 `length - 1`", "查不到時用 `??` 給預設值：`stock[name] ?? 0`"]
+    ref: chapter9/04_stricter_options.md
+
+  - id: ts-ch09-q05
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      專案打開了 `exactOptionalPropertyTypes`，`email?: string` 代表「可以沒有，有的話一定是字串」，
+      不能放一個值是 `undefined` 的 `email` 屬性。
+      修改 user.ts 的 `makeUser(name, email?)`：
+
+      - 有傳 `email` 時，回傳 `{ name, email }`。
+      - 沒傳 `email`（或傳入 `undefined`）時，回傳的物件**根本不要有** `email` 屬性，也就是 `"email" in user` 要是 `false`。
+    hints: ["`{ name, email }` 在 email 是 undefined 時，仍然會有 email 這個屬性", "先用 `if (email === undefined)` 判斷，這時只回傳 `{ name }`"]
+    ref: chapter9/04_stricter_options.md
+
+  - id: ts-ch09-q06
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 從 product.ts 匯入 `formatPrice` 函式和 `Product` 型別，但現在 `node main.ts` 執行就出錯。
+      修改 product.ts，讓 main.ts 能正確匯入，執行後印出：
+
+          原子筆：15 元
+          筆記本：45 元
+    expected_stdout: "原子筆：15 元\n筆記本：45 元\n"
+    hints: ["沒有 `export` 的東西只能在自己的檔案裡用", "在 `type Product` 和 `function formatPrice` 前面都加上 `export`"]
+    ref: chapter9/05_export_import_types.md
+
+  - id: ts-ch09-q07
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 寫成一行 `import { formatPrice, Product } from "./product.ts";`，
+      `node main.ts` 執行時出現 `does not provide an export named 'Product'`。
+      只修改 main.ts 的匯入（不要改 product.ts），讓它印出：
+
+          原子筆：15 元
+    expected_stdout: "原子筆：15 元\n"
+    hints: ["Node.js 只看這一行，分不出 `Product` 是型別，要你自己標清楚", "在同一行的型別名稱前面加 `type`：`import { formatPrice, type Product } from \"./product.ts\";`"]
+    ref: chapter9/06_import_type.md
+
+  - id: ts-ch09-q08
+    difficulty: 2
+    type: choice
+    prompt: |
+      在這本書的設定（`module: "nodenext"`、`allowImportingTsExtensions: true`，讓 Node.js 直接執行 `.ts`）下，
+      `main.ts` 要匯入同一個資料夾的 `product.ts`。資料夾裡沒有 `product.js`。
+      下面哪一種寫法，`npx tsc` 檢查會通過，但 `node main.ts` 執行時卻找不到模組？
+    choices:
+      - "`import { formatPrice } from \"./product.js\";`"
+      - "`import { formatPrice } from \"./product\";`"
+      - "`import { formatPrice } from \"./product.ts\";`"
+    answer: 0
+    hints: ["不寫副檔名，`tsc` 會報 TS2835", "`tsc` 認為 `.js` 指的是轉換前的 `.ts`，但資料夾裡實際沒有那個 `.js` 檔"]
+    ref: chapter9/07_ts_extension.md
+
+  - id: ts-ch09-q09
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      money.js 是以前用 JavaScript 寫的檔案（不要修改它）。main.ts 想匯入它的 `formatMoney`，
+      但匯入路徑寫錯了，執行會出現 `ERR_MODULE_NOT_FOUND`。
+
+      1. 修正 main.ts 的匯入路徑，讓 `node main.ts` 印出：
+
+              NT$ 1,234,567
+              NT$ 980
+
+      2. 在 money.js 旁邊建立同名的宣告檔 money.d.ts，宣告 `formatMoney` 收一個 `number`、回傳 `string`。
+         （宣告檔不會被執行，評分只看輸出，但請照 `tsc` 的要求寫好。）
+    expected_stdout: "NT$ 1,234,567\nNT$ 980\n"
+    hints: ["這次匯入的檔案真的是 `.js`，副檔名就寫實際存在的 `.js`", "money.d.ts 的內容：`export declare function formatMoney(amount: number): string;`"]
+    ref: chapter9/08_declaration_files.md
+
+  - id: ts-ch09-q10
+    difficulty: 2
+    type: choice
+    prompt: |
+      你的 `tsconfig.json` 有一行 `"types": []`。你為了使用 `process.argv` 執行了
+      `npm install -D @types/node@24`，但 `npx tsc` 仍然報 TS2591「Cannot find name 'process'」。
+      還要做什麼？
+    choices:
+      - "把 `tsconfig.json` 的 `types` 改成 `[\"node\"]`"
+      - "在檔案開頭加上 `import process from \"@types/node\";`"
+      - "把 `skipLibCheck` 改成 `false`，讓 `tsc` 去讀 `.d.ts` 檔"
+      - "改裝 `@types/node@latest`，版本不對才會找不到"
+    answer: 0
+    hints: ["`\"types\": []` 的意思是不要自動載入任何型別套件", "裝好之後，要在 `types` 明確列出要載入的型別套件"]
+    ref: chapter9/09_types_packages.md
+
+  - id: ts-ch09-q11
+    difficulty: 3
+    type: choice
+    prompt: |
+      匯入沒有附型別、也沒有 `@types` 的套件 `zero-fill` 時，`npx tsc` 報 TS7016。
+      同事在專案裡新增了 `zero-fill.d.ts`，內容只有一行：
+
+          declare module "zero-fill";
+
+      這樣做之後，下列敘述何者正確？
+    choices:
+      - "TS7016 消失了，但 `zero-fill` 匯出的東西全都是 `any`，傳錯型別也抓不到"
+      - "TS7016 消失了，而且 `tsc` 會去讀 `node_modules/zero-fill/index.js` 推論出正確的型別"
+      - "TS7016 仍然存在，因為 `.d.ts` 檔必須放在 `node_modules/zero-fill` 裡面"
+      - "`node` 執行時會先讀這個 `.d.ts`，所以 `zeroFill` 在執行時也會檢查參數型別"
+    answer: 0
+    hints: ["這一行的意思是「有這個模組，裡面是什麼我不管」", "比較好的寫法是 `declare module \"zero-fill\" { export default function ... }` 把內容寫清楚"]
+    ref: chapter9/10_untyped_packages.md
+
+  - id: ts-ch09-q12
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      待辦清單已經拆成 types.ts、format.ts、main.ts 三個檔案，但 `node main.ts` 跑不起來。
+      找出並修好所有問題，遵守這一章的規則：型別用 `import type`（或 `type` 標記），相對路徑寫 `.ts` 副檔名。
+      另外 main.ts 用索引拿「最新一筆」時有差一錯誤，而且沒處理拿不到的情況：
+      空清單時不要印「空清單的最新一筆」那一行。修好後執行要印出：
+
+          [x] 1. 買牛奶
+          [ ] 2. 繳電話費
+          最新一筆：繳電話費
+    expected_stdout: "[x] 1. 買牛奶\n[ ] 2. 繳電話費\n最新一筆：繳電話費\n"
+    hints: ["format.ts 的函式要 `export`；main.ts 的 `\"./format\"` 要加 `.ts`，`Todo` 要用 `import type`", "最後一個元素的索引是 `length - 1`，再用 `if (latest !== undefined)` 檢查"]
+    ref: chapter9/11_practice.md

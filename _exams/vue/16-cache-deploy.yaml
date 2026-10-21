@@ -1,0 +1,222 @@
+lang: vue
+chapter: "15"
+title: 快取、渲染與部署
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter15, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch15-q01
+    difficulty: 1
+    type: short
+    prompt: |
+      執行 `npm run build` 之後，正式上線時要用 `node` 執行哪一個檔案來啟動伺服器？
+      請寫出相對於專案根目錄的路徑（例如 `a/b/c.js` 的格式）。
+    answers: ["^\\.?/?\\.output/server/index\\.mjs$", "^node \\.?/?\\.output/server/index\\.mjs$"]
+    hints: ["建置的成品全部放在專案根目錄一個以點開頭的資料夾裡", "成品分成 public/ 和 server/ 兩部分，伺服器的入口是 server/ 裡的 index.mjs"]
+    ref: chapter15/01_build_and_preview.md
+  - id: vue-ch15-q02
+    difficulty: 2
+    type: choice
+    prompt: |
+      專案根目錄有一個 `.env`，裡面寫著 `NUXT_PUBLIC_SITE_NAME=開發中的網站`。
+      建置之後，下面哪一種啟動方式**不會**讀取這個 `.env`？
+    choices:
+      - "npm run dev"
+      - "npm run preview"
+      - "node .output/server/index.mjs"
+      - "三種都會讀 .env"
+    answer: 2
+    hints: ["`npm run preview` 啟動時會印出 Loaded .env，後半句還提醒了正式上線的情況", "`.env` 只給開發和預覽用；正式上線直接用 node 執行時，要用真正的環境變數"]
+    ref: chapter15/06_runtime_config.md
+  - id: vue-ch15-q03
+    difficulty: 1
+    type: choice
+    prompt: |
+      `nuxt.config.ts` 裡設定了：
+
+          routeRules: {
+            "/about": { prerender: true },
+          },
+
+      `/about` 頁面上會顯示「產生時間」。執行 `npm run build` 後用 `node .output/server/index.mjs` 啟動，
+      隔一小時再打開 `/about`，看到的產生時間是什麼時候？
+    choices:
+      - "打開頁面的那一刻"
+      - "執行 npm run build 的時候"
+      - "伺服器啟動的那一刻"
+      - "第一次有人打開 /about 的時候"
+    answer: 1
+    hints: ["prerender 的意思是在某個步驟就先把頁面渲染成 HTML 檔案存起來", "預先渲染在建置時就做好，直到下一次建置前都不會變"]
+    ref: chapter15/02_prerender.md
+  - id: vue-ch15-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      `/news` 設定了 `{ swr: 10 }`，部署在 Node.js 伺服器上。
+      第一次請求在 08:00:00（當場渲染，頁面的產生時間是 08:00:00），之後沒有人打開過。
+      08:00:30 有人打開 `/news`，他拿到的頁面上，產生時間是多少？
+    choices:
+      - "08:00:00：先拿到舊的，伺服器同時在背後重新渲染"
+      - "08:00:30：快取過期了，所以當場重新渲染再送出"
+      - "08:00:10：快取在過期的那一刻自動更新過"
+      - "拿不到內容，要等背後渲染完成"
+    answer: 0
+    hints: ["swr 是 stale-while-revalidate 的縮寫，stale 是「不新鮮的」", "過期之後的第一個人先拿到舊版，下一個人才拿到背後重新做好的新版"]
+    ref: chapter15/03_swr_and_isr.md
+  - id: vue-ch15-q05
+    difficulty: 2
+    type: choice
+    prompt: |
+      把 `"/blog": { isr: 60 }` 加進 `routeRules`，建置後用 `node .output/server/index.mjs` 啟動。
+      連續打開 `/blog` 兩次，會發生什麼事？
+    choices:
+      - "兩次的產生時間一樣，因為頁面在伺服器記憶體裡記了 60 秒"
+      - "兩次的產生時間不一樣，isr 在自己的 Node.js 伺服器上沒有作用"
+      - "兩次的產生時間一樣，都是建置的時間"
+      - "伺服器啟動時就出錯，因為 Node.js 伺服器不支援 isr"
+    answer: 1
+    hints: ["isr 是專門給某一類部署平台用的選項", "isr 把頁面記在 Vercel、Netlify 這類平台的 CDN 上；在自己的 Node.js 伺服器上要用 swr"]
+    ref: chapter15/03_swr_and_isr.md
+  - id: vue-ch15-q06
+    difficulty: 2
+    type: choice
+    prompt: |
+      `/dashboard` 設定了 `{ ssr: false }`。建置啟動後，用 `curl` 抓這一頁的 HTML（不執行 JavaScript），
+      下面哪一個描述正確？
+    choices:
+      - "HTML 裡有完整的「後台」標題和產生時間"
+      - "HTML 裡有「後台」標題，但產生時間是空的"
+      - "`<div id=\"__nuxt\">` 裡面是空的，畫面全部要等瀏覽器執行 JavaScript 才畫出來"
+      - "伺服器回 404，因為這一頁不在伺服器渲染"
+    answer: 2
+    hints: ["ssr: false 讓整頁退回第一部 create-vue 那種單頁應用程式的做法", "伺服器只送出空殼，連 useFetch 都是在瀏覽器裡才去呼叫 API"]
+    ref: chapter15/04_client_only_pages.md
+  - id: vue-ch15-q07
+    difficulty: 1
+    type: choice
+    prompt: |
+      一個頁面大部分內容都適合在伺服器渲染，只有其中一個畫圖的小元件會用到 `window`。
+      最合適的做法是哪一個？
+    choices:
+      - "替這一頁加上 { ssr: false }"
+      - "用 <ClientOnly> 包住那個畫圖的元件"
+      - "替這一頁加上 { prerender: true }"
+      - "替這一頁加上 { swr: 60 }"
+    answer: 1
+    hints: ["ssr: false 和 <ClientOnly> 都是「只在瀏覽器渲染」，差別在範圍", "只有一小塊需要瀏覽器時用 <ClientOnly>，整頁都不需要伺服器渲染才用 ssr: false"]
+    ref: chapter15/04_client_only_pages.md
+  - id: vue-ch15-q08
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      Nuxt 會用 `NUXT_` 開頭的環境變數覆蓋 `runtimeConfig` 裡的設定。
+      完成 main.ts 的 `toEnvName`：從標準輸入讀進好幾行設定路徑（公開的值寫成 `public.名稱`），
+      每行印出對應的環境變數名稱。規則：開頭是 `NUXT_`，公開的值再加 `PUBLIC_`，
+      camelCase 的名稱改成全大寫、單字之間用底線隔開。
+
+      輸入：
+
+          apiSecret
+          public.siteName
+          adminToken
+          public.apiBaseUrl
+
+      預期輸出：
+
+          NUXT_API_SECRET
+          NUXT_PUBLIC_SITE_NAME
+          NUXT_ADMIN_TOKEN
+          NUXT_PUBLIC_API_BASE_URL
+    stdin: "apiSecret\npublic.siteName\nadminToken\npublic.apiBaseUrl\n"
+    expected_stdout: "NUXT_API_SECRET\nNUXT_PUBLIC_SITE_NAME\nNUXT_ADMIN_TOKEN\nNUXT_PUBLIC_API_BASE_URL\n"
+    hints: ["先用 split(\".\") 拆開，每一段各自轉換，最後用底線接起來", "每個大寫字母前面補一個底線：part.replace(/([A-Z])/g, \"_$1\").toUpperCase()"]
+    ref: chapter15/06_runtime_config.md
+  - id: vue-ch15-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      留言板刪除留言的 API 改成從 `runtimeConfig` 讀管理暗號 `adminToken`（預設值是空字串），
+      檢查邏輯抽成 canDelete.ts 的 `canDelete(adminToken, cookie)`。目前的寫法：
+
+          return cookie === adminToken;
+
+      這有一個安全漏洞：忘了設定 `NUXT_ADMIN_TOKEN` 時，有人送一個空的 cookie 就能刪除留言。
+      請修好它，讓「沒設定暗號」時誰都不能刪，有設定時只有 cookie 正確才能刪。
+    hints: ["沒設定環境變數時，adminToken 是預設值空字串；空字串等於空字串，檢查就通過了", "先判斷 adminToken === \"\" 就直接回傳 false，再比對 cookie"]
+    ref: chapter15/06_runtime_config.md
+  - id: vue-ch15-q10
+    difficulty: 3
+    type: choice
+    prompt: |
+      `/about` 設定了 `{ prerender: true }`，頁面上用 `useRuntimeConfig()` 顯示 `config.public.siteName`。
+      建置時 `.env` 寫著 `NUXT_PUBLIC_SITE_NAME=開發中的網站`。
+      之後用 `NUXT_PUBLIC_SITE_NAME=正式網站 node .output/server/index.mjs` 啟動，`/about` 會顯示什麼？
+    choices:
+      - "正式網站：環境變數換了，不用重新建置就會生效"
+      - "開發中的網站：預先渲染的頁面在建置時就固定了"
+      - "我的網站：正式環境不讀 .env，所以回到 nuxt.config.ts 的預設值"
+      - "空白：預先渲染的頁面讀不到 runtimeConfig"
+    answer: 1
+    hints: ["換環境變數改得到每次請求都重新渲染的頁面，但改得到一個已經存好的 HTML 檔案嗎？", "/about 是建置時做好的檔案，建置時讀到的是 .env 的值；要預先渲染就得在建置時給好正確的環境變數"]
+    ref: chapter15/06_runtime_config.md
+  - id: vue-ch15-q11
+    difficulty: 3
+    type: choice
+    prompt: |
+      有一個頁面會讀 cookie，顯示「你好，小明」這種每個人不同的問候。
+      有人替它加上 `{ swr: 60 }` 想加快速度，部署後最可能看到什麼？
+    choices:
+      - "每個人看到自己的名字，而且速度變快"
+      - "每個人都看到「訪客」，因為渲染要被快取的頁面時，Nitro 會拿掉 cookie 等請求標頭"
+      - "第一次請求會出錯，因為 swr 不能用在有 cookie 的頁面"
+      - "只有第一個人看到自己的名字，其他人看到空白頁"
+    answer: 1
+    hints: ["快取是用網址當鑰匙的，同一個網址所有人拿到同一份", "Nitro 為了防止別人的名字被快取給大家，渲染時會把 cookie 拿掉；個人化頁面不要用 swr、isr 或 prerender"]
+    ref: chapter15/05_hybrid_rendering.md
+  - id: vue-ch15-q12
+    difficulty: 2
+    type: choice
+    prompt: |
+      執行 `npm run generate` 產生靜態網站。首頁有一個 `NuxtLink` 連到 `/posts/1`，
+      整個網站都沒有連到 `/posts/2`（`app/pages/posts/[id].vue` 是動態路由）。
+      用 `npx serve .output/public` 預覽時，下面哪一個網址會回 200？
+    choices:
+      - "/posts/1"
+      - "/posts/2"
+      - "/api/now"
+      - "三個都會回 200"
+    answer: 0
+    hints: ["動態路由的頁面，Nuxt 是順著頁面上的連結一路爬下去才找到的", "沒被連結到的 /posts/2 不會產生；靜態網站也沒有伺服器，server/api 全部不能用"]
+    ref: chapter15/07_generate.md
+  - id: vue-ch15-q13
+    difficulty: 1
+    type: short
+    prompt: |
+      執行 `npm run generate` 之後，`npm run preview` 不能用。照終端機的提示，要用哪一個指令預覽產生出來的靜態網站？
+    answers: ["^npx serve \\.?/?\\.output/public/?$", "^serve \\.?/?\\.output/public/?$"]
+    hints: ["generate 的成品只有 .output/public，沒有 server，所以不能啟動 Nitro 伺服器", "用 npx 執行一個叫 serve 的小工具，後面接要預覽的資料夾"]
+    ref: chapter15/07_generate.md
+  - id: vue-ch15-q14
+    difficulty: 2
+    type: short
+    prompt: |
+      不改任何程式碼，想讓 `npm run build` 建置出 Vercel 平台要的格式，要在指令前面設定哪一個環境變數？
+      （只寫環境變數的名稱）
+    answers: ["^nitro_preset$", "^nitro_preset=vercel( npm run build)?$"]
+    hints: ["決定建置成品格式的東西叫 preset，第 1 集的建置輸出就印過 Nitro preset: node-server", "環境變數名稱是 Nitro 加上 preset，全大寫、中間用底線"]
+    ref: chapter15/08_deploy.md
+  - id: vue-ch15-q15
+    difficulty: 3
+    type: choice
+    prompt: |
+      第 14 章的留言板用 `useStorage("data")` 把留言存在 `.data/` 裡的檔案，還有 `POST /api/messages` 等 API。
+      下面哪一種部署方式，不改程式碼就能讓留言正常新增並長期保存？
+    choices:
+      - "npm run generate 後放到 GitHub Pages"
+      - "部署到 Vercel，讓平台自動選 preset"
+      - "在自己的 Node.js 主機上 npm run build，並且每次都在同一個資料夾執行 node .output/server/index.mjs"
+      - "在自己的 Node.js 主機上執行 npm run preview"
+    answer: 2
+    hints: ["靜態主機沒有 server/api；Vercel、Netlify 處理請求的環境是臨時的，寫進去的檔案隨時可能消失", "preview 會在 .output 裡啟動，資料存在 .output/.data/，下次 build 就被清掉；正式上線要直接用 node，並在同一個資料夾啟動"]
+    ref: chapter15/08_deploy.md
