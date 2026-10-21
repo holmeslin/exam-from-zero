@@ -2,12 +2,15 @@ package app
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -40,6 +43,20 @@ type runner struct {
 	timeout          time.Duration
 	scaffold         map[string]string         // extra files written next to the starter
 	env              func(dir string) []string // extra environment for every command
+	// inRoot runs commands from the lang root (the question dir's parent), with {dir} in argv replaced by the question dir name
+	inRoot bool
+	// setup runs once in the lang root after <lang>/_workspace from the bank is copied there
+	setup []string
+}
+
+func nodeRunner() runner {
+	return runner{
+		test:    []string{"npx", "--no-install", "vitest", "run", "--dir", "{dir}"},
+		run:     []string{"node", "{dir}/main.ts"}, // node strips TS types natively
+		timeout: 60 * time.Second,
+		inRoot:  true,
+		setup:   []string{"npm", "install", "--no-audit", "--no-fund"},
+	}
 }
 
 var runners = map[string]runner{
@@ -60,6 +77,32 @@ var runners = map[string]runner{
 			return []string{"CARGO_TARGET_DIR=" + filepath.Join(filepath.Dir(dir), ".target")}
 		},
 	},
+	"typescript": nodeRunner(),
+	"vue":        nodeRunner(),
+	"react":      nodeRunner(),
+}
+
+const setupTimeout = 10 * time.Minute
+
+// langReady reports whether the lang root has finished its one-time setup.
+func langReady(lang, root string) bool {
+	if runners[lang].setup == nil {
+		return true
+	}
+	_, err := os.Stat(filepath.Join(root, ".ready"))
+	return err == nil
+}
+
+// setupLang copies the bank's shared workspace files into root and installs dependencies; the output explains a failure.
+func setupLang(ctx context.Context, b *Bank, lang, root string) (string, error) {
+	if _, err := copyTree(b.FS, path.Join(lang, "_workspace"), root); err != nil {
+		return "", err
+	}
+	res, _, err := execIn(ctx, root, setupTimeout, nil, runners[lang].setup)
+	if err != nil || !res.Pass() {
+		return res.Output, cmp.Or(err, fmt.Errorf("%s 失敗", strings.Join(runners[lang].setup, " ")))
+	}
+	return "", os.WriteFile(filepath.Join(root, ".ready"), nil, 0o644)
 }
 
 // Workspace is where a learner edits one question.
@@ -120,10 +163,14 @@ func copyTree(fsys fs.FS, src, dst string) ([]string, error) {
 
 // gradeCode grades the code in dir; for check=test the hidden tests are overlaid only for the run.
 func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir string) (Result, error) {
-	r := runners[lang]
+	r, qdir := runners[lang], dir
 	var env []string
 	if r.env != nil {
 		env = r.env(dir)
+	}
+	if r.inRoot {
+		r.build, r.test, r.run = inDir(r.build, dir), inDir(r.test, dir), inDir(r.run, dir)
+		dir = filepath.Dir(dir)
 	}
 	if r.build != nil {
 		res, _, err := execIn(ctx, dir, r.timeout, env, r.build)
@@ -144,7 +191,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		}
 		return res, nil
 	}
-	files, err := copyTree(b.FS, b.questionDir(lang, q.ID, "test"), dir)
+	files, err := copyTree(b.FS, b.questionDir(lang, q.ID, "test"), qdir)
 	defer func() {
 		for _, f := range files {
 			os.Remove(f)
@@ -155,6 +202,18 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 	}
 	res, _, err := execIn(ctx, dir, r.timeout, env, r.test)
 	return res, err
+}
+
+// inDir substitutes the question dir name into argv.
+func inDir(argv []string, dir string) []string {
+	if argv == nil {
+		return nil
+	}
+	out := slices.Clone(argv)
+	for i, a := range out {
+		out[i] = strings.ReplaceAll(a, "{dir}", filepath.Base(dir))
+	}
+	return out
 }
 
 // execIn runs argv in dir and returns combined output plus stdout alone; a non-zero exit is a KindTest result, not an error.

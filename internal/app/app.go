@@ -34,6 +34,7 @@ const (
 	scrQuestion
 	scrRedoIntro
 	scrCleared
+	scrSetup
 )
 
 type model struct {
@@ -48,6 +49,11 @@ type model struct {
 	missing map[string]bool // langs whose toolchain is not on PATH
 	langCur int
 	chapCur int
+
+	// one-time dependency install for the selected lang
+	settingUp bool
+	setupOut  string
+	setupErr  error
 
 	// reset dialog on the menu
 	resetting  bool
@@ -75,6 +81,11 @@ type model struct {
 }
 
 type editorDoneMsg struct{ err error }
+
+type setupDoneMsg struct {
+	out string
+	err error
+}
 
 type gradedMsg struct {
 	res Result
@@ -154,6 +165,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case editorDoneMsg:
 		m.err = msg.err
+	case setupDoneMsg:
+		m.settingUp, m.setupOut, m.setupErr = false, msg.out, msg.err
+		if msg.err == nil {
+			m.scr, m.chapCur = scrChapters, 0
+		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 	case tea.KeyMsg:
@@ -173,9 +189,31 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case scrCleared:
 			return m.updateCleared(msg)
+		case scrSetup:
+			switch msg.String() {
+			case "enter":
+				if !m.settingUp {
+					return m, m.startSetup()
+				}
+			case "esc":
+				if !m.settingUp {
+					m.scr = scrMenu
+				}
+			}
 		}
 	}
 	return m, nil
+}
+
+func (m *model) langRoot() string { return filepath.Join(m.cfg.DataDir, "workspace", m.lang().ID) }
+
+func (m *model) startSetup() tea.Cmd {
+	m.settingUp, m.setupErr, m.setupOut = true, nil, ""
+	b, lang, root := m.bank, m.lang().ID, m.langRoot()
+	return func() tea.Msg {
+		out, err := setupLang(context.Background(), b, lang, root)
+		return setupDoneMsg{out, err}
+	}
 }
 
 // stepLang returns the next lang from i in direction d whose toolchain is available, or i if there is none.
@@ -244,7 +282,12 @@ func (m *model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "down", "j":
 		m.langCur = m.stepLang(m.langCur, +1)
 	case "enter":
-		if !m.missing[m.lang().ID] {
+		switch {
+		case m.missing[m.lang().ID]:
+		case !langReady(m.lang().ID, m.langRoot()):
+			m.scr = scrSetup
+			return m, m.startSetup()
+		default:
 			m.scr, m.chapCur = scrChapters, 0
 		}
 	case "R":
@@ -527,6 +570,8 @@ func (m *model) View() string {
 		return m.viewRedoIntro()
 	case scrCleared:
 		return m.viewCleared()
+	case scrSetup:
+		return m.viewSetup()
 	}
 	return m.viewMenu()
 }
@@ -551,6 +596,9 @@ func (m *model) viewMenu() string {
 	for i, l := range m.langs {
 		chs, lp := m.bank.Chapters[l.ID], m.prog[l.ID]
 		done, status := 0, ""
+		if !langReady(l.ID, filepath.Join(m.cfg.DataDir, "workspace", l.ID)) {
+			status = "⚙ 首次進入將安裝依賴"
+		}
 		if m.allPassed(l.ID) {
 			done, status = len(chs), "✓ 全部過關"
 		} else if lp != nil {
@@ -700,6 +748,19 @@ func (m *model) progressRow() string {
 		row += "   重做 ●"
 	}
 	return row
+}
+
+func (m *model) viewSetup() string {
+	name := m.lang().Name
+	if m.settingUp {
+		return m.box(fmt.Sprintf("⚙ 安裝 %s 依賴中…（%s，第一次需要一點時間）", name, strings.Join(runners[m.lang().ID].setup, " ")))
+	}
+	body := badStyle.Render("✗ 安裝失敗") + "：" + m.setupErr.Error()
+	if out := strings.TrimSpace(m.setupOut); out != "" {
+		lines := strings.Split(out, "\n")
+		body += "\n\n" + strings.Join(lines[max(len(lines)-maxOutputLines, 0):], "\n") // npm errors end with the useful part
+	}
+	return m.box(body) + help("enter 重試   esc 返回")
 }
 
 func (m *model) viewRedoIntro() string {

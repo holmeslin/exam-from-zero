@@ -1,0 +1,13 @@
+lang: vue
+chapter: 4
+title: 第一個 Vue 程式
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: vue-counter
+    difficulty: 1
+    type: code
+    check: test
+    prompt: 讓 Counter.vue 的按鈕每按一次數字加一。
+    hints: ["ref", "count++"]
+    ref: chapter4/01.md

@@ -1,0 +1,13 @@
+lang: react
+chapter: 4
+title: 第一個 React 程式
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: react-greet
+    difficulty: 1
+    type: code
+    check: test
+    prompt: 讓 Greet 元件顯示 hello, {name}。
+    hints: ["JSX 裡用大括號", "<p>hello, {name}</p>"]
+    ref: chapter4/01.md

@@ -448,3 +448,32 @@ func TestMissingToolchainIsGreyedAndSkipped(t *testing.T) {
 	e.key(tea.KeyEnter)
 	e.waitFor("Go   0/1 過關")
 }
+
+func TestNodeLang_InstallsOnFirstEntryThenGrades(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/node")
+	e := start(t, cfg)
+	e.waitFor("TypeScript", "⚙ 首次進入將安裝依賴")
+	e.key(tea.KeyEnter)
+	e.waitFor("安裝 TypeScript 依賴中")
+	e.waitFor("第一步") // chapter list after npm install
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 add")
+	e.writeAnswer("typescript", "ts-add", "add.ts", "export function add(a: number, b: number): number { return a + b }\n")
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+}
+
+func TestNodeLang_FailedInstallCanBeRetried(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/badnode")
+	e := start(t, cfg)
+	e.waitFor("TypeScript")
+	e.key(tea.KeyEnter)
+	e.waitFor("✗ 安裝失敗", "enter 重試")
+	e.key(tea.KeyEnter)
+	e.waitFor("安裝 TypeScript 依賴中")
+	e.waitFor("✗ 安裝失敗")
+	e.key(tea.KeyEsc)
+	e.waitFor("選擇今天要測驗的語言")
+}

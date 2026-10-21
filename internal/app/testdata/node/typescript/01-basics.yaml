@@ -1,0 +1,21 @@
+lang: typescript
+chapter: 1
+title: 第一步
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 2
+questions:
+  - id: ts-add
+    difficulty: 1
+    type: code
+    check: test
+    prompt: 實作 add(a, b) 回傳兩數之和。
+    hints: ["+", "return a + b"]
+    ref: chapter1/01.md
+  - id: ts-hello
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: 印出 hello。
+    expected_stdout: "hello\n"
+    hints: ["console.log", "console.log('hello')"]
+    ref: chapter1/02.md

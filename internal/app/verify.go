@@ -34,9 +34,18 @@ func Verify(ctx context.Context, fsys fs.FS, only string, w io.Writer) error {
 		if only != "" && l.ID != only {
 			continue
 		}
-		if _, err := exec.LookPath(l.Tool); err != nil && len(b.Chapters[l.ID]) > 0 {
+		if len(b.Chapters[l.ID]) == 0 {
+			continue
+		}
+		if _, err := exec.LookPath(l.Tool); err != nil {
 			report(l.ID, "缺少 %s，無法驗證", l.Tool)
 			continue
+		}
+		if runners[l.ID].setup != nil {
+			if out, err := setupLang(ctx, b, l.ID, filepath.Join(tmp, l.ID)); err != nil {
+				report(l.ID, "安裝依賴失敗：%v\n%s", err, out)
+				continue
+			}
 		}
 		for _, c := range b.Chapters[l.ID] {
 			if c.Sample < 1 || len(c.Questions) < c.Sample {
