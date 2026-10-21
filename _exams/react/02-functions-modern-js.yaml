@@ -27,15 +27,15 @@ questions:
     prompt: |
       執行下面的程式碼，會印出什麼？
 
-          const makeUser = (name) => { name: name };
-          console.log(makeUser("小明"));
+          const wrap = (price) => { total: price * 2 };
+          console.log(wrap(50));
     choices:
-      - "{ name: '小明' }"
+      - "{ total: 100 }"
       - "undefined"
-      - "小明"
-      - "程式出錯，丟出 TypeError"
+      - "100"
+      - "程式出錯，丟出 SyntaxError"
     answer: 1
-    hints: ["箭頭右邊緊接著 `{` 時，JavaScript 會把它當成函式內容的開頭，還是物件？", "大括號被當成函式內容，裡面沒有 return，所以回傳 undefined；要回傳物件得寫成 `({ name: name })`"]
+    hints: ["箭頭右邊緊接著 `{` 時，JavaScript 會把它當成函式內容的開頭，還是物件？", "大括號被當成函式內容，`total:` 只是一個標籤，裡面沒有 return，所以回傳 undefined；要回傳物件得寫成 `({ total: price * 2 })`"]
     ref: chapter2/03_arrow_functions.md
 
   - id: react-ch02-q03

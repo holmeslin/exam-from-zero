@@ -88,16 +88,16 @@ questions:
     type: code
     check: stdout
     prompt: |
-      入場規則：**成年人（18 歲以上）或有家長陪同的人**可以進場，但前提是**一定要有票**。
-      main.ts 的判斷寫錯了，沒票的小美也能進場。請修正 `canEnter` 的條件，讓輸出變成：
+      折扣規則：**VIP 會員或單筆滿 1000 元**可以打九折，但前提是**優惠券沒有過期**。
+      main.ts 的判斷寫錯了，優惠券已經過期的大雄還是打了九折。請修正 `discount` 的條件，讓輸出變成：
 
-          小明：可以進入
-          小華：可以進入
-          小美：不能進入
-          阿強：不能進入
-    hints: ['`&&` 比 `||` 先算，所以 `a || b && c` 的意思是 `a || (b && c)`。', '用括號標清楚順序：`(visitor.age >= 18 || visitor.hasParent) && visitor.hasTicket`，或先存成中間變數再組合。']
+          阿哲：打九折
+          小芳：打九折
+          大雄：原價
+          靜香：原價
+    hints: ['`&&` 比 `||` 先算，所以 `a || b && c` 的意思是 `a || (b && c)`。', '用括號標清楚順序：`(order.isVip || order.total >= 1000) && !order.couponExpired`，或先存成中間變數再組合。']
     ref: chapter1/10_logical_operators.md
-    expected_stdout: "小明：可以進入\n小華：可以進入\n小美：不能進入\n阿強：不能進入\n"
+    expected_stdout: "阿哲：打九折\n小芳：打九折\n大雄：原價\n靜香：原價\n"
 
   - id: react-ch01-q07
     difficulty: 2
@@ -105,10 +105,10 @@ questions:
     prompt: |
       下面這段程式碼會印出什麼？請完整寫出印出的那一行。
 
-          const count = 0;
-          console.log(`你有 ${count} 則${count > 0 ? "新" : ""}訊息`);
-    answers: ['^你有 ?0 ?則訊息$']
-    hints: ['三元運算子 `條件 ? A : B`：條件成立得到 A，不成立得到 B。', '`0 > 0` 是 `false`，所以那一段會變成空字串 `""`。']
+          const items = 1;
+          console.log(`購物車有 ${items} 件商品${items > 1 ? "（含多件優惠）" : ""}`);
+    answers: ['^購物車有 ?1 ?件商品$']
+    hints: ['三元運算子 `條件 ? A : B`：條件成立得到 A，不成立得到 B。', '`1 > 1` 是 `false`，所以那一段會變成空字串 `""`。']
     ref: chapter1/11_ternary.md
 
   - id: react-ch01-q08

@@ -1,15 +1,15 @@
-const visitors = [
-  { name: "小明", age: 20, hasParent: false, hasTicket: true },
-  { name: "小華", age: 15, hasParent: true, hasTicket: true },
-  { name: "小美", age: 30, hasParent: false, hasTicket: false },
-  { name: "阿強", age: 12, hasParent: false, hasTicket: true },
+const orders = [
+  { name: "阿哲", isVip: true, total: 500, couponExpired: false },
+  { name: "小芳", isVip: false, total: 1200, couponExpired: false },
+  { name: "大雄", isVip: true, total: 800, couponExpired: true },
+  { name: "靜香", isVip: false, total: 300, couponExpired: false },
 ];
-for (const visitor of visitors) {
-  const isAllowedAge = visitor.age >= 18 || visitor.hasParent;
-  const canEnter = isAllowedAge && visitor.hasTicket;
-  if (canEnter) {
-    console.log(`${visitor.name}：可以進入`);
+for (const order of orders) {
+  const qualifies = order.isVip || order.total >= 1000;
+  const discount = qualifies && !order.couponExpired;
+  if (discount) {
+    console.log(`${order.name}：打九折`);
   } else {
-    console.log(`${visitor.name}：不能進入`);
+    console.log(`${order.name}：原價`);
   }
 }
