@@ -1,0 +1,172 @@
+lang: go
+chapter: "3"
+title: 結構、指標與方法
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter3, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch03-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      程式裡已經定義好 Book struct（欄位 Title、Pages）。
+      實作 TotalPages(books []Book) int，回傳所有書的頁數總和；空切片回傳 0。
+    hints: ["用 for range 走訪切片，每個元素都是一個 Book", "total += b.Pages，用 . 讀出欄位"]
+    ref: chapter3/01_struct.md
+  - id: go-ch03-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這段程式會印出什麼？
+
+          type Person struct {
+              Name string
+              Age  int
+          }
+
+          fmt.Printf("%+v\n", Person{Age: 30})
+    choices: ["{Name: Age:30}", "{Name:\"\" Age:30}", "{ 30}", "編譯失敗：Name 沒有給值"]
+    answer: 0
+    hints: ["struct literal 沒寫到的欄位會是零值，不會編譯失敗", "string 的零值是空字串，%+v 會印出 Name: 後面什麼都沒有"]
+    ref: chapter3/02_struct_literal_zero.md
+  - id: go-ch03-q03
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      用「匿名 struct 的切片」存三筆成績：Andy 90、Betty 85、Cindy 77（欄位 Name、Score），
+      依序每行印出「名字: 分數」（冒號後一個空格），最後一行印出「總分: 252」。
+      預期輸出：
+
+          Andy: 90
+          Betty: 85
+          Cindy: 77
+          總分: 252
+    expected_stdout: "Andy: 90\nBetty: 85\nCindy: 77\n總分: 252\n"
+    hints: ["型別寫成 []struct { Name string; Score int }，後面接 {...} 放三筆資料", "走訪時用 fmt.Printf(\"%s: %d\\n\", s.Name, s.Score)，再把分數加總"]
+    ref: chapter3/03_anonymous_struct.md
+  - id: go-ch03-q04
+    difficulty: 1
+    type: short
+    prompt: 指標 p 的型別是 *int。要透過 p 把它指向的那個 int 改成 5，這一行敘述怎麼寫？
+    answers: ["^\\*p ?= ?5$"]
+    hints: ["在指標變數前面加 *，就是「p 指向的那個值」", "*p = 5"]
+    ref: chapter3/04_pointer.md
+  - id: go-ch03-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 Swap(a, b *int)，交換 a 和 b 指向的兩個值。
+      例如 x, y := 3, 8 之後呼叫 Swap(&x, &y)，x 會變成 8、y 會變成 3。
+    hints: ["參數是指標，要用 *a、*b 讀寫原本的變數", "第 2 章的多重賦值可以一行交換：*a, *b = *b, *a"]
+    ref: chapter3/04_pointer.md
+  - id: go-ch03-q06
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 Oldest(people []Person) *Person：
+      回傳指向切片裡年紀最大那個元素的指標（一樣大時取前面那個），
+      讓呼叫者可以透過這個指標直接修改切片裡的資料；people 是空的就回傳 nil。
+    hints: ["for _, p := range people 裡的 p 是複本，&p 不會指到切片裡；改用 for i := range people，取 &people[i]", "先宣告 var best *Person（零值是 nil），best == nil 或 people[i].Age > best.Age 時更新它"]
+    ref: chapter3/07_nil.md
+  - id: go-ch03-q07
+    difficulty: 2
+    type: short
+    prompt: 從 Go 1.26 開始可以寫 p := new(42)。這時 p 的型別是什麼？
+    answers: ["^\\*int$"]
+    hints: ["new(值) 會建立一個指向那個值複本的指標，型別由值決定", "42 是 int，所以是指向 int 的指標"]
+    ref: chapter3/06_new.md
+  - id: go-ch03-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      程式裡已經定義好 type Celsius float64 和 type Fahrenheit float64。
+      幫 Celsius 完成兩個方法：
+      - ToFahrenheit() Fahrenheit：換算成華氏，公式 F = C*9/5 + 32
+      - IsFreezing() bool：0 度（含）以下回傳 true
+    hints: ["方法裡的 c 就是呼叫時點左邊的那個 Celsius，可以直接拿來算", "c*9/5 + 32 的型別還是 Celsius，要用 Fahrenheit(...) 轉換後再回傳"]
+    ref: chapter3/09_method.md
+  - id: go-ch03-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Wallet 的 Deposit（存錢）和 Withdraw（提領）邏輯都寫好了，
+      但 var w Wallet 之後呼叫 w.Deposit(100)，w.Balance 還是 0。
+      找出原因並修正，讓這兩個方法真的改到 w 的餘額。
+    hints: ["值接收者 (w Wallet) 拿到的是複本，方法改的是複本", "把兩個方法的接收者都改成指標接收者 (w *Wallet)，呼叫端不用改"]
+    ref: chapter3/10_value_vs_pointer_receiver.md
+  - id: go-ch03-q10
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式會印出什麼？
+
+          type Point struct {
+              X int
+              Y int
+          }
+
+          p := &Point{X: 1, Y: 2}
+          q := &Point{X: 1, Y: 2}
+          r := p
+          fmt.Println(p == q, p == r, *p == *q)
+    choices: ["false true true", "true true true", "false false true", "true true false"]
+    answer: 0
+    hints: ["比較兩個指標，比的是是不是指向同一個地方", "p 和 q 是兩個不同的 struct；*p == *q 才是比內容"]
+    ref: chapter3/11_struct_comparison.md
+  - id: go-ch03-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      程式裡已經定義好 Point struct（欄位 X、Y）。
+      實作 CountDistinct(points []Point) int，回傳切片裡有幾個不重複的座標。
+      例如 (1,2)、(2,1)、(1,2)、(0,0) 有 3 個不重複的座標。
+    hints: ["可以比較的 struct 能直接當 map 的 key", "用 seen := map[Point]bool{} 記下出現過的座標，最後回傳 len(seen)"]
+    ref: chapter3/11_struct_comparison.md
+  - id: go-ch03-q12
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Dog 嵌入了 Animal，Animal 已經有 Hello() 方法，會回傳「我是 名字」。
+      幫 Dog 完成自己的 Hello() 方法，回傳像「汪！我是 Lucky，品種是 柴犬」這樣的字串
+      （「汪！」後面接 Animal 的 Hello() 結果，再接「，品種是 」和品種）。
+      Animal 原本的 Hello() 不能改。
+    hints: ["外層 Dog 的同名方法優先，但內層的還叫得到：d.Animal.Hello()", "return \"汪！\" + d.Animal.Hello() + \"，品種是 \" + d.Breed"]
+    ref: chapter3/13_promotion.md
+  - id: go-ch03-q13
+    difficulty: 3
+    type: choice
+    prompt: |
+      在 go.mod 寫 go 1.27 的專案裡，有下面兩個型別：
+
+          type Animal struct {
+              Name string
+              Legs int
+          }
+
+          type Dog struct {
+              Animal
+              Breed string
+          }
+
+      哪一個 struct literal 可以編譯通過？
+    choices: ["Dog{Animal: Animal{Legs: 4}, Name: \"Lucky\"}", "Dog{Animal.Name: \"Lucky\"}", "Dog{Name: \"Lucky\", Breed: \"柴犬\"}", "以上都不行，嵌入的欄位一定要寫成 Animal: Animal{...}"]
+    answer: 2
+    hints: ["Go 1.27 起，literal 裡可以直接寫提升上來的欄位名稱", "不能同時寫 Animal: 和 Name:，key 也不能寫成 Animal.Name 這種路徑"]
+    ref: chapter3/14_nested_field_literal.md
+  - id: go-ch03-q14
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Tags 用一個 map 記錄不重複的標籤，有 Add、Has、Len 三個方法。
+      現在 var t Tags 之後直接呼叫 t.Add("go") 會 panic。
+      修改程式，讓 Tags 的零值不用初始化就能直接使用。
+    hints: ["零值裡的 map 是 nil；讀取 nil map 沒問題，寫入才會 panic", "在 Add 裡先檢查 t.set == nil，是的話就 t.set = make(map[string]bool)"]
+    ref: chapter3/15_useful_zero_value.md

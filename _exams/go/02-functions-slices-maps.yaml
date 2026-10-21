@@ -1,0 +1,416 @@
+lang: go
+chapter: "2"
+title: 函式、陣列、切片與 map
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter2, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 9
+questions:
+  # 由 EXERCISES.md 第 2 章第 2 集「題 1」轉換
+  - id: go-ch02-q01
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      用 iota 宣告四個常數 Spring、Summer、Autumn、Winter，編號從 1 開始。
+      再建立變數 season := Autumn，先印出它的編號，再用 switch 印出它的中文名稱。
+
+      預期輸出：
+
+          Autumn 的編號： 3
+          秋天
+    expected_stdout: "Autumn 的編號： 3\n秋天\n"
+    hints: ["在 const ( ... ) 裡，第一行寫 Spring = iota + 1，下面三行只寫名字", "case Spring: 跟 case 1: 意思一樣，但前者好讀很多；印編號用 fmt.Println(\"Autumn 的編號：\", season)"]
+    ref: chapter2/02_iota.md
+  # 由 EXERCISES.md 第 2 章第 4 集「題 1」轉換
+  - id: go-ch02-q02
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      費氏數列從 0、1 開始，之後每個數都是前兩個數的和。
+      用 a, b := 0, 1 和多重賦值，印出前 10 個數（每行一個）。
+    expected_stdout: "0\n1\n1\n2\n3\n5\n8\n13\n21\n34\n"
+    hints: ["每往前走一步，新的 a 是舊的 b，新的 b 是舊的 a + b", "多重賦值右邊用的都是「舊的值」，迴圈裡先印 a，再寫 a, b = b, a+b"]
+    ref: chapter2/04_multiple_assignment.md
+  # 由 EXERCISES.md 第 2 章第 5 集「題 1」轉換
+  - id: go-ch02-q03
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      買了 3 杯咖啡，每杯 65 元，付了 200 元。用 fmt.Printf 印出下面的收據；
+      平均每杯的價格要算成 float64，印到小數點後兩位。
+
+          品項：咖啡
+          數量：3 杯
+          總價：195 元
+          找零：5 元
+          平均每杯：65.00 元
+    expected_stdout: "品項：咖啡\n數量：3 杯\n總價：195 元\n找零：5 元\n平均每杯：65.00 元\n"
+    hints: ["文字用 %s、整數用 %d、小數用 %.2f，Printf 每行結尾要自己加 \\n", "平均要先轉型再除：fmt.Printf(\"平均每杯：%.2f 元\\n\", float64(total)/float64(count))"]
+    ref: chapter2/05_printf_verbs.md
+  # 由 EXERCISES.md 第 2 章第 6 集「題 1」轉換
+  - id: go-ch02-q04
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      寫一個函式 printLine，印出一行 ----------。在 main 裡呼叫它，讓輸出變成下面的樣子
+      （分隔線要靠呼叫 printLine() 印出，不要在 main 裡直接印）：
+
+          ----------
+          今日菜單
+          ----------
+          滷肉飯
+          貢丸湯
+          ----------
+    expected_stdout: "----------\n今日菜單\n----------\n滷肉飯\n貢丸湯\n----------\n"
+    hints: ["先在 main 外面寫 func printLine() { ... }，把印分隔線的那行放進去", "呼叫函式要加小括號：printLine()，總共要呼叫三次"]
+    ref: chapter2/06_function_basic.md
+  # 由 EXERCISES.md 第 2 章第 7 集「題 1」轉換
+  - id: go-ch02-q05
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      寫一個函式 cheer(name string, times int)，印出 times 次「加油，」加上名字。
+      main 裡已經替小明喊 2 次、替阿華喊 3 次，輸出應該是：
+
+          加油， 小明
+          加油， 小明
+          加油， 阿華
+          加油， 阿華
+          加油， 阿華
+    expected_stdout: "加油， 小明\n加油， 小明\n加油， 阿華\n加油， 阿華\n加油， 阿華\n"
+    hints: ["參數就像函式裡的變數，值由呼叫的人決定；重複 times 次可以用第 1 章學過的 for range", "for range times { fmt.Println(\"加油，\", name) }"]
+    ref: chapter2/07_function_params.md
+  # 由 EXERCISES.md 第 2 章第 8 集「題 2」轉換
+  - id: go-ch02-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      寫一個函式 isLeapYear(year int) bool，判斷是不是閏年：
+      能被 4 整除但不能被 100 整除，或能被 400 整除。
+      例如 2024 是 true、1900 是 false、2000 是 true。
+    hints: ["條件可以用 && 和 || 組合，記得加小括號讓意思清楚；可以直接 return 一個布林運算式", "return (year%4 == 0 && year%100 != 0) || year%400 == 0"]
+    ref: chapter2/08_function_return.md
+  # 由 EXERCISES.md 第 2 章第 9 集「題 1」轉換
+  - id: go-ch02-q07
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個函式 toHoursMinutes(total int) (int, int)，把總分鐘數換成小時和分鐘。
+      main 裡印出 135 和 50 分鐘的結果；再示範只需要小時時，怎麼用 _ 丟掉分鐘。
+
+          135 分鐘 = 2 小時 15 分鐘
+          50 分鐘 = 0 小時 50 分鐘
+          200 分鐘大約是 3 小時
+    expected_stdout: "135 分鐘 = 2 小時 15 分鐘\n50 分鐘 = 0 小時 50 分鐘\n200 分鐘大約是 3 小時\n"
+    hints: ["小時是 total / 60，分鐘是 total % 60，return 後面用逗號隔開兩個值", "hours, _ := toHoursMinutes(200)，再 fmt.Println(200, \"分鐘大約是\", hours, \"小時\")"]
+    ref: chapter2/09_multiple_returns.md
+  - id: go-ch02-q08
+    difficulty: 2
+    type: short
+    prompt: |
+      下面的函式呼叫 f() 會回傳什麼？（只要寫出數字）
+
+          func f() (count int) {
+              return
+          }
+    answers: ["^0$"]
+    hints: ["具名回傳值在函式一開始就以零值宣告好了", "只寫 return 會交回具名變數目前的值，而 int 的零值是 0"]
+    ref: chapter2/10_named_returns.md
+  # 由 EXERCISES.md 第 2 章第 11 集「題 1」轉換
+  - id: go-ch02-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      下面的函式判斷能不能領取包裹，能正確執行但巢狀很深。請改寫成 early return 的風格：
+      每種「不能領」的情況先 return，最後才回傳「可以領取」。結果要和原本一樣。
+
+          func checkPickup(hasID bool, code int, days int) string {
+              if hasID {
+                  if code == 1234 {
+                      if days <= 7 {
+                          return "可以領取"
+                      } else {
+                          return "已超過保管期限"
+                      }
+                  } else {
+                      return "取件碼錯誤"
+                  }
+              } else {
+                  return "請出示證件"
+              }
+          }
+    hints: ["原本最外層的條件是 hasID，反過來就是「沒有證件」，先處理它並 return", "依序寫 if !hasID、if code != 1234、if days > 7，各自 return 錯誤訊息，最後 return \"可以領取\""]
+    ref: chapter2/11_early_return.md
+  # 由 EXERCISES.md 第 2 章第 12 集「題 2」轉換
+  - id: go-ch02-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      寫一個遞迴函式 power(base, exp int) int，回傳 base 的 exp 次方（exp 大於等於 0）。
+      例如 power(2, 10) 是 1024、power(3, 4) 是 81。
+    hints: ["最小、不用再拆的情況是什麼？那就是終止條件：exp == 0 時回傳 1", "其他情況 return base * power(base, exp-1)，每次呼叫都讓 exp 變小"]
+    ref: chapter2/12_recursion.md
+  # 由 EXERCISES.md 第 2 章第 13 集「題 1」轉換
+  - id: go-ch02-q11
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      建立一個 [7]int 陣列存一週每天的步數：6000, 8500, 7200, 9100, 4300, 12000, 10500。
+      印出第一天、最後一天的步數；接著把第五天的步數改成 5000，再印出整個陣列和陣列長度。
+
+          第一天： 6000
+          最後一天： 10500
+          [6000 8500 7200 9100 5000 12000 10500]
+          天數： 7
+    expected_stdout: "第一天： 6000\n最後一天： 10500\n[6000 8500 7200 9100 5000 12000 10500]\n天數： 7\n"
+    hints: ["索引從 0 開始數，所以第 N 天的索引是 N-1；長度用 len(steps)", "最後一天是 steps[len(steps)-1]，第五天是 steps[4] = 5000"]
+    ref: chapter2/13_array_basic.md
+  # 由 EXERCISES.md 第 2 章第 14 集「題 1」轉換
+  - id: go-ch02-q12
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      有陣列 scores := [5]int{72, 95, 58, 88, 64}。用 for range 算出總分、最高分，
+      以及不及格（低於 60）的人數，最後印出。
+
+          總分： 377
+          最高分： 95
+          不及格人數： 1
+    expected_stdout: "總分： 377\n最高分： 95\n不及格人數： 1\n"
+    hints: ["總分、最高分、不及格人數各需要一個變數，都要在迴圈外建立；每一圈拿到一個分數，分別更新它們", "for _, s := range scores { total += s; if s > highest {...}; if s < 60 { failed++ } }"]
+    ref: chapter2/14_array_range.md
+  - id: go-ch02-q13
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這段程式會印出什麼？
+
+          var names []string
+          fmt.Println(names, len(names))
+    choices: ["[] 0", "nil 0", "執行時 panic", "編譯錯誤：names 沒有初始值"]
+    answer: 0
+    hints: ["切片的零值是 nil，但 nil 切片用起來就像空切片", "nil 切片的長度是 0，fmt.Println 會把它印成 []"]
+    ref: chapter2/15_slice.md
+  # 由 EXERCISES.md 第 2 章第 16 集「題 1」轉換
+  - id: go-ch02-q14
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      從 var evens []int 開始，用迴圈把 1 到 20 之中的偶數一個一個 append 進去，
+      最後印出切片和它的長度。
+
+          [2 4 6 8 10 12 14 16 18 20]
+          長度： 10
+    expected_stdout: "[2 4 6 8 10 12 14 16 18 20]\n長度： 10\n"
+    hints: ["nil 切片可以直接 append，不用先準備空間；迴圈裡先判斷是不是偶數", "append 的結果一定要接回來：evens = append(evens, i)"]
+    ref: chapter2/16_append_len_cap.md
+  # 由 EXERCISES.md 第 2 章第 17 集「題 1」轉換
+  - id: go-ch02-q15
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      有 days := []string{"一", "二", "三", "四", "五", "六", "日"}。
+      用切片運算式取出上班日（星期一到五）和週末，分別印出來；再印出星期三到星期五。
+
+          上班日： [一 二 三 四 五]
+          週末： [六 日]
+          三到五： [三 四 五]
+    expected_stdout: "上班日： [一 二 三 四 五]\n週末： [六 日]\n三到五： [三 四 五]\n"
+    hints: ["先把每一天的索引寫出來：一是 0、二是 1……日是 6；s[a:b] 包含 a，不包含 b", "上班日是 days[:5]，週末是 days[5:]，星期三到星期五是 days[2:5]"]
+    ref: chapter2/17_slice_expression.md
+  - id: go-ch02-q16
+    difficulty: 3
+    type: choice
+    prompt: |
+      下面這段程式最後一行會印出什麼？
+
+          a := []int{1, 2, 3, 4, 5}
+          b := a[1:3]
+          b = append(b, 99)
+          fmt.Println(a)
+    choices: ["[1 2 3 99 5]", "[1 2 3 4 5]", "[1 2 3 4 5 99]", "[1 99 3 4 5]"]
+    answer: 0
+    hints: ["b 的長度是 2，但容量是 4（從 a[1] 算到最後），append 時容量夠不夠？", "容量夠時 append 直接寫進共用的底層陣列，b 的下一格剛好是 a[3]"]
+    ref: chapter2/18_shared_backing_array.md
+  # 由 EXERCISES.md 第 2 章第 19 集「題 1」轉換
+  - id: go-ch02-q17
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      有 original := []int{3, 1, 4}。準備一個長度一樣的切片 backup := []int{0, 0, 0}，
+      用 copy 把 original 的內容複製過去並印出複製了幾個。接著把 original[0] 改成 99，
+      印出兩個切片，確認 backup 沒有被影響。
+
+          複製了 3 個
+          original: [99 1 4]
+          backup: [3 1 4]
+    expected_stdout: "複製了 3 個\noriginal: [99 1 4]\nbackup: [3 1 4]\n"
+    hints: ["copy 不會讓目的地變長，所以 backup 要先有 3 格；直接寫 backup := original 只是共用底層陣列", "n := copy(backup, original)：目的地寫在前面，回傳值是複製的個數"]
+    ref: chapter2/19_copy.md
+  # 由 EXERCISES.md 第 2 章第 20 集「題 1」轉換
+  - id: go-ch02-q18
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      寫兩個函式：
+        - addBonus(scores []int, bonus int)：把每個分數都加上 bonus，不回傳。
+        - addScore(scores []int, s int) []int：在尾端加一個分數，回傳新的切片。
+      main 從 scores := []int{70, 80} 開始，先加一筆 90，再每人加 5 分，最後印出 [75 85 95]。
+    hints: ["先寫 addScore：回傳 append 的結果，呼叫端寫 scores = addScore(scores, 90)", "改元素要用索引：for i := range scores { scores[i] += bonus }；寫 for _, s := range 再改 s 改不到"]
+    ref: chapter2/20_slice_as_param.md
+  # 由 EXERCISES.md 第 2 章第 21 集「題 1」轉換
+  - id: go-ch02-q19
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      請使用者輸入一個正整數 n，用 make([]int, n) 建立切片，把 1 到 n 的平方依序放進去，
+      最後印出切片。輸入不是整數或小於 1 時，印出提示並結束。
+
+      輸入 5 時：
+
+          請輸入 n：
+          [1 4 9 16 25]
+    stdin: "5\n"
+    expected_stdout: "請輸入 n：\n[1 4 9 16 25]\n"
+    hints: ["make([]int, n) 會得到 n 個 0，索引從 0 到 n-1；記得先用 strconv.Atoi 轉整數並檢查 err 和 n < 1", "for i := range n { squares[i] = (i + 1) * (i + 1) }；用 append 的話前面 n 個 0 會留著"]
+    ref: chapter2/21_make.md
+  # 由 EXERCISES.md 第 2 章第 22 集「題 1」轉換
+  - id: go-ch02-q20
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      社群貼文限制最多 10 個字。寫一個函式 checkPost(text string)，印出這段文字的 byte 數、
+      字數，以及有沒有超過限制。main 裡用 "Hello Go" 和 "今天天氣很好適合出去走走" 各試一次。
+
+          Hello Go
+          byte 數： 8 字數： 8
+          可以發布
+          今天天氣很好適合出去走走
+          byte 數： 36 字數： 12
+          超過 10 個字
+    expected_stdout: "Hello Go\nbyte 數： 8 字數： 8\n可以發布\n今天天氣很好適合出去走走\nbyte 數： 36 字數： 12\n超過 10 個字\n"
+    hints: ["先印出 len(text)，看看中文那句是不是比你想的多很多；len 算的是 byte 數", "把字串轉成 []rune 之後每一格就是一個字：count := len([]rune(text))"]
+    ref: chapter2/22_string_utf8.md
+  # 由 EXERCISES.md 第 2 章第 23 集「題 1」轉換
+  - id: go-ch02-q21
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      寫一個函式 countRune(s string, target rune) int，回傳 target 這個字在 s 裡出現幾次。
+      例如在 "吃葡萄不吐葡萄皮，不吃葡萄倒吐葡萄皮" 裡，'葡' 有 4 個、'吐' 有 2 個。
+    hints: ["用 for _, r := range s 走訪，拿到的 r 是完整的字；用 s[i] 只會拿到 byte", "迴圈裡寫 if r == target { count++ }，最後 return count"]
+    ref: chapter2/23_string_range.md
+  # 由 EXERCISES.md 第 2 章第 24 集「題 1」轉換
+  - id: go-ch02-q22
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      請使用者輸入一個 email，先用 strings.TrimSpace 去掉前後空白，再用 strings.ToLower 轉小寫。
+      如果不包含 @，印出「格式不對」；否則印出整理後的 email，以及它是不是 .tw 結尾。
+
+      輸入前後帶有空白的 Gopher@Example.TW 時：
+
+          請輸入 email：
+          gopher@example.tw
+          是 .tw 結尾： true
+    stdin: "  Gopher@Example.TW  \n"
+    expected_stdout: "請輸入 email：\ngopher@example.tw\n是 .tw 結尾： true\n"
+    hints: ["這些函式回傳新字串，要把結果接回變數：email = strings.TrimSpace(email)；import 記得加 \"strings\"", "檢查用 strings.Contains(email, \"@\")，結尾用 strings.HasSuffix(email, \".tw\")"]
+    ref: chapter2/24_strings_package.md
+  # 由 EXERCISES.md 第 2 章第 25 集「題 1」轉換
+  - id: go-ch02-q23
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      有價目表 prices := map[string]int{"紅茶": 30, "綠茶": 30, "奶茶": 45}。
+        - 新增「咖啡」，價格 60。
+        - 奶茶漲價為 50。
+        - 計算一張訂單的總價：一杯紅茶、兩杯奶茶、一杯咖啡。
+        - 印出價目表有幾項，以及查詢不存在的「可可」會得到什麼。
+
+          總價： 190
+          價目表共 4 項
+          可可： 0
+    expected_stdout: "總價： 190\n價目表共 4 項\n可可： 0\n"
+    hints: ["map 用 m[k] 查值，用 m[k] = v 新增或修改，兩種情況寫法一樣；每一杯的價格都從 prices 查", "total := prices[\"紅茶\"] + prices[\"奶茶\"]*2 + prices[\"咖啡\"]，查不存在的鍵會得到零值"]
+    ref: chapter2/25_map_basic.md
+  # 由 EXERCISES.md 第 2 章第 26 集「題 1」轉換
+  - id: go-ch02-q24
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      有電話簿 phones := map[string]string{"小明": "0912-345-678", "小華": "0987-654-321"}。
+      請使用者輸入名字，找到就印出電話，找不到就印出「查無此人」。
+
+      輸入「小華」時：
+
+          要查誰？
+          小華 的電話是 0987-654-321
+    stdin: "小華\n"
+    expected_stdout: "要查誰？\n小華 的電話是 0987-654-321\n"
+    hints: ["查 map 時多接一個 ok，它會告訴你這個鍵在不在；ok 是 false 時印出提示並 return", "phone, ok := phones[name]；找到時 fmt.Println(name, \"的電話是\", phone)"]
+    ref: chapter2/26_comma_ok.md
+  # 由 EXERCISES.md 第 2 章第 27 集「題 1」轉換
+  - id: go-ch02-q25
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      有庫存表 stock := map[string]int{"鉛筆": 12, "橡皮擦": 0}。寫一個函式
+      report(stock map[string]int, item string)，用 if 的初始化敘述查庫存，分三種情況印出：
+      沒有這項商品、已售完、還有幾個。main 裡用「鉛筆」「橡皮擦」「尺」各呼叫一次。
+
+          鉛筆 還有 12 個
+          橡皮擦 已售完
+          沒有 尺 這項商品
+    expected_stdout: "鉛筆 還有 12 個\n橡皮擦 已售完\n沒有 尺 這項商品\n"
+    hints: ["先分清楚「沒有這項商品」和「庫存是 0」：前者要靠 ok，後者看 n；初始化敘述建立的 n、ok 在後面的 else if、else 裡也能用", "if n, ok := stock[item]; !ok { ... } else if n == 0 { ... } else { ... }"]
+    ref: chapter2/27_if_switch_init.md
+  # 由 EXERCISES.md 第 2 章第 28 集「題 1」轉換
+  - id: go-ch02-q26
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      班上投票選班遊地點，票是 votes := []string{"海邊", "山上", "海邊", "遊樂園", "海邊", "山上"}。
+      用 map 統計每個地點的票數，然後：
+        - 用 for range 走訪 map，找出最高票的地點（這題沒有平手）。
+        - 「遊樂園」因故取消，用 delete 刪掉，再印出剩下幾個選項。
+
+          最高票： 海邊 3 票
+          剩下 2 個選項
+    expected_stdout: "最高票： 海邊 3 票\n剩下 2 個選項\n"
+    hints: ["先走訪 votes，用 counts[v]++ 計數；再走訪 counts，用兩個變數記住目前最高的地點和票數", "for place, n := range counts { if n > bestCount { best, bestCount = place, n } }，最後 delete(counts, \"遊樂園\") 再看 len(counts)"]
+    ref: chapter2/28_map_delete_range.md
+  # 由 EXERCISES.md 第 2 章第 29 集「題 1」轉換
+  - id: go-ch02-q27
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      有一週的氣溫 temps := []int{24, 27, 31, 29, 22, 26, 30}，用迴圈搭配 max、min
+      找出最高溫和最低溫，印出溫差。
+
+          最高 31 度，最低 22 度，溫差 9 度
+    expected_stdout: "最高 31 度，最低 22 度，溫差 9 度\n"
+    hints: ["最高和最低的起始值用第一天的氣溫最保險；起始值寫 0 的話最低溫會變成 0", "highest = max(highest, t)、lowest = min(lowest, t)"]
+    ref: chapter2/29_min_max_clear.md

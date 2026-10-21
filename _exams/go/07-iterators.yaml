@@ -1,0 +1,125 @@
+lang: go
+chapter: "7"
+title: 迭代器
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter7, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch07-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      函式 f 要能寫成下面這樣走訪，f 的型別應該是哪一個？
+
+          for k, v := range f {
+              fmt.Println(k, v)
+          }
+    choices: ["func(yield func(K, V) bool)", "func(yield func(V) bool)", "func(k K, v V) bool", "func() (K, V, bool)"]
+    answer: 0
+    hints: ["for range 接受的函式只有一個參數，就是 yield", "一次交出兩個值，yield 就要收兩個參數"]
+    ref: chapter7/01_range_over_func.md
+  - id: go-ch07-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 CountUp(n int) iter.Seq[int]，回傳的迭代器依序交出 1、2、…、n。
+      n 小於 1 時什麼都不交出。迴圈中途 break 時不能 panic。
+    hints: ["在回傳的匿名函式裡寫 for i := 1; i <= n; i++，每次呼叫 yield(i)", "每次 yield 都要檢查：if !yield(i) { return }"]
+    ref: chapter7/02_iter_seq.md
+  - id: go-ch07-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 Lengths(words []string) iter.Seq2[string, int]，
+      依序交出每個字和它的字元數。字元數以 rune 計算，"迭代器" 是 3，"Go" 是 2。
+    hints: ["yield 收兩個參數：yield(w, 字元數)", "字元數可以用 len([]rune(w))；別忘了 if !yield(...) { return }"]
+    ref: chapter7/03_iter_seq2.md
+  - id: go-ch07-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式會依序印出哪幾行？
+
+          func nums() iter.Seq[int] {
+              return func(yield func(int) bool) {
+                  defer fmt.Println("收尾")
+                  for i := 1; i <= 3; i++ {
+                      if !yield(i) {
+                          fmt.Println("停止")
+                          return
+                      }
+                  }
+              }
+          }
+
+          func main() {
+              for n := range nums() {
+                  if n == 2 {
+                      break
+                  }
+                  fmt.Println(n)
+              }
+              fmt.Println("結束")
+          }
+    choices: ["1、停止、收尾、結束", "1、結束、停止、收尾", "1、停止、結束", "1、2、停止、收尾、結束"]
+    answer: 0
+    hints: ["break 那一次的 yield(2) 會回傳 false，迭代器要先 return，迴圈才真正結束", "迭代器 return 時會執行它的 defer，這些都發生在印出「結束」之前；n == 2 時在 Println 之前就 break 了"]
+    ref: chapter7/04_early_stop.md
+  - id: go-ch07-q05
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      starter 裡的 Lines 有兩個問題：迴圈 break 時會 panic，
+      而且提早結束時沒有收尾（Closed 沒有加 1）。
+      請修改 Lines，讓它不管是全部走完還是被 break，都剛好把 Closed 加 1，而且不會 panic。
+    hints: ["break 時 yield 會回傳 false，這時必須 return，不能再呼叫 yield", "把 Closed++ 改成 defer func() { Closed++ }()，放在迴圈之前"]
+    ref: chapter7/04_early_stop.md
+  - id: go-ch07-q06
+    difficulty: 1
+    type: short
+    prompt: 標準庫裡哪個函式可以「從後往前」走訪切片，交出索引和值？請寫出「套件.函式」名稱。
+    answers: ["^(slices\\.)?backward(\\(.*\\))?$"]
+    hints: ["它在 slices 套件裡，和 slices.All 一樣交出索引和值", "英文的「往後、倒著」是 backward"]
+    ref: chapter7/05_std_iterators.md
+  - id: go-ch07-q07
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      starter 裡有一個價目表 map。請依照品名（字串）由小到大排序，每行印出「品名 價格」，
+      例如「紅茶 30」。直接 range map 的順序不固定，請用 slices.Sorted 搭配 maps.Keys。
+    expected_stdout: "咖啡 60\n奶茶 45\n紅茶 30\n綠茶 25\n"
+    hints: ["slices.Sorted(maps.Keys(price)) 會得到排好序的品名切片", "for _, name := range slices.Sorted(maps.Keys(price)) { fmt.Println(name, price[name]) }"]
+    ref: chapter7/06_collect_sorted.md
+  - id: go-ch07-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      幫 Stack 加上 All 方法，回傳 iter.Seq2[int, int]：
+      從最上面（最後 Push 的）往下交出「位置, 值」，最上面的位置是 0。
+      例如依序 Push 10、20、30，會交出 (0, 30)、(1, 20)、(2, 10)。
+    hints: ["從 len(s.items)-1 往 0 倒著走訪，另外用一個變數記位置", "每次 if !yield(pos, s.items[i]) { return }，然後 pos++"]
+    ref: chapter7/07_write_iterator.md
+  - id: go-ch07-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 Take[V any](seq iter.Seq[V], n int) iter.Seq[V]，只交出 seq 的前 n 個值。
+      seq 可能是無限序列：交完第 n 個就要停，不能再向 seq 多拿一個值。
+      n <= 0 時什麼都不交出，也不要去走訪 seq。外面的迴圈 break 時也不能 panic。
+    hints: ["在裡面用 for v := range seq 走訪來源，同時計數", "先 yield，計數加 1 後如果到了 n 就 return；n <= 0 時一開始就 return"]
+    ref: chapter7/07_write_iterator.md
+  - id: go-ch07-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 Equal[V comparable](a, b iter.Seq[V]) bool：兩個迭代器交出的值個數與順序都相同時回傳 true。
+      for range 一次只能走訪一個迭代器，請用 iter.Pull 同時從兩邊各拿一個值比較。
+      一發現不同就要提早回傳，而且兩邊的迭代器都必須正確收尾。
+    hints: ["nextA, stopA := iter.Pull(a) 之後下一行立刻寫 defer stopA()，b 也一樣", "迴圈中各呼叫一次 next：ok 不同或值不同就回傳 false；兩邊 ok 都是 false 代表同時拿完，回傳 true"]
+    ref: chapter7/08_iter_pull.md

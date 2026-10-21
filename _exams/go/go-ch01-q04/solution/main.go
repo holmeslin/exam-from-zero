@@ -3,8 +3,8 @@ package main
 import "fmt"
 
 func main() {
-	for i := 10; i > 0; i -= 2 {
-		fmt.Println(i)
-	}
-	fmt.Println("發射！")
+	quiz1 := 70
+	quiz2 := 100
+	quiz3 := 70
+	fmt.Println("平均：", (quiz1+quiz2+quiz3)/3)
 }

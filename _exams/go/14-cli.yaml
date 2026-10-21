@@ -1,0 +1,161 @@
+lang: go
+chapter: "13"
+title: 實戰：CLI 工具
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter13, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch13-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 Greet(args []string) []string。args 的長相和 os.Args 一樣：
+      args[0] 是程式本身，真正的參數從 args[1] 開始。
+
+      - 沒有任何參數時，回傳只有一行的用法說明：「用法：greet <名字>...」
+      - 有參數時，每個名字回傳一行「哈囉，名字」，例如 ["./greet", "Andy"] 回傳 ["哈囉，Andy"]
+    hints: ["先用 len(args) < 2 判斷有沒有參數", "有參數時走訪 args[1:]，把 \"哈囉，\"+name append 進結果"]
+    ref: chapter13/01_os_args.md
+  - id: go-ch13-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 ParseOpts(args []string)，用 flag.NewFlagSet 解析選項（args 就是 os.Args[1:]）：
+
+      - -name：字串，預設 "世界"
+      - -n：整數，預設 1
+
+      回傳 name、n、剩下的位置參數（fs.Args()）與解析錯誤。
+      例如 ["-name", "小美", "-n", "2", "其他", "參數"] 要回傳 "小美"、2、["其他", "參數"]、nil；
+      ["-n", "abc"] 要回傳錯誤。起始程式已經用 flag.ContinueOnError 建好 FlagSet。
+    hints: ["fs.String / fs.Int 回傳的是指標，Parse 完要用 *name 取值", "先 if err := fs.Parse(args); err != nil { return ... err }，再回傳 *namePtr, *nPtr, fs.Args(), nil"]
+    ref: chapter13/02_flag.md
+  - id: go-ch13-q03
+    difficulty: 2
+    type: choice
+    prompt: |
+      join 用 flag 定義了 -sep 選項（預設是一個空白），最後印出 strings.Join(flag.Args(), *sep)。
+      執行下面這行指令會印出什麼？
+
+          ./join a b -sep ,
+    choices: ["a,b", "a b -sep ,", "a b", "flag 解析失敗，印出用法說明"]
+    answer: 1
+    hints: ["flag 碰到第一個不是選項的字，就停止解析", "a 不是選項，所以 -sep , 也被當成普通的位置參數，用預設的空白接起來"]
+    ref: chapter13/02_flag.md
+  - id: go-ch13-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作有子命令的 Textkit(args []string) (string, error)。args 就是 os.Args[1:]，所以 args[0] 是子命令：
+
+      - upper：把剩下的字用空白接起來，轉成大寫。["upper", "hello", "go"] → "HELLO GO"
+      - repeat：有自己的選項 -n（重複幾次，預設 2）和 -sep（分隔符號，預設一個空白），
+        把剩下的字用空白接起來後重複 n 次。["repeat", "-n", "3", "-sep", " | ", "咚"] → "咚 | 咚 | 咚"
+
+      沒給子命令、子命令不認得、選項解析失敗（例如 upper 沒有 -n 選項）時，回傳錯誤。
+      每個子命令用 flag.NewFlagSet(名稱, flag.ContinueOnError) 建立自己的選項，才不會直接結束程式。
+    hints: ["先檢查 len(args) < 1，再 switch args[0]，default 回傳 fmt.Errorf 錯誤", "每個 case 建自己的 FlagSet，解析 args[1:]；repeat 用 make([]string, *n) 填滿後 strings.Join(parts, *sep)"]
+    ref: chapter13/03_subcommands.md
+  - id: go-ch13-q05
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這支程式執行後，畫面上會出現哪些字？
+
+          func main() {
+              defer fmt.Println("收尾：關閉檔案")
+              fmt.Println("開始工作")
+              fmt.Fprintln(os.Stderr, "出錯了")
+              os.Exit(1)
+          }
+    choices: ["開始工作、出錯了", "開始工作、出錯了、收尾：關閉檔案", "開始工作、收尾：關閉檔案", "只有「開始工作」，寫到 os.Stderr 的字不會顯示"]
+    answer: 0
+    hints: ["stderr 平常也會顯示在終端機畫面上", "os.Exit 會立刻結束程式，連 defer 都不執行"]
+    ref: chapter13/04_exit_code.md
+  - id: go-ch13-q06
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一支從標準輸入讀資料的程式，一直讀到輸入結束為止：
+
+      - 每行先去掉前後空白；空白行略過
+      - 能轉成整數的行就加總；轉不成整數的行，把警告寫到「標準錯誤」後略過
+      - 最後在「標準輸出」印出一行「N 個數字，總和 S」，例如：4 個數字，總和 18
+
+      注意：評分只比對標準輸出，警告如果用 fmt.Println 印，就會把結果弄髒。
+    stdin: "5\n x\n7\n\n-2\n 8 \nabc12\n"
+    expected_stdout: "4 個數字，總和 18\n"
+    hints: ["for scanner.Scan() 讀每一行，strings.TrimSpace 後用 strconv.Atoi 轉換", "警告用 fmt.Fprintf(os.Stderr, ...)；迴圈結束後檢查 scanner.Err()，再用 fmt.Printf(\"%d 個數字，總和 %d\\n\", count, total)"]
+    ref: chapter13/05_pipes.md
+  - id: go-ch13-q07
+    difficulty: 1
+    type: short
+    prompt: |
+      sum 會把結果寫到 stdout、警告寫到 stderr。想把結果存進 result.txt，而警告仍然顯示在畫面上，
+      空格裡要填哪個符號？
+
+          ./sum < nums.txt ___ result.txt
+    answers: ["^>$", "^1>$"]
+    hints: ["< 是把檔案接到 stdin，方向剛好相反", "這個符號只會導走 stdout，stderr 仍然留在畫面上"]
+    ref: chapter13/05_pipes.md
+  - id: go-ch13-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 GoFiles(root string) ([]string, error)：用 filepath.WalkDir 走訪 root 底下所有資料夾，
+      回傳每個 .go 檔「相對於 root」的路徑，順序就是 WalkDir 走訪的順序。
+
+      - 名稱是 .git 或 vendor 的資料夾整個跳過，連裡面的 .go 檔都不算
+      - 名稱叫 vendor.go 的「檔案」不受影響，照樣要算
+      - root 不存在時要回傳錯誤
+    hints: ["fn 裡先處理 err 參數；d.IsDir() 而且 d.Name() 是 .git 或 vendor 時回傳 filepath.SkipDir", "!d.IsDir() && filepath.Ext(path) == \".go\" 時，用 filepath.Rel(root, path) 轉成相對路徑再 append"]
+    ref: chapter13/06_walk_dir.md
+  - id: go-ch13-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      讓長時間的工作在按下 Ctrl+C 時能乾淨地停下來，實作兩個函式：
+
+      - NewContext()：回傳收到 os.Interrupt 或 syscall.SIGTERM 時會被取消的 context，以及 stop 函式
+      - Process(ctx, n, step)：依序處理第 1～n 個項目，每個項目呼叫 step(i)。
+        每個項目「開始前」先檢查 ctx 是不是已經被取消；被取消就不再處理，
+        回傳已完成的個數和 context.Cause(ctx)。全部做完回傳 n, nil。
+
+      測試會在第 3 個項目做完時送出 SIGINT，期待 Process 回傳 3 和一個非 nil 的錯誤。
+    hints: ["NewContext 直接 return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)", "迴圈裡用 select { case <-ctx.Done(): return done, context.Cause(ctx); default: } 再呼叫 step(i)"]
+    ref: chapter13/07_signal_notify_context.md
+  - id: go-ch13-q10
+    difficulty: 3
+    type: choice
+    prompt: |
+      用 signal.NotifyContext 攔截 Ctrl+C 後，範例在 case <-ctx.Done(): 裡第一件事就呼叫 stop()，再開始存進度。
+      這樣做的主要目的是什麼？
+    choices:
+      - "取消攔截、恢復訊號的預設行為，收尾卡住時使用者再按一次 Ctrl+C 就能強制結束"
+      - "不呼叫 stop() 的話，ctx.Done() 不會被關閉，程式收不到通知"
+      - "stop() 會等所有 defer 執行完，確保進度存檔成功"
+      - "stop() 會把結束碼設成 0，讓 shell 認為程式正常結束"
+    answer: 0
+    hints: ["stop() 做的事是「取消攔截」", "如果一直不呼叫 stop()，之後的 Ctrl+C 都會被吞掉"]
+    ref: chapter13/07_signal_notify_context.md
+  - id: go-ch13-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      照本章完整範例的寫法，實作 find 工具的主體 run(args, stdin, stdout, stderr) int：
+      從 stdin 一行一行讀，把含有指定字詞的行寫到 stdout，並回傳結束碼。
+
+      用法：find [-i] [-n] <字詞>
+      - -i：不分大小寫
+      - -n：每行前面加上行號，格式「行號:內容」，例如 2:I like go
+      - 位置參數必須剛好 1 個，否則在 stderr 印出用法並回傳 2
+      - 選項打錯回傳 2；-h 印出說明，算成功回傳 0；讀取 stdin 失敗回傳 1；其他情況回傳 0
+      - 錯誤訊息與說明一律寫到 stderr，stdout 只放結果
+    hints: ["flag.NewFlagSet(\"find\", flag.ContinueOnError) 再 SetOutput(stderr)；Parse 失敗時用 errors.Is(err, flag.ErrHelp) 區分 0 和 2", "用 bufio.NewScanner(stdin) 讀，-i 時兩邊都 strings.ToLower 再 strings.Contains；迴圈後 scanner.Err() 不是 nil 就回傳 1"]
+    ref: chapter13/08_full_example.md

@@ -1,0 +1,154 @@
+lang: go
+chapter: ""
+title: 附錄二
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/appendix2, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ap2-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這段程式在你的電腦上每次都印出「哈囉」。關於它，哪個說法正確？
+
+          var message string
+          var ready bool
+
+          func main() {
+              go func() {
+                  message = "哈囉"
+                  ready = true
+              }()
+              for !ready {
+                  time.Sleep(time.Millisecond)
+              }
+              fmt.Println(message)
+          }
+    choices:
+      - "它有 data race，行為沒有定義；兩個 goroutine 之間沒有 happens-before，要用 channel 等同步工具接起來"
+      - "它是正確的，因為 goroutine 裡先寫 message 才寫 ready，別的 goroutine 一定照這個順序看到"
+      - "它是正確的，因為 time.Sleep 會在兩個 goroutine 之間建立 happens-before"
+      - "只要用 go run -race 跑沒有出現警告，就代表正確"
+    answer: 0
+    hints: ["編譯器和 CPU 會在不改變單一 goroutine 結果的前提下重排、暫存讀寫", "不同 goroutine 之間預設沒有先後關係；time.Sleep 不是同步工具"]
+    ref: appendix2/a_memory_model.md
+  - id: go-ap2-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 SafeCount(workers, times int) int：
+      啟動 workers 個 goroutine，每個把同一個計數器加 1、共加 times 次，
+      全部做完後回傳計數器的值（應該剛好是 workers*times）。
+      不能有 data race：用 sync.WaitGroup 等待、用 sync.Mutex 保護計數器。
+    hints: ["wg.Done() happens-before wg.Wait() 回傳；mu.Unlock() happens-before 下一次 mu.Lock() 回傳", "每個 goroutine 裡：mu.Lock(); count++; mu.Unlock()；迴圈外 wg.Wait() 之後再 return count"]
+    ref: appendix2/a_memory_model.md
+  - id: go-ap2-q03
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      GetConfig() 可能同時被很多 goroutine 呼叫，但現在每次都會重新呼叫 loadConfig。
+      請改用 sync.Once：不管多少 goroutine 同時呼叫，loadConfig 只執行一次，
+      而且每個呼叫者都保證看得到載入好的 config。
+      （不要修改 loadConfig 和 initCount，測試會檢查 initCount。）
+    hints: ["once.Do(f) 裡的 f 結束 happens-before 任何 once.Do 回傳", "宣告 var once sync.Once，GetConfig 裡寫 once.Do(func() { config = loadConfig() })，再 return config"]
+    ref: appendix2/a_memory_model.md
+  - id: go-ap2-q04
+    difficulty: 1
+    type: choice
+    prompt: |
+      執行 go build -gcflags='-m -l' . 後，哪一行訊息代表那個值「留在 stack 上」？
+    choices:
+      - "./main.go:19:11: make([]int, n) does not escape"
+      - "./main.go:14:2: moved to heap: p"
+      - "./main.go:32:14: total escapes to heap"
+      - "./main.go:13:6: can inline newPoint"
+    answer: 0
+    hints: ["moved to heap、escapes to heap 都代表放到 heap", "can inline 講的是 inline，和放在哪裡無關"]
+    ref: appendix2/b_escape_analysis.md
+  - id: go-ap2-q05
+    difficulty: 2
+    type: short
+    prompt: |
+      想讓編譯器印出逃逸分析的決定（哪些變數 moved to heap、哪些 does not escape），
+      在模組資料夾要執行哪個 go build 指令？（寫出完整指令）
+    answers:
+      - "^go build -gcflags[= ]['\"]?(-l )?-m( -l)?['\"]?( \\.)?$"
+      - "^go build -gcflags[= ]['\"]?-m=2['\"]?( \\.)?$"
+    hints: ["-gcflags 把參數交給編譯器", "go build -gcflags=-m ."]
+    ref: appendix2/b_escape_analysis.md
+  - id: go-ap2-q06
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      GC 只回收「從根走不到」的物件。下面的 Stack.Pop 縮短了切片，
+      但底層陣列那一格還留著指向 *Image 的指標，GC 只能當它還在用。
+      請修改 Pop：取出元素後，先把底層陣列那一格設成 nil 再縮短切片。
+      空的 Stack 呼叫 Pop 要回傳 nil。
+    hints: ["s.items[:len-1] 只改了長度，底層陣列的最後一格還在", "i := len(s.items)-1；last := s.items[i]；s.items[i] = nil；s.items = s.items[:i]"]
+    ref: appendix2/c_gc.md
+  - id: go-ap2-q07
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      用 runtime/debug 寫一支程式：
+      1. 先用 debug.SetGCPercent 把 GOGC 設成 80（這次不印）。
+      2. 再把 GOGC 設成 150，印出「原本的 GOGC：」和這次呼叫回傳的舊值。
+      3. 用 debug.SetMemoryLimit 把記憶體上限設成 512 MiB（512 << 20 位元組）。
+      4. 呼叫 SetMemoryLimit 只查詢、不修改，印出「目前的記憶體上限：」和查到的值。
+      兩行都用 fmt.Println(標題, 值) 印出，例如 fmt.Println("原本的 GOGC：", old)。
+    expected_stdout: "原本的 GOGC： 80\n目前的記憶體上限： 536870912\n"
+    hints: ["SetGCPercent 和 SetMemoryLimit 都會回傳「原本的設定」", "SetMemoryLimit 傳負數（例如 -1）代表只查詢不修改"]
+    ref: appendix2/c_gc.md
+  - id: go-ap2-q08
+    difficulty: 2
+    type: choice
+    prompt: |
+      go tool pprof -top 的輸出中有這兩行：
+
+               flat  flat%   sum%        cum   cum%
+              710ms 87.65% 87.65%      800ms 98.77%  main.isPrime (inline)
+                  0     0%   100%      810ms   100%  main.main
+
+      下列解讀何者正確？
+    choices:
+      - "main.main 自己幾乎不做事，時間都花在它呼叫的函式；熱點是 flat 最大的 main.isPrime"
+      - "main.main 的 cum 是 100%，所以它就是要優化的熱點"
+      - "flat 是函式加上它呼叫的函式一共花的時間，cum 是函式本身的時間"
+      - "main.main 的 flat 是 0，代表它沒有被執行到"
+    answer: 0
+    hints: ["flat 是函式本身，cum 包含它呼叫的函式", "看熱點要找 flat 大的函式"]
+    ref: appendix2/d_pprof.md
+  - id: go-ap2-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 Profile(w io.Writer, work func()) error：
+      用 runtime/pprof 開始 CPU profiling 並寫進 w，執行 work，結束時停止記錄。
+      如果開始記錄失敗（例如已經有別的 profiling 在跑），直接回傳那個錯誤，不執行 work。
+    hints: ["pprof.StartCPUProfile(w) 會回傳 error", "if err := pprof.StartCPUProfile(w); err != nil { return err }，接著 defer pprof.StopCPUProfile()，再呼叫 work()"]
+    ref: appendix2/d_pprof.md
+  - id: go-ap2-q10
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      「對每個元素套用一個函式」對任何型別做法都一樣，適合用泛型。
+      實作 Map[T, U any](items []T, f func(T) U) []U：
+      依序把 f 套用到 items 的每個元素，回傳結果切片。
+    hints: ["結果切片的元素型別是 U", "result := make([]U, 0, len(items))，for range 裡 append(result, f(v))"]
+    ref: appendix2/e_interface_vs_generics.md
+  - id: go-ap2-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      矩形和圓形算面積的方法不同，而且要放在同一個切片裡，這是介面的強項。
+      1. 定義 Shape 介面，要求方法 Area() float64。
+      2. 讓 Rect（W*H）和 Circle（3.14*R*R）實作 Area。
+      3. 把 TotalArea 改成 TotalArea(shapes []Shape) float64，回傳面積總和。
+    hints: ["泛型的 []T 裡元素一定是同一種 T，混合型別要用介面", "type Shape interface { Area() float64 }；func (r Rect) Area() float64 { return r.W * r.H }"]
+    ref: appendix2/e_interface_vs_generics.md

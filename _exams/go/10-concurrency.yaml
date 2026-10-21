@@ -1,0 +1,223 @@
+# 第 9 章在 EXERCISES.md 沒有固定題，以下題目都是依各集內容新出的
+lang: go
+chapter: "9"
+title: 並行
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter9, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 6
+questions:
+  - id: go-ch09-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這支程式執行後，哪個說法正確？
+
+          func say(word string) {
+              for i := range 3 {
+                  fmt.Println(word, i)
+              }
+          }
+
+          func main() {
+              go say("背景")
+              fmt.Println("main 結束")
+          }
+    choices:
+      - "一定會印出「main 結束」，但「背景」那幾行可能一行都沒印出來"
+      - "一定先印完「背景 0」到「背景 2」，最後才印「main 結束」"
+      - "一定會印出全部 4 行，只是順序每次不同"
+      - "編譯錯誤：go 後面不能接有參數的函式呼叫"
+    answer: 0
+    hints: ["加了 go 之後，main 會等 say 做完嗎？", "main 一回傳整支程式就結束，其他 goroutine 會被直接中止"]
+    ref: chapter9/01_goroutine.md
+  - id: go-ch09-q02
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      用 sync.WaitGroup 的 wg.Go，為 nums 裡的每個數字各開一個 goroutine 計算平方，
+      寫進 squares 切片裡「自己的格子」；等所有 goroutine 都做完，再用 fmt.Println(squares) 印出。
+    expected_stdout: "[1 4 9 16 25]\n"
+    hints: ["var wg sync.WaitGroup，迴圈裡用 wg.Go(func() { ... })，迴圈後 wg.Wait()", "每個 goroutine 只寫 squares[i] = n * n，彼此不碰同一格，就沒有 data race"]
+    ref: chapter9/02_waitgroup.md
+  - id: go-ch09-q03
+    difficulty: 2
+    type: short
+    prompt: 要對目前資料夾和底下所有套件執行測試，同時開啟 race detector 偵測 data race，指令怎麼寫？
+    answers:
+      - "^go test -race \\./\\.\\.\\.$"
+      - "^go test \\./\\.\\.\\. -race$"
+    hints: ["在 go test 後面加上一個旗標就能開啟 race detector", "go test -race ./..."]
+    ref: chapter9/03_data_race.md
+  - id: go-ch09-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 Counter 的 Add 和 Get，讓好幾個 goroutine 同時呼叫也能算對。
+      請用 struct 裡的 sync.Mutex 保護 counts（讀和寫都要上鎖）。
+    hints: ["Lock 之後馬上 defer Unlock()", "c.mu.Lock(); defer c.mu.Unlock(); c.counts[name]++，Get 也一樣先上鎖再 return"]
+    ref: chapter9/04_mutex.md
+  - id: go-ch09-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 Ticket 的 Claim 方法：只有第一個呼叫的人拿到 true，之後的人一律拿到 false。
+      就算 100 個 goroutine 同時搶，也只能有一個人搶到。不要用 Mutex，用 atomic.Bool 的方法。
+    hints: ["「檢查是 false、是的話改成 true」要一次完成，不能拆成 Load 再 Store", "return t.taken.CompareAndSwap(false, true)"]
+    ref: chapter9/06_atomic.md
+  - id: go-ch09-q06
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這支程式裡，「讀取設定」會印出幾次？
+
+          var loadConfig = sync.OnceValues(func() (string, error) {
+              fmt.Println("讀取設定")
+              return "", errors.New("找不到設定檔")
+          })
+
+          func main() {
+              for range 3 {
+                  _, err := loadConfig()
+                  fmt.Println("錯誤：", err)
+              }
+          }
+    choices:
+      - "1 次，之後每次都直接回傳同一個錯誤"
+      - "3 次，因為第一次失敗了，之後每次呼叫都會重試"
+      - "1 次，之後再呼叫時 err 會是 nil"
+      - "0 次，要先呼叫 Do 才會執行"
+    answer: 0
+    hints: ["OnceValues 只算一次並把結果記起來", "第一次的結果（包括錯誤）會一直被沿用，不會重試"]
+    ref: chapter9/07_once.md
+  - id: go-ch09-q07
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這支程式總共丟掉幾則訊息？最後讀到的是哪一則？
+
+          inbox := make(chan string, 1)
+          for i := 1; i <= 3; i++ {
+              select {
+              case inbox <- fmt.Sprintf("訊息 %d", i):
+                  fmt.Println("放進訊息", i)
+              default:
+                  fmt.Println("箱子滿了，丟掉訊息", i)
+              }
+          }
+          select {
+          case msg := <-inbox:
+              fmt.Println("讀到", msg)
+          default:
+              fmt.Println("沒有訊息")
+          }
+    choices:
+      - "丟掉 2 則，讀到「訊息 1」"
+      - "丟掉 2 則，讀到「訊息 3」"
+      - "丟掉 0 則，讀到「訊息 3」"
+      - "一則都沒丟：箱子滿了之後傳送會停下來等，程式卡住"
+    answer: 0
+    hints: ["inbox 只有 1 格暫存區；滿了之後傳送的 case 不能進行", "有 default 的 select 不會等：第 2、3 則走 default，箱子裡留的是第 1 則"]
+    ref: chapter9/11_select.md
+  - id: go-ch09-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 Countdown(n int) <-chan int：背景的 goroutine 依序送出 n、n-1、…、1，送完就關閉 channel，
+      讓呼叫的人可以用 for v := range Countdown(3) 收到 3、2、1 後自然結束。n 是 0 時什麼都不送，直接關閉。
+    hints: ["在 goroutine 裡用 for i := n; i > 0; i-- 傳送 out <- i", "迴圈結束後 close(out)，接收端的 for range 才會結束"]
+    ref: chapter9/10_close_range.md
+  - id: go-ch09-q09
+    difficulty: 1
+    type: short
+    prompt: 函式參數想標示成「只能從這個 channel 接收 int」，參數的型別要怎麼寫？
+    answers:
+      - "^<- ?chan int$"
+    hints: ["箭頭的位置跟接收的寫法 v := <-ch 一樣，從 chan 指出來", "<-chan int"]
+    ref: chapter9/13_directional_channel.md
+  - id: go-ch09-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 Merge(a, b <-chan int) []int：把 a、b 兩個 channel 送來的數字全部收齊，
+      由小到大排序後回傳。a、b 各自送完都會被關閉，兩個都關閉後才回傳。
+      請用 select 同時接收兩邊，某個 channel 關閉後把它設成 nil 來停用那個 case。
+      注意：送來的數字也可能是 0。
+    hints: ["for a != nil || b != nil { select { case n, ok := <-a: ... } }", "ok 是 false 時設成 nil 並 continue，否則 append；最後 slices.Sort(all)"]
+    ref: chapter9/14_nil_channel.md
+  - id: go-ch09-q11
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      起始程式執行時會出現 fatal error: all goroutines are asleep - deadlock!
+      請修好它（不要改 channel 的暫存大小），讓它印出「總和： 14」。
+    expected_stdout: "總和： 14\n"
+    hints: ["三個 goroutine 卡在傳送等人接收，main 卻卡在 wg.Wait() 等它們結束", "把 wg.Wait() 和 close(results) 移到另一個 goroutine：go func() { wg.Wait(); close(results) }()"]
+    ref: chapter9/15_deadlock.md
+  - id: go-ch09-q12
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      First 同時執行好幾個函式，回傳最先完成的結果。它答案是對的，
+      但其他比較慢的 goroutine 送結果時已經沒人接收，會永遠卡住。請修好這個 goroutine 洩漏。
+    hints: ["每個 goroutine 最後都要能把結果送出去、然後結束", "你知道總共會有 len(fns) 個值：ch := make(chan string, len(fns))"]
+    ref: chapter9/16_goroutine_leak.md
+  - id: go-ch09-q13
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 Process(jobs []int, workers int, work func(int) int) []int：
+      開固定 workers 個 goroutine 當工人，從 channel 拿工作來做，結果的第 i 格放 work(jobs[i])。
+      同時在執行 work 的 goroutine 不可以超過 workers 個，而且要真的讓工人一起做。
+    hints: ["工人收的可以是索引 i，送出的結果用 struct 記下 i 和值，收集時放回 out[i]", "派工的 goroutine 送完 close；另一個 goroutine 在 wg.Wait() 之後 close 結果的 channel，main 用 for range 收"]
+    ref: chapter9/17_worker_pool.md
+  - id: go-ch09-q14
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Generate 已經寫好。請完成 pipeline 的兩個階段 Square 和 OnlyOdd，
+      讓 OnlyOdd(Square(Generate(1, 2, 3, 4, 5))) 依序送出 1、9、25 後關閉。
+      每個階段都要建立自己的輸出 channel、開 goroutine 處理，輸入讀完就關閉輸出。
+    hints: ["照 Generate 的形狀寫：out := make(chan int)、go func() { ... }()、return out", "goroutine 裡用 for n := range in 讀上一站，處理後送到 out，迴圈結束後 close(out)"]
+    ref: chapter9/18_pipeline.md
+  - id: go-ch09-q15
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 Receive(ch <-chan int, d time.Duration) (int, bool)：從 ch 接收一個值，最多等 d 這麼久。
+      收到時回傳該值和 true；逾時回傳 0 和 false。
+      （隱藏測試用 testing/synctest 的假時鐘，等 10 秒的測試也會瞬間跑完。）
+    hints: ["用 select 同時等 ch 和一個鬧鐘", "case v := <-ch: return v, true；case <-time.After(d): return 0, false"]
+    ref: chapter9/12_timeout.md
+  - id: go-ch09-q16
+    difficulty: 3
+    type: choice
+    prompt: |
+      執行 go test 跑下面這個測試，結果會是哪一種？
+
+          func TestSleep(t *testing.T) {
+              synctest.Test(t, func(t *testing.T) {
+                  start := time.Now()
+                  time.Sleep(10 * time.Second)
+                  waited := time.Since(start)
+                  if waited != 10*time.Second {
+                      t.Errorf("等了 %v", waited)
+                  }
+              })
+          }
+    choices:
+      - "幾乎瞬間跑完，waited 剛好是 10s，測試通過"
+      - "真的要等 10 秒，waited 大約是 10s 但有一點誤差，所以測試常常失敗"
+      - "幾乎瞬間跑完，但 waited 是 0，測試失敗"
+      - "測試失敗：泡泡裡不能呼叫 time.Sleep"
+    answer: 0
+    hints: ["泡泡裡的時間是假的，不會自己走", "所有 goroutine 都卡住時，假時鐘會直接跳到下一個有事發生的時間點，而且沒有誤差"]
+    ref: chapter9/19_synctest.md

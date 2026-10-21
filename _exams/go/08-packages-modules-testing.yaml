@@ -1,0 +1,228 @@
+# 第 8 章：套件、模組與測試。本章約一半在講工具指令（go mod、go doc、go get、go fix、-bench、-fuzz），這些用選擇題或簡答題考
+lang: go
+chapter: "8"
+title: 套件、模組與測試
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter8, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch08-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      某個專案的 go.mod 內容如下：
+
+          module hello
+
+          go 1.25
+
+      其中「go 1.25」這一行是什麼意思？
+    choices:
+      - "這個模組需要的最低 Go 版本，Go 會依照它決定能使用哪些語言功能"
+      - "只是備註，記錄當初用哪一版 Go 建立，不影響編譯"
+      - "這個模組本身的版本號，發布新版時要手動加一"
+      - "電腦上安裝的 Go 版本，每次 go run 都會自動更新這一行"
+    answer: 0
+    hints: ["這行不只是備註，寫錯了編譯時可能會出現「requires go1.26 or later」", "它是最低 Go 版本，決定能用哪些語言功能"]
+    ref: chapter8/01_go_mod.md
+  - id: go-ch08-q02
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      這個模組的模組路徑是 q（go.mod 裡寫的是 module q），
+      greet 資料夾裡已經有 greet 套件，提供 Hello(name string) string。
+
+      請修改 main.go：引入 greet 套件，印出 greet.Hello("小明") 的結果。
+    expected_stdout: "你好，小明！\n"
+    hints: ["引入自己模組的套件，路徑是「模組路徑/資料夾路徑」", "import \"q/greet\"，然後 fmt.Println(greet.Hello(\"小明\"))"]
+    ref: chapter8/02_package_directory.md
+  - id: go-ch08-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      greet 套件（模組路徑 q，引入路徑 q/greet）裡有 shout 函式和 Person 型別，
+      但 main 套件想用 greet.Shout("嗨") 和 greet.Person{Name: "小明", Age: 18} 時編譯失敗。
+
+      請修改 greet/greet.go，讓其他套件可以使用這個函式和 Person 的年齡欄位
+      （函式要叫 Shout，欄位要叫 Age，功能不變）。
+    hints: ["Go 用名稱第一個字母的大小寫決定其他套件看不看得到", "把 shout 改成 Shout、age 改成 Age"]
+    ref: chapter8/03_exported.md
+  - id: go-ch08-q04
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      模組路徑是 q，裡面有兩個都叫 greet 的套件：
+      q/en/greet 的 Hello 回傳英文問候，q/zh/greet 的 Hello 回傳中文問候。
+
+      請在 main.go 同時引入這兩個套件，先印出英文版 Hello("Andy")，
+      再印出中文版 Hello("Andy")，每個一行。
+    expected_stdout: "Hello, Andy!\n你好，Andy！\n"
+    hints: ["兩個套件名字都叫 greet 會打架，要幫其中一個取別名", "zhgreet \"q/zh/greet\"，之後用 zhgreet.Hello(\"Andy\")"]
+    ref: chapter8/04_import_alias.md
+  - id: go-ch08-q05
+    difficulty: 2
+    type: choice
+    prompt: |
+      模組 shop 的結構如下：
+
+          shop/
+          ├── go.mod
+          ├── main.go
+          ├── order/
+          │   ├── order.go
+          │   ├── api/
+          │   │   └── api.go
+          │   └── internal/
+          │       └── price/
+          │           └── price.go
+          └── report/
+              └── report.go
+
+      下列哪一個套件可以 import "shop/order/internal/price"？
+    choices:
+      - "shop/report"
+      - "根目錄 main.go 所在的 shop 套件"
+      - "shop/order/api"
+      - "另一個模組裡的套件"
+    answer: 2
+    hints: ["internal 套件只能被「internal 的上一層資料夾」以及它底下的程式碼引入", "internal 的上一層是 order，只有 order 和它底下的套件可以用"]
+    ref: chapter8/05_internal.md
+  - id: go-ch08-q06
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這個程式會印出什麼？
+
+          package main
+
+          import "fmt"
+
+          var x = setX()
+
+          func setX() int {
+              fmt.Print("A")
+              return 1
+          }
+
+          func init() {
+              fmt.Print("B")
+          }
+
+          func main() {
+              fmt.Print("C")
+          }
+
+          func init() {
+              fmt.Print("D")
+          }
+    choices: ["ABDC", "BDAC", "ABCD", "BADC"]
+    answer: 0
+    hints: ["啟動順序是：套件層級變數 → init → main", "多個 init 依出現的順序執行，main 一定最後"]
+    ref: chapter8/06_init.md
+  - id: go-ch08-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      greet/greet.go 缺少正確的文件註解。請補上：
+
+      - 套件註解：以「Package greet 」開頭，例如「// Package greet 負責產生打招呼的句子。」
+      - Hello 和 Bye 的文件註解：緊貼在函式上方，以函式名稱加一個空白開頭，
+        例如「// Hello 回傳……」
+
+      函式本身不用改。
+    hints: ["文件註解要緊貼在宣告正上方，第一句以被說明的名稱開頭", "package greet 上一行寫 // Package greet ……；Hello 上一行改成 // Hello 回傳……；Bye 也一樣"]
+    ref: chapter8/07_doc_comments.md
+  - id: go-ch08-q08
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      main.go 可以編譯，執行後卻印出「小明 今年 %!s(int=18) 歲」。
+      請先執行 go vet 看看它指出什麼問題，再修正程式，讓它印出：
+
+          小明 今年 18 歲
+    expected_stdout: "小明 今年 18 歲\n"
+    hints: ["go vet 會說 Printf 的格式動詞和參數型別對不上", "age 是整數，把第二個 %s 改成 %d"]
+    ref: chapter8/08_gofmt_vet.md
+  - id: go-ch08-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      greet 資料夾裡有 Hello 函式和它的表格驅動測試 greet_test.go。
+      執行 go test ./... 會看到測試失敗。
+
+      請讀懂失敗訊息，修正 greet/greet.go 的 Hello（不要改測試），讓測試通過。
+    hints: ["失敗訊息印出了輸入值，看看是表格的哪一列錯了", "name 是空字串時要改用「朋友」：if name == \"\" { name = \"朋友\" }"]
+    ref: chapter8/10_table_driven_test.md
+  - id: go-ch08-q10
+    difficulty: 2
+    type: short
+    prompt: |
+      greet 資料夾裡的 TestHello 用 t.Run 建立了一個叫「空字串」的子測試。
+      在 greet 資料夾裡，只執行這一個子測試的 go test 指令怎麼寫？（可以加 -v）
+    answers:
+      - "^go test (-v )?-run[ =]?['\"]?testhello/空字串['\"]?( -v)?( \\.| \\./\\.\\.\\.)?$"
+    hints: ["-run 可以指定要執行哪些測試，子測試的名字用 / 和測試函式名稱接起來", "go test -run 'TestHello/空字串'"]
+    ref: chapter8/11_subtests.md
+  - id: go-ch08-q11
+    difficulty: 1
+    type: choice
+    prompt: |
+      執行 go test -bench=. 後看到這一行：
+
+          BenchmarkHello-14    	121566765	         9.720 ns/op
+
+      其中「9.720 ns/op」是什麼意思？
+    choices:
+      - "平均執行一次 Hello 花了 9.720 奈秒"
+      - "全部執行完總共花了 9.720 奈秒"
+      - "14 個 CPU 核心各花了 9.720 奈秒"
+      - "每次執行 Hello 用掉 9.720 位元組的記憶體"
+    answer: 0
+    hints: ["op 是 operation，「一次操作」的意思", "ns/op 是平均每次花多少奈秒；121566765 才是總共執行的次數"]
+    ref: chapter8/12_benchmark.md
+  - id: go-ch08-q12
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      greet 套件（引入路徑 q/greet）有 Hello 和 Bye 兩個函式，
+      greet/example_test.go 已經有 ExampleHello 可以參考。
+
+      請在同一個檔案加上 Bye 的 Example 函式：呼叫 greet.Bye("小明") 印出結果，
+      並用「// Output:」註解寫出預期的輸出，讓 go test 會檢查它。
+    hints: ["Example 函式的名稱是 Example 加上要示範的名稱，沒有參數也沒有回傳值", "func ExampleBye() { fmt.Println(greet.Bye(\"小明\")) }，最後加上 // Output: 和 // 再見，小明！"]
+    ref: chapter8/13_example_test.md
+  - id: go-ch08-q13
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Reverse 用 "Go"、"hello" 測試都沒問題，但 fuzzing 找到了這個錯誤：
+
+          Reverse("Ή") = "\x89\xce"，不是合法的 UTF-8
+
+      請修正 Reverse，讓含有中文、希臘字母等多位元組字元的字串也能正確顛倒。
+    hints: ["中文、希臘字母在 UTF-8 裡佔好幾個位元組，顛倒位元組會把一個字元拆散", "把 []byte(s) 換成 []rune(s)，以字元為單位顛倒"]
+    ref: chapter8/14_fuzzing.md
+  - id: go-ch08-q14
+    difficulty: 2
+    type: choice
+    prompt: |
+      你的模組相依 example.com/lib v1.4.2。照語意化版本的規則，
+      升級到下列哪一個版本，最可能讓你原本的程式無法使用？
+    choices: ["v1.4.3", "v1.5.0", "v1.10.0", "v2.0.0"]
+    answer: 3
+    hints: ["版本號是 v主版本.次版本.修訂版本，各自代表不同程度的改變", "只有主版本變動才代表有不相容的修改"]
+    ref: chapter8/15_go_get.md
+  - id: go-ch08-q15
+    difficulty: 1
+    type: short
+    prompt: 想先看看 go fix 打算怎麼修改整個模組的程式碼，但不要真的改動檔案，指令怎麼寫？
+    answers: ["^go fix -diff( \\./\\.\\.\\.| \\.)?$"]
+    hints: ["加上一個旗標，go fix 就只顯示差異、不寫回檔案", "go fix -diff ./..."]
+    ref: chapter8/16_go_fix.md

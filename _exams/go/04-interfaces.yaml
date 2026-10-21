@@ -1,0 +1,130 @@
+lang: go
+chapter: "4"
+title: 介面
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter4, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch04-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      程式裡已經定義好 Shape 介面，以及實作它的 Rect 和 Circle。
+      請完成 TotalArea(shapes []Shape) float64，回傳切片裡所有形狀的面積總和。
+      例如 []Shape{Rect{Width: 3, Height: 4}, Circle{Radius: 1}} 要回傳 15.14。
+    hints: ["迴圈裡不用管每個元素是 Rect 還是 Circle，一律呼叫 Area()", "total := 0.0，再用 for _, s := range shapes 把 s.Area() 加進 total"]
+    ref: chapter4/01_interface.md
+  - id: go-ch04-q02
+    difficulty: 1
+    type: short
+    prompt: |
+      已經有 Shape 介面和 Rect 型別。請寫出一行套件層級的宣告，
+      不做任何事，只用來在編譯時確認 Rect 實作了 Shape（Rect 不符合時編譯就會失敗）。
+    answers: ["^var _ shape = &?rect ?\\{ ?\\}$"]
+    hints: ["宣告一個 Shape 型別的變數，把 Rect{} 放進去，再用底線丟掉", "var _ Shape = Rect{}"]
+    ref: chapter4/02_implicit_implementation.md
+  - id: go-ch04-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Counter 想透過 Incrementer 介面計數，但 AddN(&Counter{}, 3) 執行完，Count 還是 0。
+      請修正 Inc 方法，讓透過介面呼叫時真的會改到原本的 Counter。
+    hints: ["值接收者拿到的是複本，c.Count++ 改的是複本", "把接收者改成指標：func (c *Counter) Inc()"]
+    ref: chapter4/03_method_set.md
+  - id: go-ch04-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      Rect 的 Area 是值接收者（回傳 Width * Height）。下面這段程式會印出什麼？
+
+          r := Rect{Width: 10, Height: 2}
+          var s Shape = r
+          r.Height = 5
+          fmt.Println(r.Area(), s.Area())
+    choices: ["50 20", "50 50", "20 20", "20 50"]
+    answer: 0
+    hints: ["把值放進介面時，介面裡存的是那個值的複本", "之後改 r 不會影響 s 裡那份，s 仍是 10 x 2"]
+    ref: chapter4/04_interface_value.md
+  - id: go-ch04-q05
+    difficulty: 1
+    type: short
+    prompt: Go 內建的 any 是哪一個型別的別名？請寫出那個型別。
+    answers: ["^interface ?\\{ ?\\}$"]
+    hints: ["它是一個沒有列出任何方法的介面", "type any = interface{}"]
+    ref: chapter4/05_any.md
+  - id: go-ch04-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 SumInts(items []any) int：只把 items 裡動態型別是 int 的值加起來，
+      其他型別（字串、float64、bool、nil……）一律略過，不可以 panic。
+      例如 []any{1, "two", 3.0, true, 10} 要回傳 11。
+    hints: ["直接寫 item.(int) 遇到字串會 panic，要用 comma-ok 寫法", "if n, ok := item.(int); ok { total += n }"]
+    ref: chapter4/06_type_assertion.md
+  - id: go-ch04-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      用 type switch 完成 Describe(x any) string，依照 x 的動態型別回傳：
+      - int：「整數 兩倍的值」，例如 21 → "整數 42"
+      - string：「字串 長度」，例如 "Go" → "字串 2"
+      - bool：「布林 相反的值」，例如 true → "布林 false"
+      - nil：「沒有東西」
+      - 其他：「其他 型別」，例如 3.14 → "其他 float64"
+    hints: ["switch v := x.(type)，每個 case 寫一個型別，nil 也可以當 case", "其他型別用 default 加 fmt.Sprintf(\"其他 %T\", v)"]
+    ref: chapter4/07_type_switch.md
+  - id: go-ch04-q08
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      幫 Color 加上 String() 方法：Red 印成「紅」、Green 印成「綠」、Blue 印成「藍」，
+      其他值印成「未知」。main 不用改，加上方法後 fmt 就會自動用它。
+    expected_stdout: "紅 藍\n綠 1\n[藍 紅 未知]\n"
+    hints: ["實作 fmt.Stringer 只要一個方法：func (c Color) String() string", "方法裡用 switch c 對應 Red、Green、Blue，最後 return \"未知\""]
+    ref: chapter4/08_stringer.md
+  - id: go-ch04-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Pet 介面應該由 Speaker 和 Walker 組合而成。請：
+      1. 在 Pet 裡嵌入 Walker
+      2. 幫 Dog 加上 Walk() string，回傳 Name + " 跑來跑去"
+      3. 讓 Play 回傳「叫聲 / 走路」，例如 Play(Dog{Name: "Lucky"}) 回傳 "Lucky：汪汪 / Lucky 跑來跑去"
+    hints: ["介面嵌入只要在大括號裡寫介面名稱，一行一個", "Pet 加上 Walker 之後，Play 裡就能呼叫 p.Walk()，用 \" / \" 把兩段接起來"]
+    ref: chapter4/09_interface_embedding.md
+  - id: go-ch04-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Report(w io.Writer, names []string) 應該把每個名字寫成一行「- 名字」，寫到 w 裡。
+      目前它直接印到螢幕，傳 strings.Builder 進去什麼都收不到。請修正。
+    hints: ["fmt 有一個版本的 Println 可以指定要寫到哪個 io.Writer", "把 fmt.Println(...) 改成 fmt.Fprintln(w, ...)"]
+    ref: chapter4/10_small_interfaces.md
+  - id: go-ch04-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Find(name string) Shape 找不到時應該回傳 nil，但現在 Find("small") == nil 卻是 false，
+      呼叫端以為找到了，接著呼叫 Area() 就 panic。請修正 Find。
+    hints: ["把 nil 的 *Rect 放進介面，動態型別那一格還是 *Rect，所以介面不等於 nil", "先用 *Rect 檢查 if r == nil { return nil }，再 return r"]
+    ref: chapter4/11_nil_interface_trap.md
+  - id: go-ch04-q12
+    difficulty: 3
+    type: choice
+    prompt: |
+      Rect 的 Area 是指標接收者，所以 *Rect 實作了 Shape。下面這段程式會印出什麼？
+
+          var p *Rect
+          var s Shape = p
+          fmt.Println(p == nil, s == nil)
+    choices: ["true false", "true true", "false false", "編譯錯誤"]
+    answer: 0
+    hints: ["介面只有在動態型別和動態值兩格都空的時候才等於 nil", "s 的動態值是 nil，但動態型別是 *Rect"]
+    ref: chapter4/11_nil_interface_trap.md

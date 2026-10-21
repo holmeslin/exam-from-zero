@@ -1,0 +1,182 @@
+# 附錄一：本書沒有附錄一的固定練習題（EXERCISES.md 從第 3 章起不出固定題），以下題目都是依課文新出的
+lang: go
+chapter: ""
+title: 附錄一
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/appendix1, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ap1-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這行會印出什麼？
+
+          fmt.Println(0o17, 0x1F, 0b101, 1_000)
+    choices: ["17 1F 101 1_000", "15 31 5 1", "15 31 5 1000", "17 31 5 1000"]
+    answer: 2
+    hints: ["0o 是八進位、0x 是十六進位、0b 是二進位；fmt.Println 一律用十進位印出", "底線只是給人看的分隔，1_000 就是 1000"]
+    ref: appendix1/a_number_literals.md
+  - id: go-ap1-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      利用短路求值，完成兩個函式，而且都不能 panic：
+      - CanDelete(u *User) bool：u 是 nil 時回傳 false，否則回傳 u.Admin。
+      - FirstIs(names []string, want string) bool：names 的第一個元素等於 want 時回傳 true；
+        names 是空切片（或 nil）時回傳 false。
+      每個函式都用一行 return 寫完。
+    hints: ["&& 的左邊是 false 時，右邊根本不會執行，所以把「安全檢查」放左邊", "return u != nil && u.Admin；切片則是 len(names) > 0 && names[0] == want"]
+    ref: appendix1/b_short_circuit.md
+  - id: go-ap1-q03
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      起始程式想在座位表裡找「第一個」空位，但 break 只跳出內層迴圈，結果印了兩個空位。
+      請用標籤 break 修正，讓程式找到第一個空位就跳出兩層迴圈，
+      最後再印出「搜尋結束」。
+    expected_stdout: "空位在 1 1\n搜尋結束\n"
+    hints: ["在外層 for 前面寫「名稱:」就是標籤，例如 search:", "把 break 改成 break search，迴圈後面再 fmt.Println(\"搜尋結束\")"]
+    ref: appendix1/c_labeled_break_continue.md
+  - id: go-ap1-q04
+    difficulty: 2
+    type: choice
+    prompt: 關於 goto，下列哪一個敘述正確？
+    choices:
+      - "goto 可以從 { } 區塊裡面跳到區塊外面的標籤"
+      - "goto 可以跳到別的函式裡的標籤"
+      - "goto 可以從外面跳進 if 的大括號裡"
+      - "goto 可以往後跳過 msg := \"你好\"，再在標籤後面使用 msg"
+    answer: 0
+    hints: ["課文列了 goto 的兩個限制：不能跳過變數宣告、不能從外面跳進區塊", "goto 只能在同一個函式裡跳；從區塊裡面往外跳是允許的"]
+    ref: appendix1/d_goto.md
+  - id: go-ap1-q05
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      ParseAll(a, b string) (int, error) 要把 a、b 轉成整數後相加；b 是空字串時只轉 a。
+      任何一個轉換失敗都要回傳錯誤。
+
+      起始程式有 bug：ParseAll("10", "abc") 竟然回傳 10 和 nil。
+      找出 err 被遮蔽（shadowing）的地方並修正。轉換成功時的結果要維持不變。
+    hints: ["看 if b != \"\" 裡面那行 :=，它在內層區塊連 err 也一起建立了新變數", "先 var y int，再寫 y, err = strconv.Atoi(b)，讓錯誤寫進外層的 err"]
+    ref: appendix1/e_shadowing.md
+  - id: go-ap1-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Counter 有一個指標接收者的方法 Add(n int)。完成兩個函式：
+      - AdderOf(c *Counter) func(int)：回傳已經綁好 c 的方法值，呼叫它就會加到 c.total。
+      - AddExpr() func(*Counter, int)：回傳 Add 的方法運算式，接收者是第一個參數。
+      兩個函式都只要一行 return，不要自己寫匿名函式。
+    hints: ["點號前面是變數就是方法值，是型別就是方法運算式；兩者都不加括號", "return c.Add；指標接收者的方法運算式要寫成 (*Counter).Add"]
+    ref: appendix1/f_method_value_expression.md
+  - id: go-ap1-q07
+    difficulty: 3
+    type: choice
+    prompt: |
+      Hello 是值接收者的方法：
+
+          type Greeter struct{ Name string }
+
+          func (g Greeter) Hello(to string) {
+              fmt.Println(g.Name, "向", to, "打招呼")
+          }
+
+      下面這段會印出什麼？
+
+          g := Greeter{Name: "Andy"}
+          say := g.Hello
+          g.Name = "Bob"
+          say("Cindy")
+    choices: ["Bob 向 Cindy 打招呼", "Andy 向 Cindy 打招呼", "Cindy 向 Bob 打招呼", "編譯錯誤：g.Hello 沒有加括號"]
+    answer: 1
+    hints: ["g.Hello 不加括號是方法值，它會綁住接收者", "值接收者的方法值，在取值那一刻就複製了 g，之後改 g.Name 不影響 say"]
+    ref: appendix1/f_method_value_expression.md
+  - id: go-ap1-q08
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段會印出什麼？
+
+          const (
+              count = 100
+              ratio = 2.5
+              grade = 'A'
+          )
+
+          a := count
+          b := ratio
+          c := grade
+          fmt.Printf("%T %T %T\n", a, b, c)
+    choices: ["int float64 rune", "untyped int untyped float untyped rune", "int64 float32 int32", "int float64 int32"]
+    answer: 3
+    hints: ["無型別常數在沒指定型別時，會採用預設型別：整數 int、小數 float64、字元 rune", "rune 是 int32 的別名，%T 印出來的是 int32"]
+    ref: appendix1/g_untyped_constants.md
+  - id: go-ap1-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 Clone(s []int) []int：回傳一個內容和 s 相同、但「不共用底層陣列」的新切片。
+      之後修改回傳的切片，原本的 s 不能跟著變。
+
+      起始程式的 t := s 只複製了 slice header，兩者還是指向同一個底層陣列。
+    hints: ["要有一個新的底層陣列，可以用 make 建一個長度相同的切片", "t := make([]int, len(s))，再 copy(t, s)"]
+    ref: appendix1/h_array_value_slice_header.md
+  - id: go-ap1-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 Perks(level int) []string，依會員等級回傳可領的獎勵，高等級也能領低等級的：
+      - 等級 3 → ["皇冠", "寶石", "金幣"]
+      - 等級 2 → ["寶石", "金幣"]
+      - 等級 1 → ["金幣"]
+      - 其他等級 → 空切片
+      請用 switch level 搭配 fallthrough，每個 case 只 append 一個獎勵。
+    hints: ["case 由高到低排：case 3、case 2、case 1，每段 append 自己那一個", "case 3 和 case 2 的最後一行寫 fallthrough，case 1 不寫"]
+    ref: appendix1/i_fallthrough.md
+  - id: go-ap1-q11
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      用 fmt.Printf 把每位學生印成一行，格式如下：
+      - 編號：字母 A 後面接 4 位數字，不足補 0（7 → A0007）
+      - 一個空格，接著名字靠左對齊、寬度 6
+      - 一個 |，接著分數靠右對齊、寬度 7、小數 2 位
+
+      預期輸出：
+
+          A0007 Andy  |  92.50
+          A0042 Bob   |   8.00
+          A0315 Cindy |  77.25
+    expected_stdout: "A0007 Andy  |  92.50\nA0042 Bob   |   8.00\nA0315 Cindy |  77.25\n"
+    hints: ["%04d 用 0 補到 4 位，%-6s 靠左寬度 6，%7.2f 寬度 7、小數 2 位", "fmt.Printf(\"A%04d %-6s|%7.2f\\n\", ids[i], names[i], scores[i])"]
+    ref: appendix1/j_fmt_advanced.md
+  - id: go-ap1-q12
+    difficulty: 1
+    type: short
+    prompt: |
+      p := Point{X: 3, Y: 4}。想用 fmt.Printf 印出含欄位名稱的 {X:3 Y:4}，
+      格式動詞要寫什麼？（只填動詞，例如 %d）
+    answers: ["^%\\+v$", "^\"%\\+v\"$", "^\"%\\+v\\\\n\"$"]
+    hints: ["%v 只印值 {3 4}，%#v 會連型別一起印出 main.Point{X:3, Y:4}", "介於兩者之間、多了欄位名稱的是 %+v"]
+    ref: appendix1/j_fmt_advanced.md
+  - id: go-ap1-q13
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      替 Product 的欄位加上 json tag，讓 json.Marshal 的輸出符合：
+      - Name、Price 在 JSON 裡叫 name、price，而且一定要輸出（價格是 0 也要輸出）
+      - Note 叫 note，空字串時省略
+      - Maker 叫 maker，是零值的 struct 時省略
+
+      例如 Product{Name: "Pen", Price: 30} 要輸出 {"name":"Pen","price":30}。
+    hints: ["tag 格式是 `json:\"名稱\"`，選項接在逗號後面，例如 `json:\"note,omitempty\"`", "omitempty 不認得 struct，Maker 要用 `json:\"maker,omitzero\"`；Price 不能加 omitempty"]
+    ref: appendix1/k_struct_tags.md

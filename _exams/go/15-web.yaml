@@ -1,0 +1,179 @@
+lang: go
+chapter: "14"
+title: 實戰：Web 服務
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter14, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch14-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這段程式中，http.ListenAndServe 什麼時候會回傳？
+
+          err := http.ListenAndServe(":8080", nil)
+          if err != nil {
+              fmt.Fprintln(os.Stderr, err)
+              os.Exit(1)
+          }
+    choices:
+      - 正常情況下永遠不會回傳，回傳時一定是出錯了（例如埠號被占用）
+      - 伺服器啟動成功後馬上回傳 nil，之後在背景處理請求
+      - 每處理完一個請求就回傳一次
+      - 沒有請求進來超過一段時間後回傳 nil
+    answer: 0
+    hints: ["它會一直等待連線、處理請求", "會回傳就代表伺服器停了，例如 bind: address already in use"]
+    ref: chapter14/01_first_server.md
+  - id: go-ch14-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 handler Hello(w http.ResponseWriter, r *http.Request)：
+      讀取查詢參數 name，沒有的話用「世界」，寫出兩行：
+
+          哈囉，<name>！
+          你用 <方法> 方法請求了 <路徑>
+
+      例如請求 POST /x 時，內容是「哈囉，世界！」和「你用 POST 方法請求了 /x」。
+    hints: ["r.URL.Query().Get(\"name\") 取查詢參數，r.Method 和 r.URL.Path 是方法和路徑", "w 是 io.Writer，用 fmt.Fprintf(w, \"哈囉，%s！\\n\", name) 寫回應"]
+    ref: chapter14/01_first_server.md
+  - id: go-ch14-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 NewMux() *http.ServeMux，登記三個只接受 GET 的路由：
+
+      - /users/{id}：寫出「user <id>」並換行，例如 /users/42 → user 42
+      - /users/me：寫出「me」並換行
+      - /files/{path...}：寫出「file <剩下的路徑>」並換行，例如 /files/docs/a.txt → file docs/a.txt
+
+      /users/42/extra 要得到 404，DELETE /users/42 要得到 405（這兩個 ServeMux 會自動處理）。
+    hints: ["路由寫成「方法 路徑」，例如 \"GET /users/{id}\"，handler 裡用 r.PathValue(\"id\") 取值", "{path...} 會符合剩下的全部；/users/me 比 /users/{id} 具體，會優先，跟登記順序無關"]
+    ref: chapter14/02_servemux.md
+  - id: go-ch14-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      路由表只登記了下面這個路由，送出 DELETE /items/42 會得到什麼？
+
+          mux.HandleFunc("GET /items/{id}", getItem)
+    choices:
+      - 405 Method Not Allowed，並附上 Allow 標頭
+      - 404 Not Found
+      - 200，交給 getItem 處理
+      - 程式 panic
+    answer: 0
+    hints: ["路徑對得上，只是方法不對", "ServeMux 會自動回 405，並在 Allow 列出 GET, HEAD"]
+    ref: chapter14/02_servemux.md
+  - id: go-ch14-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      用自己的型別實作 http.Handler：
+
+      - Greeter 的 ServeHTTP 寫出「<Greeting>，<name>」並換行，name 來自路由的 {name}
+      - *Counter 的 ServeHTTP 每次寫出「第 <n> 次」並換行，n 從 1 開始，用 atomic.Int64 計數
+      - NewMux 用 mux.Handle 登記 GET /hi/{name} → Greeter{Greeting: "哈囉"}，GET /count → &Counter{}
+    hints: ["有 ServeHTTP(w, r) 方法的型別就是 Handler；Counter 要改計數，所以是指標接收者", "c.n.Add(1) 會加一並回傳新值；mux.Handle(\"GET /count\", &Counter{})"]
+    ref: chapter14/03_handler.md
+  - id: go-ch14-q06
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 (s *Store) Create，處理新增商品的 JSON API：
+
+      1. 用 http.MaxBytesReader 把請求內容限制在 1 MB
+      2. 把內容解碼成 {"name": ..., "price": ...}，格式錯誤回 400
+      3. name 空白或 price 是負數回 400
+      4. 在鎖裡給新商品下一個 ID（從 1 開始）並存進 s.items
+      5. 用 writeJSON 回 201 和新商品，例如 {"id":1,"name":"珍珠奶茶","price":60}
+
+      出錯時用 http.Error 回應，寫完記得 return。
+    hints: ["json.NewDecoder(r.Body).Decode(&in)，in 用只有 Name、Price 的匿名 struct", "s.mu.Lock() → s.nextID++ → 存進 map → s.mu.Unlock()，最後 writeJSON(w, http.StatusCreated, item)"]
+    ref: chapter14/04_json_api.md
+  - id: go-ch14-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      寫一個 middleware RequireToken(next http.Handler) http.Handler：
+      請求標頭 X-Token 等於 "secret" 時交給 next；
+      否則用 http.Error 回 401，訊息是 "unauthorized"，而且不能呼叫 next。
+    hints: ["回傳 http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { ... })，它是抓住 next 的閉包", "r.Header.Get(\"X-Token\") 不對就 http.Error(w, \"unauthorized\", http.StatusUnauthorized) 再 return，對就 next.ServeHTTP(w, r)"]
+    ref: chapter14/05_middleware.md
+  - id: go-ch14-q08
+    difficulty: 3
+    type: choice
+    prompt: |
+      logging 會在 next.ServeHTTP 結束後印出日誌，recoverer 用 defer 加 recover 把 panic 改成 500。
+      如果寫成下面這樣，某個 handler panic 時會發生什麼事？
+
+          handler := recoverer(logging(mux))
+    choices:
+      - 使用者收到 500，但 panic 直接穿過 logging，這個請求沒有日誌
+      - 使用者收到 500，日誌也正常記下 500
+      - panic 沒被攔下，整個伺服器程式結束
+      - logging 記下 200，因為 statusRecorder 的預設值是 200
+    answer: 0
+    hints: ["包裝順序就是請求經過的順序：先 recoverer、再 logging、最後 mux", "panic 往外傳時，logging 裡 next.ServeHTTP 後面的 fmt.Printf 不會執行"]
+    ref: chapter14/05_middleware.md
+  - id: go-ch14-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 HTTP client 函式 FetchWeather(ctx, client, baseURL, city) (Weather, error)：
+      向 baseURL + "/weather/" + city 送出 GET 請求，把回應的 JSON 解碼成 Weather。
+
+      - 用 http.NewRequestWithContext 建立請求，讓 ctx 能中止它，再用 client.Do 送出
+      - 拿到 resp 後記得 defer resp.Body.Close()
+      - 狀態碼不是 200 時回傳錯誤，錯誤訊息要包含 resp.Status（例如 "404 Not Found"）
+    hints: ["404、500 不會讓 client.Do 回傳錯誤，要自己檢查 resp.StatusCode != http.StatusOK", "fmt.Errorf(\"伺服器回應 %s\", resp.Status)；成功時 json.NewDecoder(resp.Body).Decode(&w)"]
+    ref: chapter14/06_http_client.md
+  - id: go-ch14-q10
+    difficulty: 1
+    type: short
+    prompt: |
+      http.Server 的哪個欄位限制「從連線開始到讀完請求標頭」的時間，用來防範慢慢送標頭的 Slowloris？
+      （至少一定要設定它）
+    answers: ["^`?(http\\.server\\.|server\\.|srv\\.)?readheadertimeout`?$"]
+    hints: ["四種逾時是 ReadHeaderTimeout、ReadTimeout、WriteTimeout、IdleTimeout", "只管「標頭」的那一個"]
+    ref: chapter14/07_timeouts.md
+  - id: go-ch14-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      graceful shutdown 時呼叫了 srv.Shutdown(shutdownCtx)，
+      之後在另一個 goroutine 裡的 srv.ListenAndServe() 會回傳什麼？
+    choices:
+      - http.ErrServerClosed，表示是我們叫它關的，不算真的出錯
+      - nil，因為伺服器是正常關閉
+      - context.Canceled
+      - 它不會回傳，要等程式結束
+    answer: 0
+    hints: ["這是一個哨兵錯誤，要用 errors.Is 排除", "名字裡有 Server 和 Closed"]
+    ref: chapter14/08_graceful_shutdown.md
+  - id: go-ch14-q12
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      不開伺服器，在 main 裡用 httptest 直接測試已經寫好的 Hello：
+      依序對 "/hello?name=小明" 和 "/hello" 送出 GET 請求，
+      每次用 fmt.Print(rec.Code, " ", rec.Body.String()) 印出狀態碼和內容。
+    expected_stdout: "200 哈囉，小明\n400 缺少 name\n"
+    hints: ["httptest.NewRequest(http.MethodGet, target, nil) 假造請求，httptest.NewRecorder() 記錄回應", "直接呼叫 Hello(rec, req)，記得 import \"net/http/httptest\""]
+    ref: chapter14/09_httptest.md
+  - id: go-ch14-q13
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 WithTimeout(h http.Handler, d time.Duration) http.Handler：
+      h 在 d 之內做完就照常回應；超過 d 就回 503，內容是 "處理逾時\n"。
+      請用標準庫的 middleware 完成。
+    hints: ["標準庫有 http.TimeoutHandler(h, 時間, 訊息)", "return http.TimeoutHandler(h, d, \"處理逾時\\n\")"]
+    ref: chapter14/07_timeouts.md

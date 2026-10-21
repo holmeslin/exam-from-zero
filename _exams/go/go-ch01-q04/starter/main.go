@@ -1,5 +1,10 @@
 package main
 
+import "fmt"
+
 func main() {
-	// 用三段式 for 倒數，最後印出「發射！」
+	quiz1 := 70
+	quiz2 := 100
+	quiz3 := 70
+	fmt.Println("平均：", quiz1+quiz2+quiz3/3)
 }
