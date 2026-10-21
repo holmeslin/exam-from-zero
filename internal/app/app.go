@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"math/rand/v2"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -71,6 +72,8 @@ type model struct {
 	out     viewport.Model // scrollable grading output
 	saveErr error
 }
+
+type editorDoneMsg struct{ err error }
 
 type gradedMsg struct {
 	res Result
@@ -142,6 +145,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.setOutput(resultBody(msg.res))
 		return m, nil
+	case editorDoneMsg:
+		m.err = msg.err
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 	case tea.KeyMsg:
@@ -278,6 +283,36 @@ func (m *model) record(res Result) {
 	m.save()
 }
 
+// openEditor suspends the TUI and edits the question's first starter file.
+func (m *model) openEditor() tea.Cmd {
+	file := m.wsDir
+	starter := m.bank.questionDir(m.lang().ID, m.q.ID, "starter")
+	_ = fs.WalkDir(m.bank.FS, starter, func(p string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			file = filepath.Join(m.wsDir, strings.TrimPrefix(p, starter+"/"))
+			return fs.SkipAll
+		}
+		return err
+	})
+	argv := editorCommand()
+	cmd := exec.Command(argv[0], append(argv[1:], file)...)
+	cmd.Dir = m.wsDir
+	return tea.ExecProcess(cmd, func(err error) tea.Msg { return editorDoneMsg{err} })
+}
+
+// editorCommand: $VISUAL, then $EDITOR (may carry flags), then VS Code, then vim.
+func editorCommand() []string {
+	for _, env := range []string{"VISUAL", "EDITOR"} {
+		if f := strings.Fields(os.Getenv(env)); len(f) > 0 {
+			return f
+		}
+	}
+	if _, err := exec.LookPath("code"); err == nil {
+		return []string{"code", "--wait"}
+	}
+	return []string{"vim"}
+}
+
 func (m *model) showHint() {
 	if m.hintLevel >= len(m.q.Hints) {
 		return
@@ -334,6 +369,8 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case k == "ctrl+f" && m.q.Type == "short", k == "!" && !short:
 		m.confirmFlag = true
 		return m, nil
+	case k == "e" && m.q.Type == "code":
+		return m, m.openEditor()
 	case k == "r" && m.run.Cleared:
 		m.showRef = !m.showRef
 		return m, nil
@@ -624,7 +661,7 @@ func (m *model) viewQuestion() string {
 	case m.q.Type == "short":
 		s.WriteString(help("enter 送出   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
 	default:
-		s.WriteString(help("enter 判定   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
+		s.WriteString(help("e 開編輯器   enter 判定   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
 	}
 	return s.String()
 }

@@ -415,3 +415,21 @@ func TestReset_OnlyAfterAllPassedAndArchivesWorkspace(t *testing.T) {
 		t.Fatalf("reset must clear only go:\n%s", raw)
 	}
 }
+
+func TestEditorKeyOpensStarterFileInEditor(t *testing.T) {
+	// fake editor: writes a correct answer into the file it is given
+	script := filepath.Join(t.TempDir(), "fake-editor")
+	src := "#!/bin/sh\nprintf 'package main\\n\\nfunc Add(a, b int) int { return a + b }\\n\\nfunc main() {}\\n' > \"$1\"\n"
+	if err := os.WriteFile(script, []byte(src), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("VISUAL", "")
+	t.Setenv("EDITOR", script)
+
+	e := start(t, newConfig(t))
+	enterFirstQuestion(e, "實作 Add", "e 開編輯器")
+	e.press("e")
+	e.waitFor("實作 Add") // TUI comes back after the editor exits
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+}
