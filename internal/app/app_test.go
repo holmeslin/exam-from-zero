@@ -664,6 +664,21 @@ func TestNodeLang_InstallShowsLiveOutput(t *testing.T) {
 	e.waitFor("第一步") // chapter list once the install finishes
 }
 
+func TestNodeLang_InstallLiveOutputKeepsUpdatingPastTheCap(t *testing.T) {
+	bin := t.TempDir() // a fake npm that prints more than the 1 MiB output cap, then more lines
+	script := "#!/bin/sh\nhead -c 1100000 /dev/zero | tr '\\0' x\necho\necho 'after the cap'\nsleep 2\n"
+	if err := os.WriteFile(filepath.Join(bin, "npm"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/node")
+	e := start(t, cfg)
+	e.waitFor("TypeScript")
+	e.key(tea.KeyEnter)
+	e.waitFor("安裝 TypeScript 依賴中", "after the cap")
+}
+
 func TestNodeLang_FailedInstallCanBeRetried(t *testing.T) {
 	cfg := newConfig(t)
 	cfg.Bank = os.DirFS("testdata/badnode")

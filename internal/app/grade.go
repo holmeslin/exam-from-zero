@@ -378,6 +378,34 @@ func (c *capBuf) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// tailBuf keeps only the latest output, for a live view of a command that may print without end.
+type tailBuf struct {
+	mu  sync.Mutex
+	buf []byte
+}
+
+const maxTail = 64 << 10 // far more than the few lines a live view shows
+
+func (t *tailBuf) String() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return string(t.buf)
+}
+
+func (t *tailBuf) Write(p []byte) (int, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.buf = append(t.buf, p...)
+	if over := len(t.buf) - maxTail; over > 0 {
+		t.buf = t.buf[over:]
+		if i := bytes.IndexByte(t.buf, '\n'); i >= 0 { // drop the cut line, which may start mid-rune
+			t.buf = t.buf[i+1:]
+		}
+		t.buf = slices.Clone(t.buf) // let the dropped head be freed
+	}
+	return len(p), nil
+}
+
 // gradeAnswer grades choice (by index) and short (by normalized text against regexes) questions.
 func gradeAnswer(q *Question, choice int, text string) Result {
 	ok := false

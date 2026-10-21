@@ -58,7 +58,7 @@ type model struct {
 	// one-time dependency install for the selected lang
 	settingUp bool
 	setupOut  string
-	setupLive *capBuf   // install output so far, shown while settingUp
+	setupLive *tailBuf  // latest install output, shown while settingUp
 	setupAt   time.Time // when the install started
 	setupErr  error
 
@@ -263,7 +263,7 @@ func (m *model) langRoot() string { return filepath.Join(m.cfg.DataDir, "workspa
 
 func (m *model) startSetup() tea.Cmd {
 	m.settingUp, m.setupErr, m.setupOut = true, nil, ""
-	m.setupLive, m.setupAt = &capBuf{}, time.Now()
+	m.setupLive, m.setupAt = &tailBuf{}, time.Now()
 	b, lang, root, live := m.bank, m.lang().ID, m.langRoot(), m.setupLive
 	return tea.Batch(func() tea.Msg {
 		out, err := setupLang(m.ctx, b, lang, root, live)
