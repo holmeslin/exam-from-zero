@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 )
 
 // Verify checks bank structure and that every code question's solution passes and starter fails.
@@ -17,6 +18,10 @@ func Verify(ctx context.Context, fsys fs.FS, only string, w io.Writer) error {
 	b, err := LoadBank(fsys)
 	if err != nil {
 		return err
+	}
+	// a typo would otherwise skip every lang and still report success
+	if only != "" && (len(b.Chapters[only]) == 0 || !slices.ContainsFunc(langs, func(l Lang) bool { return l.ID == only })) {
+		return fmt.Errorf("題庫沒有支援的語言 %q", only)
 	}
 	tmp, err := os.MkdirTemp("", "exam-verify-")
 	if err != nil {

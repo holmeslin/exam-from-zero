@@ -2,8 +2,10 @@ package app
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -562,5 +564,30 @@ func TestInlineEditor_DoesNotClobberEditsMadeElsewhere(t *testing.T) {
 	e.waitFor("✓ 通過", "return a + b") // the editor pane reloads what was graded
 	if got := e.workspaceFile("go", "go-ch01-q01", "main.go"); got != addRight {
 		t.Fatalf("IDE edit overwritten:\n%s", got)
+	}
+}
+
+func TestRunDrop_InRedoRemovesFromIDsAndQueuesReplacement(t *testing.T) {
+	diff := func(string) int { return 1 }
+	r := &Run{IDs: []string{"a", "b"}, Wrong: []string{"a"}, Redo: true}
+	if _, done := r.Drop("c", diff); done || r.Current() != "c" || !slices.Equal(r.IDs, []string{"c", "b"}) {
+		t.Fatalf("replacement must be answered before the run ends: %+v", r)
+	}
+	r = &Run{IDs: []string{"a", "b"}, Wrong: []string{"a"}, Redo: true}
+	if _, done := r.Drop("", diff); !done || !slices.Equal(r.IDs, []string{"b"}) {
+		t.Fatalf("dropped question must leave IDs: %+v", r)
+	}
+}
+
+func TestExecIn_CapsOutputOfPrintLoop(t *testing.T) {
+	res, _, err := execIn(t.Context(), t.TempDir(), time.Second, nil, []string{"yes"})
+	if err != nil || res.Kind != KindTimeout || len(res.Output) > maxOutput+100 {
+		t.Fatalf("kind %v, %d bytes, err %v", res.Kind, len(res.Output), err)
+	}
+}
+
+func TestVerify_RejectsUnknownLang(t *testing.T) {
+	if err := Verify(t.Context(), os.DirFS("testdata/bank"), "typescrit", io.Discard); err == nil {
+		t.Fatal("a typo must not verify successfully")
 	}
 }

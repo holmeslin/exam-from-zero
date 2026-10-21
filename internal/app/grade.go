@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -234,24 +235,47 @@ func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []
 	if len(stdin) > 0 {
 		cmd.Stdin = strings.NewReader(stdin[0])
 	}
-	var out, stdout bytes.Buffer
+	var out, stdout capBuf
 	cmd.Stdout, cmd.Stderr = io.MultiWriter(&out, &stdout), &out
 	// kill the whole group: `go test` / `cargo run` spawn the real binary as a child
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.WaitDelay = time.Second
 	err := cmd.Run()
+	output := out.buf.String()
+	if out.over {
+		output += "\n…（輸出超過 1 MiB，已截斷）"
+	}
 	if ctx.Err() == context.DeadlineExceeded {
-		return Result{Kind: KindTimeout, Output: out.String()}, "", nil
+		return Result{Kind: KindTimeout, Output: output}, "", nil
 	}
 	var exit *exec.ExitError
-	if errors.As(err, &exit) {
-		return Result{Kind: KindTest, Output: out.String()}, "", nil
+	if errors.As(err, &exit) || out.over { // truncated output must never count as a pass
+		return Result{Kind: KindTest, Output: output}, "", nil
 	}
 	if err != nil {
 		return Result{}, "", err
 	}
-	return Result{Kind: KindPass, Output: out.String()}, stdout.String(), nil
+	return Result{Kind: KindPass, Output: output}, stdout.buf.String(), nil
+}
+
+const maxOutput = 1 << 20
+
+// capBuf keeps the first maxOutput bytes and drains the rest, so a print loop cannot exhaust memory.
+// It locks because exec copies stdout and stderr from separate goroutines.
+type capBuf struct {
+	mu   sync.Mutex
+	buf  bytes.Buffer
+	over bool
+}
+
+func (c *capBuf) Write(p []byte) (int, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	room := maxOutput - c.buf.Len()
+	c.buf.Write(p[:min(len(p), room)])
+	c.over = c.over || len(p) > room
+	return len(p), nil
 }
 
 // gradeAnswer grades choice (by index) and short (by normalized text against regexes) questions.

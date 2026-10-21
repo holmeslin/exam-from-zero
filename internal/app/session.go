@@ -90,16 +90,21 @@ func (r *Run) done() int {
 	return r.Pos
 }
 
-// Drop removes the current question (reported broken). In the main pass replacement, if any, takes its place.
+// Drop removes the current question (reported broken). replacement, if any, takes its place.
 func (r *Run) Drop(replacement string, difficulty func(id string) int) (startedRedo, done bool) {
 	id := r.Current()
 	is := func(s string) bool { return s == id }
 	r.Hinted = slices.DeleteFunc(r.Hinted, is)
+	i := slices.Index(r.IDs, id)
+	r.IDs = slices.Delete(r.IDs, i, i+1)
 	if r.Redo {
 		r.Wrong = slices.Delete(r.Wrong, r.Pos, r.Pos+1)
+		if replacement != "" { // never attempted, so it must be answered in this redo pass
+			r.IDs = slices.Insert(r.IDs, i, replacement)
+			r.Wrong = slices.Insert(r.Wrong, r.Pos, replacement)
+		}
 	} else {
 		r.Wrong = slices.DeleteFunc(r.Wrong, is)
-		r.IDs = slices.Delete(r.IDs, r.Pos, r.Pos+1)
 		if replacement != "" {
 			r.IDs = slices.Insert(r.IDs, r.Pos, replacement)
 			slices.SortStableFunc(r.IDs[r.Pos:], func(a, b string) int { return cmp.Compare(difficulty(a), difficulty(b)) })
