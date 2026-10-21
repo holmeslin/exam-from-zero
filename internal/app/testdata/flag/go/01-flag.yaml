@@ -1,0 +1,22 @@
+lang: go
+chapter: 1
+title: 檢舉
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: flag-a
+    difficulty: 1
+    type: choice
+    prompt: 題目甲
+    choices: ["對", "錯"]
+    answer: 0
+    hints: ["a", "b"]
+    ref: x.md
+  - id: flag-b
+    difficulty: 1
+    type: choice
+    prompt: 題目乙
+    choices: ["對", "錯"]
+    answer: 0
+    hints: ["a", "b"]
+    ref: x.md

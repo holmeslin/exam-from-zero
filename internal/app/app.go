@@ -35,10 +35,11 @@ const (
 )
 
 type model struct {
-	cfg  Config
-	bank *Bank
-	rng  *rand.Rand
-	prog map[string]*LangProgress
+	cfg   Config
+	bank  *Bank
+	rng   *rand.Rand
+	prog  map[string]*LangProgress
+	flags []Flag
 
 	scr     screen
 	langs   []Lang // langs present in the bank
@@ -53,6 +54,7 @@ type model struct {
 	result      *Result
 	err         error
 	confirmQuit bool
+	confirmFlag bool
 	choiceCur   int
 	hintLevel   int  // hints shown for the current question
 	showRef     bool // reference answer expanded
@@ -78,12 +80,17 @@ func New(cfg Config) (tea.Model, error) {
 	if err != nil {
 		return nil, err
 	}
+	flags, err := loadFlags(cfg.ConfigDir)
+	if err != nil {
+		return nil, err
+	}
 	m := &model{
-		cfg:  cfg,
-		bank: b,
-		rng:  rand.New(rand.NewPCG(cfg.Seed, cfg.Seed)),
-		prog: prog,
-		out:  viewport.New(0, 0),
+		cfg:   cfg,
+		bank:  b,
+		rng:   rand.New(rand.NewPCG(cfg.Seed, cfg.Seed)),
+		prog:  prog,
+		flags: flags,
+		out:   viewport.New(0, 0),
 	}
 	m.input = textinput.New()
 	m.input.Prompt = "答案："
@@ -189,7 +196,7 @@ func (m *model) enterChapter() {
 		delete(lp.Runs, c.Key)
 	}
 	if lp.Runs[c.Key] == nil {
-		lp.Runs[c.Key] = newRun(c, m.rng, func(string) bool { return false })
+		lp.Runs[c.Key] = newRun(c, m.rng, m.flagged)
 	}
 	m.run, lp.Last = lp.Runs[c.Key], c.Key
 	m.save()
@@ -237,6 +244,16 @@ func (m *model) loadQuestion() {
 }
 
 func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.confirmFlag {
+		switch msg.String() {
+		case "y":
+			m.confirmFlag = false
+			m.flag()
+		case "n", "esc":
+			m.confirmFlag = false
+		}
+		return m, nil
+	}
 	if m.confirmQuit {
 		switch msg.String() {
 		case "y":
@@ -250,6 +267,9 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch k := msg.String(); {
 	case k == "tab" && m.q.Type == "short", k == "h" && !short:
 		m.showHint()
+		return m, nil
+	case k == "ctrl+f" && m.q.Type == "short", k == "!" && !short:
+		m.confirmFlag = true
 		return m, nil
 	case k == "r" && m.run.Cleared:
 		m.showRef = !m.showRef
@@ -302,8 +322,36 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *model) next() {
-	startedRedo, done := m.run.Next()
+func (m *model) flagged(id string) bool {
+	return slices.ContainsFunc(m.flags, func(f Flag) bool { return f.Lang == m.lang().ID && f.ID == id })
+}
+
+// flag reports the current question as broken and swaps in an unused, unflagged one from the chapter.
+func (m *model) flag() {
+	id := m.q.ID
+	m.flags = append(m.flags, Flag{Lang: m.lang().ID, ID: id, Time: time.Now()})
+	if err := writeJSON(flagsPath(m.cfg.ConfigDir), m.flags); err != nil {
+		m.saveErr = err
+	}
+	replacement := ""
+	if !m.run.Redo {
+		var spare []string
+		for _, q := range m.chapter().Questions {
+			if !slices.Contains(m.run.IDs, q.ID) && !m.flagged(q.ID) {
+				spare = append(spare, q.ID)
+			}
+		}
+		if len(spare) > 0 {
+			replacement = spare[m.rng.IntN(len(spare))]
+		}
+	}
+	m.advance(m.run.Drop(replacement, func(id string) int { return m.bank.byID[id].Difficulty }))
+}
+
+func (m *model) next() { m.advance(m.run.Next()) }
+
+// advance moves on after the run's position changed: next question, redo intro, or chapter cleared.
+func (m *model) advance(startedRedo, done bool) {
 	defer m.save()
 	switch {
 	case done:
@@ -485,17 +533,23 @@ func (m *model) viewQuestion() string {
 	if m.q.Type == "short" {
 		hintKey = "tab"
 	}
+	flagKey := "!"
+	if m.q.Type == "short" {
+		flagKey = "ctrl+f"
+	}
 	switch {
+	case m.confirmFlag:
+		s.WriteString("\n  確定檢舉這題有問題？會換一題並不再出現  y 檢舉   n 取消")
 	case m.confirmQuit:
 		s.WriteString("\n  確定離開？進度會保留  y 離開   n 繼續作答")
 	case r.Cleared:
 		s.WriteString(help("enter 下一題   r 參考答案   esc 離開"))
 	case m.q.Type == "choice":
-		s.WriteString(help("↑/↓ 選擇   enter 送出   " + hintKey + " 提示   esc 離開"))
+		s.WriteString(help("↑/↓ 選擇   enter 送出   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
 	case m.q.Type == "short":
-		s.WriteString(help("enter 送出   " + hintKey + " 提示   esc 離開"))
+		s.WriteString(help("enter 送出   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
 	default:
-		s.WriteString(help("enter 判定   " + hintKey + " 提示   esc 離開"))
+		s.WriteString(help("enter 判定   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
 	}
 	return s.String()
 }

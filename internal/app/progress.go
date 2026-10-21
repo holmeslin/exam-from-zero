@@ -29,31 +29,54 @@ func progressPath(configDir string) string { return filepath.Join(configDir, "pr
 
 // loadProgress returns empty progress when the file does not exist yet; a corrupt file is an error so it never gets overwritten.
 func loadProgress(configDir string) (map[string]*LangProgress, error) {
-	p := progressPath(configDir)
-	raw, err := os.ReadFile(p)
-	if errors.Is(err, fs.ErrNotExist) {
-		return map[string]*LangProgress{}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var prog map[string]*LangProgress
-	if err := json.Unmarshal(raw, &prog); err != nil {
-		return nil, fmt.Errorf("進度檔 %s 損毀，請修復或移走後再啟動：%w", p, err)
-	}
-	return prog, nil
+	prog := map[string]*LangProgress{}
+	return prog, readJSON(progressPath(configDir), &prog)
 }
 
-// saveProgress writes via a temp file + rename so a crash mid-write cannot corrupt existing progress.
 func saveProgress(configDir string, prog map[string]*LangProgress) error {
-	raw, err := json.MarshalIndent(prog, "", "  ")
+	return writeJSON(progressPath(configDir), prog)
+}
+
+// Flag marks a question the learner reported as broken; it is never sampled again.
+type Flag struct {
+	Lang string    `json:"lang"`
+	ID   string    `json:"id"`
+	Time time.Time `json:"time"`
+}
+
+func flagsPath(configDir string) string { return filepath.Join(configDir, "flagged.json") }
+
+func loadFlags(configDir string) ([]Flag, error) {
+	var flags []Flag
+	return flags, readJSON(flagsPath(configDir), &flags)
+}
+
+// readJSON leaves v untouched when the file does not exist.
+func readJSON(p string, v any) error {
+	raw, err := os.ReadFile(p)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
+	if err := json.Unmarshal(raw, v); err != nil {
+		return fmt.Errorf("%s 損毀，請修復或移走後再啟動：%w", p, err)
+	}
+	return nil
+}
+
+// writeJSON writes via a temp file + rename so a crash mid-write cannot corrupt the existing file.
+func writeJSON(p string, v any) error {
+	raw, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(configDir, "progress-*.json")
+	dir := filepath.Dir(p)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, ".tmp-*.json")
 	if err != nil {
 		return err
 	}
@@ -65,7 +88,7 @@ func saveProgress(configDir string, prog map[string]*LangProgress) error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), progressPath(configDir))
+	return os.Rename(tmp.Name(), p)
 }
 
 func (lp *LangProgress) stat(id string) *QStat {

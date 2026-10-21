@@ -316,3 +316,41 @@ func TestHintsAndReferenceAnswer(t *testing.T) {
 		t.Fatalf("hint not recorded:\n%s", raw)
 	}
 }
+
+func TestFlag_ReplacesQuestionAndExcludesItLater(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/flag")
+	e := start(t, cfg)
+	e.waitFor("選擇今天要測驗的語言")
+	e.key(tea.KeyEnter)
+	e.waitFor("檢舉")
+	e.key(tea.KeyEnter)
+	out := e.waitFor("題目")
+	first, other, firstID := "題目甲", "題目乙", "flag-a"
+	if !strings.Contains(out, first) {
+		first, other, firstID = other, first, "flag-b"
+	}
+
+	e.press("!")
+	e.waitFor("確定檢舉")
+	e.press("y")
+	e.waitFor(other) // "第 1/1 題" is unchanged so not repainted
+	raw, err := os.ReadFile(filepath.Join(cfg.ConfigDir, "flagged.json"))
+	if err != nil || !strings.Contains(string(raw), firstID) {
+		t.Fatalf("flagged.json missing %s: %v\n%s", firstID, err, raw)
+	}
+
+	e.key(tea.KeyEnter) // answer "對"
+	e.waitFor("✓ 通過")
+	e.key(tea.KeyEnter)
+	e.waitFor("過關")
+	e.key(tea.KeyEsc)
+	e.waitFor("✓")
+	e.key(tea.KeyEnter) // replay: only the unflagged question is left
+	e.waitFor(other)
+
+	e.press("!") // flagging the last one leaves nothing to replace it, which must not block passing
+	e.waitFor("確定檢舉")
+	e.press("y")
+	e.waitFor("過關")
+}
