@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"math/rand/v2"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -45,6 +46,11 @@ type model struct {
 	langs   []Lang // langs present in the bank
 	langCur int
 	chapCur int
+
+	// reset dialog on the menu
+	resetting  bool
+	resetInput textinput.Model
+	resetMsg   string
 
 	// current challenge
 	run         *Run
@@ -94,6 +100,8 @@ func New(cfg Config) (tea.Model, error) {
 	}
 	m.input = textinput.New()
 	m.input.Prompt = "答案："
+	m.resetInput = textinput.New()
+	m.resetInput.Prompt = ""
 	for _, l := range langs {
 		if len(b.Chapters[l.ID]) > 0 {
 			m.langs = append(m.langs, l)
@@ -158,8 +166,63 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *model) allPassed(lang string) bool {
+	lp := m.prog[lang]
+	return lp != nil && !slices.ContainsFunc(m.bank.Chapters[lang], func(c *Chapter) bool { return !slices.Contains(lp.Passed, c.Key) })
+}
+
+// archiveDir is where a reset moves the old workspace; it never overwrites an earlier archive.
+func (m *model) archiveDir(lang string) string {
+	base := filepath.Join(m.cfg.DataDir, "workspace", lang+".bak-"+time.Now().Format("2006-01-02"))
+	p := base
+	for i := 2; ; i++ {
+		if _, err := os.Stat(p); os.IsNotExist(err) {
+			return p
+		}
+		p = fmt.Sprintf("%s-%d", base, i)
+	}
+}
+
+func (m *model) reset() {
+	lang := m.lang().ID
+	ws := filepath.Join(m.cfg.DataDir, "workspace", lang)
+	if _, err := os.Stat(ws); err == nil {
+		if err := os.Rename(ws, m.archiveDir(lang)); err != nil {
+			m.resetMsg = "封存失敗：" + err.Error()
+			return
+		}
+	}
+	delete(m.prog, lang)
+	m.save()
+	m.resetting = false
+}
+
 func (m *model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.resetting {
+		switch msg.String() {
+		case "enter":
+			if m.resetInput.Value() == m.lang().ID {
+				m.reset()
+			} else {
+				m.resetMsg = "名稱不符"
+				m.resetInput.Reset()
+			}
+		case "esc":
+			m.resetting = false
+		default:
+			var cmd tea.Cmd
+			m.resetInput, cmd = m.resetInput.Update(msg)
+			return m, cmd
+		}
+		return m, nil
+	}
 	switch msg.String() {
+	case "R":
+		if m.allPassed(m.lang().ID) {
+			m.resetting, m.resetMsg = true, ""
+			m.resetInput.Reset()
+			m.resetInput.Focus()
+		}
 	case "up", "k":
 		m.langCur = max(m.langCur-1, 0)
 	case "down", "j":
@@ -432,7 +495,9 @@ func (m *model) viewMenu() string {
 	for i, l := range m.langs {
 		chs, lp := m.bank.Chapters[l.ID], m.prog[l.ID]
 		done, status := 0, ""
-		if lp != nil {
+		if m.allPassed(l.ID) {
+			done, status = len(chs), "✓ 全部過關"
+		} else if lp != nil {
 			done = len(lp.Passed)
 			idx := slices.IndexFunc(chs, func(c *Chapter) bool { return c.Key == lp.Last })
 			if run := lp.Runs[lp.Last]; run != nil && idx >= 0 {
@@ -441,7 +506,17 @@ func (m *model) viewMenu() string {
 		}
 		fmt.Fprintf(&s, "  %s%s %s  %3d/%-3d %s\n", cursor(i == m.langCur), pad(l.Name, 12), bar(done, len(chs)), done, len(chs), status)
 	}
-	s.WriteString(help("↑/↓ 選擇   enter 進入   q 離開"))
+	if m.resetting {
+		l := m.lang()
+		body := fmt.Sprintf("所有進度將清除，workspace 會封存為\n%s\n\n輸入 %s 以確認：%s",
+			tildePath(m.archiveDir(l.ID)), l.ID, m.resetInput.View())
+		if m.resetMsg != "" {
+			body += "\n" + badStyle.Render(m.resetMsg)
+		}
+		s.WriteString("\n  重置 " + l.Name + "\n" + boxStyle.Render(body+"\n\nenter 確認   esc 取消"))
+		return s.String()
+	}
+	s.WriteString(help("↑/↓ 選擇   enter 進入   R 重置（僅限全部過關）   q 離開"))
 	if m.saveErr != nil {
 		s.WriteString("\n" + badStyle.Render("  進度儲存失敗：") + m.saveErr.Error())
 	}

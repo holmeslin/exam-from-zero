@@ -354,3 +354,64 @@ func TestFlag_ReplacesQuestionAndExcludesItLater(t *testing.T) {
 	e.press("y")
 	e.waitFor("過關")
 }
+
+func TestReset_OnlyAfterAllPassedAndArchivesWorkspace(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/reset")
+	// rust progress must survive a go reset
+	if err := os.WriteFile(filepath.Join(cfg.ConfigDir, "progress.json"), []byte(`{"rust":{"passed":["01-one"]}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ws := filepath.Join(cfg.DataDir, "workspace", "go")
+	if err := os.MkdirAll(ws, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ws, "mine.go"), []byte("first round"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	e := start(t, cfg)
+	e.waitFor("選擇今天要測驗的語言")
+	e.press("R") // go not passed yet: nothing happens
+	e.key(tea.KeyDown)
+	if out := e.waitFor("▶ Rust"); strings.Contains(out, "以確認") {
+		t.Fatal("reset offered before every chapter passed")
+	}
+	e.key(tea.KeyUp)
+	e.key(tea.KeyEnter)
+	e.waitFor("唯一一關")
+	e.key(tea.KeyEnter)
+	e.waitFor("選第一個")
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+	e.key(tea.KeyEnter)
+	e.waitFor("過關")
+	e.key(tea.KeyEsc)
+	e.waitFor("✓")
+	e.key(tea.KeyEsc)
+	e.waitFor("✓ 全部過關")
+
+	e.press("R")
+	e.waitFor("重置 Go", "go.bak-", "輸入 go 以確認")
+	e.tm.Type("gx")
+	e.key(tea.KeyEnter)
+	e.waitFor("名稱不符")
+	e.tm.Type("go")
+	e.key(tea.KeyEnter)
+	e.waitFor("0/1")
+
+	if _, err := os.Stat(ws); !os.IsNotExist(err) {
+		t.Fatalf("workspace not moved away: %v", err)
+	}
+	baks, _ := filepath.Glob(ws + ".bak-*")
+	if len(baks) != 1 {
+		t.Fatalf("want one archived workspace, got %v", baks)
+	}
+	if raw, _ := os.ReadFile(filepath.Join(baks[0], "mine.go")); string(raw) != "first round" {
+		t.Fatalf("archive lost the learner's code: %q", raw)
+	}
+	raw, _ := os.ReadFile(filepath.Join(cfg.ConfigDir, "progress.json"))
+	if !strings.Contains(string(raw), `"rust"`) || strings.Contains(string(raw), `"go"`) {
+		t.Fatalf("reset must clear only go:\n%s", raw)
+	}
+}
