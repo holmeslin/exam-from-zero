@@ -63,11 +63,15 @@ func prepareWorkspace(b *Bank, dataDir, lang string, q *Question) (string, error
 }
 
 func resetWorkspace(b *Bank, dataDir, lang string, q *Question) error {
-	dir := workspaceDir(dataDir, lang, q.ID)
+	return materialize(b, lang, q, "starter", workspaceDir(dataDir, lang, q.ID))
+}
+
+// materialize writes one part (starter or solution) of q into dir, replacing whatever was there.
+func materialize(b *Bank, lang string, q *Question, part, dir string) error {
 	if err := os.RemoveAll(dir); err != nil {
 		return err
 	}
-	if _, err := copyTree(b.FS, b.questionDir(lang, q.ID, "starter"), dir); err != nil {
+	if _, err := copyTree(b.FS, b.questionDir(lang, q.ID, part), dir); err != nil {
 		return err
 	}
 	for name, body := range runners[lang].scaffold {

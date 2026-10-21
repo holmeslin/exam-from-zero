@@ -2,8 +2,10 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -21,13 +23,20 @@ var exams embed.FS
 
 func main() {
 	bank, _ := fs.Sub(exams, "_exams")
-	if err := run(bank, os.Args[1:]); err != nil {
+	if err := run(bank, os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "exam:", err)
 		os.Exit(1)
 	}
 }
 
-func run(bank fs.FS, args []string) error {
+func run(bank fs.FS, args []string, out io.Writer) error {
+	if len(args) > 0 && args[0] == "verify" {
+		lang := ""
+		if len(args) > 1 {
+			lang = args[1]
+		}
+		return app.Verify(context.Background(), bank, lang, out)
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
