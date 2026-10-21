@@ -1,0 +1,177 @@
+lang: rust
+chapter: ""
+title: 附錄二
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/appendix2, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 5
+questions:
+  - id: rust-ap2-q01
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `language_for_request` 優先回傳 request 指定的語言，沒指定時借用設定裡的預設語言。
+      starter 目前**無法編譯**：`None` 分支回傳的是 `&'config str`，但回傳型別是 `&'request str`。
+
+      請只在簽名加上生命週期之間的 bound 讓它通過編譯，不要改參數與回傳型別。
+      隱藏測試會讓 config 活得比 request 的字串更久。
+    hints: ["要保證 'config 活得過 'request", "在回傳型別後加上 where 'config: 'request,"]
+    ref: appendix2/a_lifetime_outlives_lifetime.md
+  - id: rust-ap2-q02
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `Builder` 只想暫時借用 `FormatterLike`，好讓 `write_two_parts` 能先用一個 builder 寫入、
+      再直接寫 `formatter`、最後建立第二個 builder。
+      starter 目前**無法編譯**：`Builder<'a>` 把外層 `&mut` 和內層 `String` 的借用綁成同一段生命週期。
+
+      請修改 `Builder` 的生命週期設計（struct 與 impl），讓 `write_two_parts` 原封不動地通過編譯。
+      `Builder::new` 與 `field` 的功能不變；隱藏測試會在 `write_two_parts` 之後再用 `Builder::new` 寫入一段文字。
+    hints: ["分成兩段生命週期：'borrow 是 builder 暫時借用的期間，'buffer 是內部 String 被借用的期間", "pub struct Builder<'borrow, 'buffer: 'borrow> { formatter: &'borrow mut FormatterLike<'buffer> }，impl 也跟著帶兩個生命週期"]
+    ref: appendix2/a_lifetime_outlives_lifetime.md
+  - id: rust-ap2-q03
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式碼的結果是什麼？
+
+          fn extend<'short, 'long>(short: &'short str, _long: &'long str) -> &'long str
+          where
+              'long: 'short,
+          {
+              short
+          }
+    choices:
+      - "可以編譯：'long: 'short 讓 short 的生命週期延長成 'long"
+      - "可以編譯，但執行時期可能產生懸垂參考"
+      - "無法編譯：bound 只保證 'long 活得過 'short，不能把 &'short str 當成 &'long str 回傳"
+      - "無法編譯：where 子句不能寫兩個生命週期之間的 bound"
+    answer: 2
+    hints: ["outlives bound 只能讓較長的保證縮短使用", "'long: 'short 沒有說 'short 活得跟 'long 一樣久"]
+    ref: appendix2/a_lifetime_outlives_lifetime.md
+  - id: rust-ap2-q04
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `select_from_both` 用同一個 `choose` 分別從兩份資料各選一個元素，
+      第一個結果跟著 `first` 的生命週期，第二個結果跟著 `second` 的生命週期。
+      starter 目前**無法編譯**：`choose` 的 bound 只能接收 `&'first [T]`，第二次呼叫就不符合。
+
+      請只修改 `where` 子句，讓同一個 `choose` 能處理任何生命週期的 slice。
+      隱藏測試會讓第二份資料先離開作用域，再使用第一個結果。
+    hints: ["需要「對每一個 'a 都成立」的 bound", "F: for<'a> Fn(&'a [T]) -> Option<&'a T>（也可以用 lifetime elision 寫成 F: Fn(&[T]) -> Option<&T>）"]
+    ref: appendix2/b_hrtb.md
+  - id: rust-ap2-q05
+    difficulty: 2
+    type: short
+    prompt: |
+      bound `F: Fn(&str) -> &str` 省略了生命週期。
+      請寫出加上 `for<'a>` 的完整 HRTB 形式（生命週期名稱用 `'a`）。
+    answers:
+      - ^(f\s?:\s?)?for\s?<'[a-z_]+>\s?fn\s?\(\s?&'[a-z_]+\s?str\s?\)\s?->\s?&'[a-z_]+\s?str,?$
+      - ^for\s?<'[a-z_]+>\s?f\s?:\s?fn\s?\(\s?&'[a-z_]+\s?str\s?\)\s?->\s?&'[a-z_]+\s?str,?$
+    hints: ["只有一個 input lifetime 時，回傳值的參考跟著輸入", "F: for<'a> Fn(&'a str) -> &'a str"]
+    ref: appendix2/b_hrtb.md
+  - id: rust-ap2-q06
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 `choose_shorter(long, short, use_long)`：`use_long` 為 true 時回傳 `long`，否則回傳 `short`。
+      注意 `long` 是 `&'static str`，回傳型別卻是 `&'short str`——想想為什麼可以直接回傳。
+    hints: ["共享參考對生命週期是 covariant，&'static str 可以縮短成 &'short str", "if use_long { long } else { short }"]
+    ref: appendix2/c_variance.md
+  - id: rust-ap2-q07
+    difficulty: 2
+    type: choice
+    prompt: |
+      假設 `'long: 'short`。下面哪一個型別**不能**把 `T = &'long str` 轉成 `T = &'short str` 使用
+      （也就是對 `T` 是 invariant）？
+    choices:
+      - "`&'a T`"
+      - "`Box<T>`"
+      - "`fn() -> T`"
+      - "`Cell<T>`"
+    answer: 3
+    hints: ["先問：這個型別能不能把新的 T 寫進去？", "interior mutability 的型別即使只拿到共享參考也能更換內容"]
+    ref: appendix2/c_variance.md
+  - id: rust-ap2-q08
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      想用 `Id<User>` 和 `Id<Article>` 區分使用者編號與文章編號，但 `T` 只當型別標記，不存真正的資料。
+      starter 目前**無法編譯**，因為 `T` 沒有出現在任何欄位裡。
+
+      請修改 `Id<T>` 讓它通過編譯，`new` 與 `value` 照常運作，而且 `Id<T>` 的大小要和 `u64` 一樣。
+    hints: ["標準庫有個不佔空間、表示「邏輯上使用了 T」的 marker type", "加一個欄位 _kind: std::marker::PhantomData<T>，建立時填 PhantomData"]
+    ref: appendix2/d_phantom_markers.md
+  - id: rust-ap2-q09
+    difficulty: 2
+    type: short
+    prompt: |
+      書中的 `Executor` 必須留在建立它的執行緒。為了讓它**同時不**自動實作 `Send` 與 `Sync`，
+      書中加入了一個零大小的欄位 `_not_send_sync`。這個欄位的型別是什麼？
+    answers:
+      - ^(std::marker::)?phantomdata\s?<\s?(std::rc::)?rc\s?<\s?\(\s?\)\s?>\s?>$
+    hints: ["用 PhantomData 包一個本身既不是 Send 也不是 Sync 的型別", "Rc<()> 不是 Send 也不是 Sync"]
+    ref: appendix2/d_phantom_markers.md
+  - id: rust-ap2-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `ChunksMut` 擁有一個 `Vec<i32>`，每次 `next` 借出下一段最多 `size` 個元素的**可變** slice，
+      讓呼叫者直接修改裡面的資料；資料用完回傳 `None`。例如 `[1, 2, 3, 4, 5]`、`size = 2`
+      會依序借出長度 2、2、1 的 slice。
+
+      starter 的 `type Item<'a>` 還是 `()`。請改成正確的 GAT 並實作 `next`。
+    hints: ["Item<'a> 要借用這一次的 &'a mut self：type Item<'a> = &'a mut [i32] where Self: 'a;", "先算好 start、end（end 不超過 data.len()）並更新 position，最後回傳 Some(&mut self.data[start..end])"]
+    ref: appendix2/e_gat.md
+  - id: rust-ap2-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 `run_each(items, action)`：依序對 `items` 的每個元素呼叫 `action` 並 `.await`。
+      隱藏測試傳入的 `async` 閉包會修改捕捉到的 `Vec`（例如 `log.push(...)`），
+      所以目前的 bound `F: AsyncFn(&str)` 也要一併修正。
+    hints: ["會修改捕捉值的 async 閉包實作的是 AsyncFnMut，呼叫時需要可變借用，參數也要寫成 mut action", "for &item in items { action(item).await; }"]
+    ref: appendix2/f_async_closures.md
+  - id: rust-ap2-q12
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式為什麼無法編譯？
+
+          fn main() {
+              let prefix = String::from("訊息");
+
+              let make_future = || async move {
+                  println!("{prefix}");
+              };
+
+              let _first = make_future();
+              let _second = make_future();
+          }
+    choices:
+      - "第一次呼叫會把 prefix 搬進回傳的 Future，所以 make_future 只實作 FnOnce，不能呼叫第二次"
+      - "async move block 不能寫在普通閉包裡"
+      - "兩個 Future 都沒有 .await，編譯器拒絕未使用的 Future"
+      - "String 沒有實作 Future，不能放進 async block"
+    answer: 0
+    hints: ["async move block 必須擁有 prefix", "把捕捉值搬出環境的閉包只能呼叫一次"]
+    ref: appendix2/f_async_closures.md
+  - id: rust-ap2-q13
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `numbered(label, n)` 回傳產生 1 到 n 的迭代器，完全不使用 `label`。
+      隱藏測試會在使用迭代器**之前**先 `drop` 掉 `label` 的 `String`，
+      但在 Rust 2024 edition 的預設捕捉規則下，這樣的測試無法編譯。
+
+      請只修改回傳型別，明確表示隱藏型別不捕捉任何泛型參數。
+    hints: ["impl Trait 可以用 use<...> 列出允許捕捉的參數", "-> impl Iterator<Item = u32> + use<>"]
+    ref: appendix2/g_use_bound.md

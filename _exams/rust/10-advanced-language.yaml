@@ -1,0 +1,228 @@
+# 第 10 章 進階語言功能（EXERCISES.md 第 3 章之後沒有固定題，全部為新出題）
+lang: rust
+chapter: "10"
+title: 進階語言功能
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter10, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 6
+questions:
+  - id: rust-ch10-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `Shape`、`Square`、`Rect` 都已經寫好了。請完成兩個函式：
+
+      - `make_shape(kind, a, b) -> Box<dyn Shape>`：`kind` 是 `"square"` 時回傳邊長 `a` 的 `Square`，其他情況回傳 `a` x `b` 的 `Rect`。
+      - `total_area(shapes: &[Box<dyn Shape>]) -> u32`：回傳所有形狀面積的總和。
+    hints: ["`if` 的兩個分支型別不同，所以要各自用 `Box::new(...)` 包起來，回傳型別寫 `Box<dyn Shape>`", "用 `for s in shapes` 走訪，`s.area()` 會透過 vtable 呼叫到正確的實作"]
+    ref: chapter10/01_dyn_trait.md
+  - id: rust-ch10-q02
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面四個 trait，哪一個可以寫成 `Box<dyn ...>` 使用？
+
+          trait Same { fn same(&self, other: &Self) -> bool; }
+
+          trait Convert { fn to<U>(&self) -> U; }
+
+          trait Dup: Sized { fn dup(&self) -> Self; }
+
+          trait Named {
+              fn name(&self) -> String;
+              fn copy(&self) -> Self where Self: Sized;
+          }
+    choices: ["Same", "Convert", "Dup", "Named"]
+    answer: 3
+    hints: ["回想三個限制：`Self` 不能出現在 `self` 以外的地方、方法不能有泛型參數、trait 不能要求 `Self: Sized`", "個別方法加上 `where Self: Sized` 就會退出 `dyn`，trait 本身仍然 `dyn` compatible"]
+    ref: chapter10/02_dyn_compatibility.md
+  - id: rust-ch10-q03
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      隱藏測試會做兩件事：對 `Cat` 呼叫 `twin()` 複製一隻貓，以及把 `Cat`、`Dog` 放進 `Vec<Box<dyn Animal>>`。
+      目前 `Animal` 不是 `dyn` compatible，所以測試會編譯失敗。
+
+      1. 修改 `Animal`，讓它可以用 `dyn Animal`，但具體型別仍然能呼叫 `twin()`。
+      2. 新增 `pub fn names(zoo: &[Box<dyn Animal>]) -> Vec<String>`，依序回傳每隻動物的 `name()`。
+    hints: ["`twin` 回傳 `Self`，在 `Self = dyn Animal` 時大小不固定，這就是不相容的原因", "在 trait 的 `twin` 宣告後面加上 `where Self: Sized`，讓這個方法退出 `dyn`"]
+    ref: chapter10/02_dyn_compatibility.md
+  - id: rust-ch10-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      把 `gcd(a, b)` 寫成**編譯時期也能執行**的函式，回傳兩數的最大公因數（`gcd(0, 7)` 是 7），
+      然後把 `GCD_84_36` 改成用 `gcd(84, 36)` 算出來。
+      隱藏測試會把 `gcd(...)` 放在 `const` 裡呼叫，一般函式會編譯失敗。
+    hints: ["函式前面加 `const` 變成 `const fn`；`const fn` 裡可以用 `let mut` 和 `while`", "輾轉相除法：當 `b != 0` 時，令 `r = a % b`，再把 `a = b`、`b = r`，最後回傳 `a`"]
+    ref: chapter10/03_const_fn.md
+  - id: rust-ch10-q05
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `Polygon` trait 有兩個 associated const：`SIDES`（邊數）和 `NAME`（預設是 `"多邊形"`）。請：
+
+      - 讓 `Triangle` 是 3 邊、名稱 `"三角形"`；`Square` 是 4 邊、名稱 `"正方形"`；`Hexagon` 是 6 邊、沿用預設名稱。
+      - 完成預設方法 `angle_sum()`：回傳內角和 (邊數 - 2) x 180。
+    hints: ["在 `impl` 裡寫 `const SIDES: u32 = 3;`、`const NAME: &'static str = \"三角形\";`；不寫 `NAME` 就會用預設值", "trait 的預設方法裡用 `Self::SIDES` 取得目前型別的常數"]
+    ref: chapter10/04_associated_const.md
+  - id: rust-ch10-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      用 `const` generics 完成三個函式：
+
+      - `add_arrays(a, b)`：兩個同長度的陣列逐項相加。
+      - `reversed(arr)`：回傳順序顛倒的新陣列。
+      - `filled(value)`：回傳每一格都是 `value` 的陣列，長度由呼叫端決定。
+    hints: ["先用 `let mut result = [0; N];` 建立結果陣列，再用 `for i in 0..N` 填值", "顛倒時第 `i` 格放 `arr[N - 1 - i]`；`filled` 直接回傳 `[value; N]`"]
+    ref: chapter10/05_const_generics.md
+  - id: rust-ch10-q07
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面四個宣告，哪一個**無法**通過編譯？
+
+          struct Container<T = String> { value: T }
+
+          struct Pair<T, U = T> { first: T, second: U }
+
+          struct Buffer<const N: usize = 1024> { data: [u8; N] }
+
+          fn make<T = i32>(x: T) -> T { x }
+    choices: ["Container", "Pair", "Buffer", "make"]
+    answer: 3
+    hints: ["預設參數可以放在 `struct`、`enum`、`union`、型別別名和 trait 的宣告", "函式和方法的泛型參數不能有預設值"]
+    ref: chapter10/06_default_params.md
+  - id: rust-ch10-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      幫 `Vec2` 實作運算子，讓下面這些寫法都能用：
+
+      - `a + b`、`a - b`：逐項相加、相減
+      - `-a`：兩個分量都取負號
+      - `a * 3`：兩個分量都乘上一個 `i32`
+      - `a += b`：就地加上 `b`
+    hints: ["對應的 trait 是 `std::ops` 裡的 `Add`、`Sub`、`Neg`、`Mul<i32>`、`AddAssign`；乘法右邊是 `i32`，要寫 `impl Mul<i32> for Vec2`", "`AddAssign` 沒有 `Output`，方法是 `fn add_assign(&mut self, rhs: Vec2)`，直接修改 `self.x`、`self.y`"]
+    ref: chapter10/07_operator_overload.md
+  - id: rust-ch10-q09
+    difficulty: 1
+    type: short
+    prompt: |
+      下面這段程式會印出什麼？
+
+          let a = 3.99_f64 as i32;
+          let b = 300_u32 as u8;
+          println!("{} {}", a, b);
+    answers: ["^3[ ,]*44$"]
+    hints: ["浮點數用 `as` 轉整數是截斷小數，不是四捨五入", "大整數轉小整數會靜默截斷，只留最低的 8 個位元：300 = 256 + 44"]
+    ref: chapter10/08_as.md
+  - id: rust-ch10-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Level` 的 discriminant 要是：`Low` = 1、`Medium` = 2、`High` = 3、`Critical` = 10、`Emergency` = 11。請：
+
+      - 在 `enum` 定義裡設定 discriminant（只寫必要的 `= 數字`）。
+      - `code(level)`：回傳 discriminant。
+      - `from_code(c: u8)`：把數字轉回 `Level`，不是合法的值就回傳 `None`。
+      - `from_big(c: u32)`：同上，但輸入是 `u32`；超出 `u8` 範圍時要回傳 `None`，不能被截斷（例如 267 不能變成 11）。
+    hints: ["沒指定的 variant 會從前一個 +1，所以只要寫 `Low = 1` 和 `Critical = 10`；`code` 用 `level as u8`", "`from_big` 先用 `u8::try_from(c)`，`Ok` 時交給 `from_code`，`Err` 時回傳 `None`"]
+    ref: chapter10/09_enum_discriminant.md
+  - id: rust-ch10-q11
+    difficulty: 1
+    type: choice
+    prompt: |
+      想讓**整個檔案（模組）**裡都不出現 `dead_code` 警告，應該在檔案開頭寫哪一行？
+    choices: ["#[allow(dead_code)]", "#![allow(dead_code)]", "#[deny(dead_code)]", "//! allow(dead_code)"]
+    answer: 1
+    hints: ["outer attribute `#[...]` 修飾下面那一個項目；inner attribute `#![...]` 修飾包含它的整個項目", "差一個驚嘆號；`//!` 是 `#![doc = ...]` 的簡寫，跟警告無關"]
+    ref: chapter10/10_attributes.md
+  - id: rust-ch10-q12
+    difficulty: 2
+    type: choice
+    prompt: |
+      在 Linux 上編譯下面這段程式，會發生什麼事？
+
+          #[cfg(target_os = "windows")]
+          fn windows_only() {}
+
+          fn main() {
+              if cfg!(target_os = "windows") {
+                  windows_only();
+              }
+          }
+    choices: ["可以編譯，執行時不會呼叫 windows_only", "編譯錯誤：找不到 windows_only", "可以編譯，但執行到 if 時 panic", "可以編譯，cfg! 會等到執行時期才判斷作業系統"]
+    answer: 1
+    hints: ["`#[cfg]` 不符合條件時，那個函式整個被移除，等於不存在", "`cfg!` 只是展開成 `false`，`if` 兩個分支都會保留並接受檢查"]
+    ref: chapter10/11_cfg_macro.md
+  - id: rust-ch10-q13
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      用 `macro_rules!` 補完兩個巨集（都已經有 `#[macro_export]`）：
+
+      - `sum!(...)`：把所有參數加起來；`sum!()` 是 0，`sum!(1, 2, 3)` 是 6。
+      - `strings![...]`：把每個字串字面值轉成 `String`，放進 `Vec<String>`；`strings![]` 是空的 `Vec`。
+    hints: ["用 `$($x:expr),*` 或 `$($x:expr),+` 匹配逗號分隔的多個參數", "`sum!` 可以展開成 `0 $(+ $x)*`；`strings!` 可以在區塊裡建 `Vec`，用 `$( v.push(String::from($s)); )*` 逐一放入"]
+    ref: chapter10/12_macro_rules.md
+  - id: rust-ch10-q14
+    difficulty: 1
+    type: choice
+    prompt: |
+      哪一種巨集會**取代**被標記的項目，而不是在旁邊附加新程式碼？
+    choices: ["derive macro", "attribute macro", "function-like macro", "macro_rules! 巨集"]
+    answer: 1
+    hints: ["三種 proc macro：`derive` 附加、attribute 取代、function-like 展開括號裡的內容", "`#[derive(...)]` 不會動到原本的 struct；自訂的 `#[my_attr]` 回傳的東西會取代被標記的函式"]
+    ref: chapter10/13_proc_macro.md
+  - id: rust-ch10-q15
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面哪一個操作**需要**寫在 `unsafe` 裡？
+    choices: ["用 `&raw const x` 建立 `*const i32`", "解參考 `*const i32` 讀出它指向的值", "呼叫某個 unsafe trait 的方法", "建立 union 的值 `IntOrBool { i: 42 }`"]
+    answer: 1
+    hints: ["原始指標的建立不需要 `unsafe`，使用才需要；`unsafe trait` 危險的是實作，不是呼叫", "union 是寫入不需要 `unsafe`、讀取才需要"]
+    ref: chapter10/14_unsafe.md
+  - id: rust-ch10-q16
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成兩個全域狀態：
+
+      - `next_id()`：每次呼叫回傳下一個 id，第一次是 1，接著 2、3……；多個執行緒同時呼叫也不能拿到重複的 id。不要用 `static mut`。
+      - `PRIMES`：50 以下所有質數（由小到大）的 `Vec<u32>`，在第一次用到時才計算；`is_small_prime(n)` 用它判斷 `n` 在不在裡面。
+    hints: ["計數器用 `static NEXT: AtomicU32 = AtomicU32::new(1);`，`next_id` 回傳 `NEXT.fetch_add(1, Ordering::Relaxed)`（會回傳加之前的值）", "`LazyLock::new(|| { ... })` 的閉包裡用兩層迴圈找出 2 到 49 的質數；`is_small_prime` 用 `PRIMES.contains(&n)`"]
+    ref: chapter10/16_lazy_lock.md
+  - id: rust-ch10-q17
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      練習 FFI 的兩個方向：
+
+      - `c_abs(x)`：呼叫 C 標準函式庫的 `abs`（C 的宣告是 `int abs(int)`）。請把它宣告成 `safe`，讓 `c_abs` 裡不需要 `unsafe`。
+      - `rust_ch10_triple(x)`：回傳 `x * 3`。隱藏測試會像 C 一樣，用 `rust_ch10_triple` 這個名字、以 C ABI 呼叫它。
+
+      如果測試出現 linker 錯誤（找不到 `rust_ch10_triple` 這個 symbol），代表第二項還沒做好。
+    hints: ["`unsafe extern \"C\" { safe fn abs(x: i32) -> i32; }`，之後就能直接呼叫 `abs(x)`", "要讓 C 呼叫 Rust：函式加上 `#[unsafe(no_mangle)]`，並寫成 `pub extern \"C\" fn`"]
+    ref: chapter10/17_extern.md
+  - id: rust-ch10-q18
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      - `fail(msg)`：以 `msg` 為訊息 panic，回傳型別要表明它**永遠不會回傳**。
+      - `must_positive(x)`：`x > 0` 時回傳 `x`，否則呼叫 `fail("必須是正數")`。
+      - `sum_valid(items)`：把每個字串用 `parse::<i32>()` 轉成數字後加總，轉不了的就跳過。
+    hints: ["永不回傳的函式寫成 `-> !`；`!` 可以被當成任何型別，所以 `if x > 0 { x } else { fail(...) }` 型別一致", "`sum_valid` 裡寫 `match item.parse::<i32>() { Ok(n) => n, Err(_) => continue }`"]
+    ref: chapter10/19_never_type.md

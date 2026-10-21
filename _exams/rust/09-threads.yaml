@@ -1,0 +1,204 @@
+# 第 9 章：EXERCISES.md 只收第 1、2 章的固定題，這一章的題目都是依課文新出的
+lang: rust
+chapter: "9"
+title: 多執行緒
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter9, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 5
+questions:
+  - id: rust-ch09-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      在 64 位元系統上執行下面的程式，依序會印出什麼？
+
+          println!("{}", size_of::<&i32>());
+          println!("{}", size_of::<&[i32]>());
+          println!("{}", size_of::<&str>());
+          println!("{}", size_of::<Box<i32>>());
+    choices:
+      - "8、8、8、8"
+      - "8、16、16、8"
+      - "4、16、16、8"
+      - "8、16、8、16"
+    answer: 1
+    hints: ["一般的指標只存一個位址；64 位元系統上一個位址是 8 bytes", "`&[T]` 和 `&str` 是胖指標：位址之外還要記長度"]
+    ref: chapter9/01_pointer.md
+
+  - id: rust-ch09-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 `spawn_greeting(name: String) -> JoinHandle<String>`：
+      開一條新的執行緒，在裡面組出 `"Hello, {name}!"` 當作閉包的回傳值，並把 `JoinHandle` 交給呼叫端。
+      呼叫端 `join` 之後應該拿到這個字串，例如：
+
+          let h = spawn_greeting(String::from("Rust"));
+          assert_eq!(h.join().unwrap(), "Hello, Rust!");
+    hints: ["`thread::spawn` 本身就回傳 `JoinHandle`，閉包的回傳值就是 `join` 拿到的值", "閉包要用到外面的 `name`，記得加 `move`：`thread::spawn(move || format!(\"Hello, {}!\", name))`"]
+    ref: chapter9/02_thread_spawn.md
+
+  - id: rust-ch09-q03
+    difficulty: 3
+    type: choice
+    prompt: |
+      關於 `Send` / `Sync`，下列哪一個敘述是**正確**的？
+    choices:
+      - "`RefCell<i32>` 既不是 `Send` 也不是 `Sync`，所以完全不能 move 到其他執行緒"
+      - "`Rc<i32>` 是 `Send` 但不是 `Sync`，所以可以 move 進 `thread::spawn`，只是不能共享"
+      - "`Mutex<RefCell<i32>>` 是 `Sync`，因為 `Mutex<T>` 只要求 `T: Send` 就能是 `Sync`"
+      - "`Arc<RefCell<i32>>` 可以 clone 之後 move 到多條執行緒共享，因為 `Arc` 的計數是 atomic"
+    answer: 2
+    hints: ["`RefCell` 能 move 過去（`Send`），但不能共享（不是 `Sync`）；`Rc` 兩者都不是", "`Arc<T>` 要跨執行緒，`T` 必須 `Send + Sync`；`Mutex` 的鎖則能把只有 `Send` 的型別變成 `Sync`"]
+    ref: chapter9/08_mutex.md
+
+  - id: rust-ch09-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `count_in_threads(words: Arc<Vec<String>>, targets: Vec<String>) -> Vec<usize>`：
+      每個 target 開**一條執行緒**，算出它在 `words` 裡出現幾次。回傳的 Vec 要依照 `targets` 的順序排列。
+
+          words   = ["a", "b", "a", "c", "a", "b"]
+          targets = ["a", "b", "c", "z"]
+          回傳      [3, 2, 1, 0]
+
+      測試也會檢查：函式回傳之後，`words` 的 `Arc::strong_count` 要回到只剩呼叫端自己那一份。
+    hints: ["每條執行緒用 `Arc::clone(&words)` 拿一份指標再 `move` 進閉包；先把 `JoinHandle` 依序放進 Vec", "依序 `join` 每個 handle 收集結果，順序就和 targets 一樣；計數用 `words.iter().filter(|w| **w == t).count()`"]
+    ref: chapter9/06_arc.md
+
+  - id: rust-ch09-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 `HitCounter`，讓多條執行緒可以透過 `Arc<HitCounter>` 同時記錄點擊次數：
+
+          new() -> HitCounter      // 從 0 開始
+          hit(&self) -> usize      // 記一次點擊，回傳加完之後的總次數
+          get(&self) -> usize      // 目前的總次數
+
+      欄位已經是 `AtomicUsize`。注意 `hit` 只拿到 `&self`。測試會讓 8 條執行緒各 `hit` 1000 次，並檢查所有 `hit` 的回傳值剛好是 1 到 8000 各出現一次。
+    hints: ["atomic 型別有 interior mutability，`&self` 就能修改；`fetch_add` 會回傳**舊值**", "`self.hits.fetch_add(1, Ordering::SeqCst) + 1`；不要先 `load` 再 `store`，那樣兩步之間會被別的執行緒插隊"]
+    ref: chapter9/07_atomic.md
+
+  - id: rust-ch09-q06
+    difficulty: 1
+    type: short
+    prompt: |
+      下面的程式會印出什麼？（照輸出的樣子作答）
+
+          use std::sync::atomic::{AtomicI32, Ordering};
+
+          fn main() {
+              let c = AtomicI32::new(10);
+              let a = c.fetch_add(5, Ordering::SeqCst);
+              let b = c.load(Ordering::SeqCst);
+              println!("{} {}", a, b);
+          }
+    answers: ['^10 15$', '^10, ?15$']
+    hints: ["`fetch_add` 加完之後回傳的是加之前的值", "a 是舊值 10，b 是加完之後的 15"]
+    ref: chapter9/07_atomic.md
+
+  - id: rust-ch09-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `collect_squares(n: u32) -> Vec<u32>`：
+      用 `Arc<Mutex<Vec<u32>>>` 當共享的容器，開 `n` 條執行緒，第 `i` 條（`i` 從 0 到 `n - 1`）把 `i * i` 推進去。
+      等所有執行緒都跑完之後，回傳收集到的結果（順序不拘）。例如 `collect_squares(5)` 回傳 0、1、4、9、16 這五個數。
+    hints: ["每條執行緒先 `Arc::clone` 再 `move` 進閉包，在裡面用 `.lock().expect(...)` 拿到 guard 後 `push`", "全部 `join` 完之後，再鎖一次把裡面的 Vec `clone` 出來回傳"]
+    ref: chapter9/08_mutex.md
+
+  - id: rust-ch09-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 `Registry`，用 `RwLock<Vec<String>>` 保存登記過的名字，讓多條執行緒能共用同一個 `Arc<Registry>`：
+
+          new() -> Registry
+          add(&self, name: &str) -> bool        // 還沒登記過就加入並回傳 true；已經有了回傳 false
+          contains(&self, name: &str) -> bool
+          len(&self) -> usize
+
+      測試會讓 4 條執行緒同時 `add` 同樣的 100 個名字，最後必須剛好 100 個、`add` 回傳 true 的次數也剛好 100 次。
+    hints: ["`contains`、`len` 只要讀鎖 `.read()`；`add` 要用寫鎖 `.write()`，而且「檢查有沒有」和「加入」要在同一把寫鎖裡完成", "持有寫鎖時不要再呼叫 `self.contains(...)`——同一條執行緒再拿同一把鎖可能 panic 或卡死；直接用 guard 做 `iter().any(|n| n == name)`"]
+    ref: chapter9/09_rwlock.md
+
+  - id: rust-ch09-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 `lock_or_reset(m: &Mutex<Vec<i32>>) -> MutexGuard<'_, Vec<i32>>`：
+
+      - 鎖沒中毒：照常回傳 guard，資料不動。
+      - 鎖中毒了：把資料重設成空的 Vec，並**解除中毒**，讓之後別人用一般的 `m.lock().expect(...)` 也能正常取鎖；然後回傳 guard。
+
+      目前的寫法遇到中毒的鎖會直接 panic。
+    hints: ["用 `match m.lock()` 分開處理 `Ok(g)` 和 `Err(poisoned)`；`poisoned.into_inner()` 能拿回 guard", "`into_inner` 不會解除中毒；把資料改成 `vec![]` 之後要呼叫 `m.clear_poison()`"]
+    ref: chapter9/10_poisoning.md
+
+  - id: rust-ch09-q10
+    difficulty: 2
+    type: choice
+    prompt: |
+      一條執行緒拿著 `RwLock` 的**讀鎖**時 panic 了；主執行緒 `join` 收下這個 panic 之後，接著呼叫 `lock.write()`。會發生什麼事？
+    choices:
+      - "回傳 `Err(PoisonError)`，因為有執行緒在持有鎖的期間 panic"
+      - "回傳 `Ok`，讀鎖 panic 不會讓 `RwLock` 中毒"
+      - "永遠卡住，因為 panic 的執行緒沒有放掉讀鎖"
+      - "編譯錯誤，`RwLock` 的讀鎖不能在可能 panic 的執行緒裡使用"
+    answer: 1
+    hints: ["poisoning 是為了提醒「資料可能修改到一半」；只讀的話不會留下不一致的狀態", "`RwLock` 只有在持有**寫鎖**時 panic 才會中毒；panic 時 guard 也會被 drop，鎖會放掉"]
+    ref: chapter9/10_poisoning.md
+
+  - id: rust-ch09-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `squares_via_channel(nums: Vec<u64>) -> Vec<u64>`：
+      建立一個 `mpsc` channel，每個數字開一條執行緒，在裡面算出平方後 `send` 回來；主執行緒收完所有結果後回傳（順序不拘）。
+      注意：所有結果都收完之後，函式必須能結束，不能卡住。
+    hints: ["每條執行緒用 `tx.clone()` 拿自己的發送端再 `move` 進閉包", "迴圈結束後要 `drop(tx)`，否則原始的 `tx` 還活著，`for x in rx` 永遠不會結束；收集可以用 `rx.into_iter().collect()`"]
+    ref: chapter9/11_mpsc.md
+
+  - id: rust-ch09-q12
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的程式中，執行緒 A 先鎖 `lock1` 再鎖 `lock2`，執行緒 B 先鎖 `lock2` 再鎖 `lock1`：
+
+          let a = thread::spawn(move || {
+              let _g1 = l1.lock().expect("鎖失敗");
+              let _g2 = l2.lock().expect("鎖失敗");
+          });
+          let b = thread::spawn(move || {
+              let _g2 = l2.lock().expect("鎖失敗");
+              let _g1 = l1.lock().expect("鎖失敗");
+          });
+
+      下列敘述何者正確？
+    choices:
+      - "編譯不會通過，因為 `Send` / `Sync` 會擋下取鎖順序不一致的程式"
+      - "可以編譯；時機剛好時兩條執行緒會互相等待、永遠卡住。讓兩邊都先鎖 `lock1` 再鎖 `lock2` 就能避免"
+      - "可以編譯；執行時 Rust 偵測到死鎖會讓其中一條執行緒 panic，鎖因此中毒"
+      - "可以編譯，而且一定不會卡住，因為 `Mutex` 會自動依位址排序取鎖"
+    answer: 1
+    hints: ["`Send` / `Sync` 保護的是資料競爭；死鎖是邏輯問題，編譯器擋不住", "避免死鎖的第一招：所有執行緒以相同順序取鎖"]
+    ref: chapter9/12_deadlock.md
+
+  - id: rust-ch09-q13
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `parallel_sum(data: &[i64]) -> i64`：
+      把 `data` 從中間切成前後兩半，各開一條執行緒加總，再把兩個結果相加回傳。
+      `data` 是借來的切片，不是 `'static`，所以 `thread::spawn` 不能直接用它——請改用 `thread::scope`。
+    hints: ["`let mid = data.len() / 2;`，兩半分別是 `&data[..mid]` 和 `&data[mid..]`", "在 `thread::scope(|s| { ... })` 裡用 `s.spawn(|| ...)` 開兩條執行緒，`join` 拿回各自的總和；`scope` 閉包的回傳值就是 `thread::scope` 的回傳值"]
+    ref: chapter9/13_thread_scope.md

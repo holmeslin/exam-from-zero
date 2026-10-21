@@ -1,0 +1,209 @@
+# 第 4 章：所有權與借用。EXERCISES.md 第 3 章之後沒有固定題，以下題目都是依本章內容新出的
+lang: rust
+chapter: "4"
+title: 所有權與借用
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter4, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 5
+questions:
+  - id: rust-ch04-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      程式碼裡定義了 `trait Legs`，要求實作者提供 `fn legs(self) -> u32`。
+      `Bird` 已經實作好了（回傳 2），請完成 `impl Legs for Dog`，讓 `Dog.legs()` 回傳 4。
+    hints: ["`impl Legs for Dog` 裡的 `legs` 跟 `Bird` 的寫法一樣，只是回傳值不同", "把 `todo!(...)` 換成 `4`"]
+    ref: chapter4/02_trait.md
+
+  - id: rust-ch04-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這段程式碼會發生什麼事？
+
+          #[derive(Debug)]
+          struct Point { x: i32, y: i32 }
+
+          fn main() {
+              let p1 = Point { x: 1, y: 2 };
+              let p2 = p1;
+              println!("{:?}", p1);
+          }
+    choices:
+      - "印出 Point { x: 1, y: 2 }"
+      - "編譯錯誤：p1 的所有權已經 move 給 p2，不能再用"
+      - "可以編譯，但執行時會 panic"
+      - "印出 p2 的內容，因為 p1 和 p2 指向同一份資料"
+    answer: 1
+    hints: ["`Point` 沒有實作 `Copy`，`let p2 = p1;` 是 move 還是複製？", "move 之後原本的變數就不能再用，Rust 在編譯時期就會擋下來"]
+    ref: chapter4/03_move_and_clone.md
+
+  - id: rust-ch04-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 `add_bonus(score: &mut i32, bonus: i32)`：透過可變參考，把 `bonus` 加到 `score` 指向的原本那個值上。
+      例如 `let mut s = 80; add_bonus(&mut s, 5);` 之後 `s` 是 85。
+    hints: ["要修改參考指向的值，要先用 `*` 解參考", "`*score += bonus;`"]
+    ref: chapter4/06_mutable_borrowing.md
+
+  - id: rust-ch04-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      隱藏測試會這樣使用 `Point`：
+
+          let p = Point { x: 1, y: 2 };
+          let q = p;
+          let moved = shift(p, 10, 20);
+          // 之後還會讀 p.x、p.y
+
+      目前的起始程式碼可以編譯，但隱藏測試會因為 p 已經被 move 而**編譯失敗**。
+      不要改 `shift` 的簽名，只修改 `Point` 的定義，讓賦值和傳進函式時都自動複製、不 move。
+    hints: ["哪個 `trait` 能讓型別在賦值和傳入函式時自動複製？", "把 `#[derive(Debug)]` 改成 `#[derive(Debug, Copy, Clone)]`——`Copy` 要求一定也要有 `Clone`"]
+    ref: chapter4/04_copy.md
+
+  - id: rust-ch04-q05
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      目前 `perimeter(r: Rect)` 會把 `Rect` move 進函式。隱藏測試會這樣呼叫：
+
+          let r = Rect { width: 3, height: 4 };
+          perimeter(&r);
+          perimeter(&r);
+          // 之後還會讀 r.width、r.height
+
+      所以用目前的起始程式碼，隱藏測試會**編譯失敗**（型別不符）。
+      請修改 `perimeter` 的參數型別，讓它只借用 `Rect`、不拿走所有權。
+    hints: ["函式參數寫 `&Type` 就是借用", "把 `r: Rect` 改成 `r: &Rect`；用 `.` 讀欄位時 Rust 會自動解參考，函式本體不用改"]
+    ref: chapter4/05_borrowing.md
+
+  - id: rust-ch04-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Counter` 的三個 method 目前都用 `self` 取得所有權，所以呼叫一次就不能再用了。
+      隱藏測試會這樣用：
+
+          let mut c = Counter::new();
+          c.get();
+          c.increment();
+          c.increment();
+          c.get();
+          c.finish(); // 之後 c 就不再使用
+
+      用目前的起始程式碼，隱藏測試會**編譯失敗**。請只修改這三個 method 的 `self` 寫法：
+      只讀用一種、要修改欄位用一種、要消耗計數器用一種，讓測試能編譯並通過。
+    hints: ["只讀 → `&self`，要改 → `&mut self`，要消耗 → `self`", "`get(&self)`、`increment(&mut self)`，`finish(self)` 保持不變"]
+    ref: chapter4/08_ref_self.md
+
+  - id: rust-ch04-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作兩個函式：
+      1. `make_greeting(name: &str) -> String`：回傳「你好，<name>！」，例如 `make_greeting("小明")` 回傳 `"你好，小明！"`（逗號和驚嘆號都是全形）。
+         隱藏測試會傳字串字面值，也會傳 `&String`，而且之後還會使用原本的 `String`。
+      2. `add_suffix(s: &mut String, suffix: &str)`：把 `suffix` 接到 `s` 的後面，直接修改原本的字串。
+    hints: ["組合字串並回傳 `String` 可以用 `format!`；在 `String` 後面接文字用 `push_str`", "`format!(\"你好，{}！\", name)`，以及 `s.push_str(suffix);`"]
+    ref: chapter4/11_string_vs_str.md
+
+  - id: rust-ch04-q08
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      程式先讀一行整數 n，再讀 n 行、每行一個成績。請把成績依序放進一個 `Vec`，然後印出：
+
+          成績：<用 {:?} 印出整個 Vec>
+          共 <筆數> 筆
+          總分：<用起始程式碼裡的 sum 算出的總和>
+
+      最後依序對每筆成績印出一行：60 分以上（含）印「<成績> 及格」，否則印「<成績> 不及格」。
+      走訪 `Vec` 時請借用，不要把它 move 掉。
+      （判定時會輸入 4 筆：85、59、92、60）
+    stdin: "4\n85\n59\n92\n60\n"
+    expected_stdout: "成績：[85, 59, 92, 60]\n共 4 筆\n總分：296\n85 及格\n59 不及格\n92 及格\n60 及格\n"
+    hints: ["在讀取迴圈裡用 `scores.push(score)`；長度用 `scores.len()`；呼叫 `sum(&scores)` 時 `&Vec` 會自動轉成 `&[i32]`", "用 `for s in &scores` 走訪，`s` 是 `&i32`，比較時寫 `*s >= 60`"]
+    ref: chapter4/12_vec.md
+
+  - id: rust-ch04-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `winner_name(players: &[Player]) -> String` 要回傳分數最高的玩家名字（同分取先出現的）。
+      目前的起始程式碼**無法編譯**，錯誤出在最後一行 `best.name`。
+      請找出原因並修正，讓函式回傳正確的名字，而且呼叫後 `players` 裡的資料都還在。
+    hints: ["`best` 是 `&Player`，借來的東西只能看、不能拿走；`String` 不是 `Copy`", "回傳一份副本：`best.name.clone()`"]
+    ref: chapter4/07_borrowing_rules.md
+
+  - id: rust-ch04-q10
+    difficulty: 3
+    type: choice
+    prompt: |
+      下面四段程式碼（都放在 `fn main` 裡），哪一段**可以**通過編譯？
+
+      甲：
+          let mut x = 10;
+          let r1 = &x;
+          let r2 = &mut x;
+          *r2 += 1;
+          println!("{}", r1);
+
+      乙：
+          let mut x = 10;
+          let r1 = &x;
+          println!("{}", r1);
+          let r2 = &mut x;
+          *r2 += 1;
+
+      丙：
+          let mut x = 10;
+          let r1 = &mut x;
+          let r2 = &mut x;
+          *r1 += 1;
+          *r2 += 1;
+
+      丁：
+          let r;
+          {
+              let x = 42;
+              r = &x;
+          }
+          println!("{}", r);
+    choices: ["甲", "乙", "丙", "丁"]
+    answer: 1
+    hints: ["`&` 和 `&mut` 不能同時存在，同一時間也只能有一個 `&mut`；但參考最後一次使用之後，借用就結束了", "丁是懸垂參考；甲、丙在兩個借用都還會被使用時就衝突了，只有乙的 r1 在建立 `&mut` 前就用完"]
+    ref: chapter4/07_borrowing_rules.md
+
+  - id: rust-ch04-q11
+    difficulty: 2
+    type: short
+    prompt: |
+      `let v = vec![1, 2, 3];` 之後寫：
+
+          for x in &v {
+              println!("{}", x);
+          }
+
+      迴圈裡 `x` 的型別是什麼？（直接寫型別，例如 `i64`）
+    answers: ['^`?& ?i32`?$']
+    hints: ["`for x in &v` 走訪的是借來的 `Vec`，每次拿到的元素也是借來的", "是 `i32` 的參考"]
+    ref: chapter4/13_vec_and_ownership.md
+
+  - id: rust-ch04-q12
+    difficulty: 1
+    type: choice
+    prompt: |
+      下列哪一個型別**沒有**實作 `Copy`，賦值時會 move？
+    choices: ["(i32, bool)", "[char; 3]", "String", "&str"]
+    answer: 2
+    hints: ["負責管理另外存放在 heap 上資料的型別，不能用單純、機械化的方式自動複製", "`String` 的資料主要在 heap 上；`&str` 是參考，`&T` 都是 `Copy`"]
+    ref: chapter4/09_stack_and_heap.md

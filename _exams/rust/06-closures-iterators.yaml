@@ -1,0 +1,165 @@
+lang: rust
+chapter: "6"
+title: 閉包與迭代器
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter6, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 5
+questions:
+  - id: rust-ch06-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 `apply_twice(f: fn(i32) -> i32, x: i32) -> i32`：把函式指標 `f` 連續套用兩次，回傳 `f(f(x))` 的結果。
+      例如 `apply_twice(double, 5)`（double 會乘以 2）應該回傳 20。
+    hints: ["函式指標可以像一般函式一樣直接呼叫：f(x)", "先算 f(x)，再把結果再丟給 f 一次：f(f(x))"]
+    ref: chapter6/01_function_pointer.md
+  - id: rust-ch06-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 `remove_below(v: &mut Vec<i32>, threshold: i32)`：原地移除所有小於 `threshold` 的元素，其餘元素維持原本順序。
+      請用 `Vec` 的 `retain` 搭配一個捕捉 `threshold` 的閉包完成。
+    hints: ["retain 會對每個元素呼叫閉包，閉包回傳 true 的元素才會留下", "v.retain(|x| *x >= threshold);"]
+    ref: chapter6/02_closure_basics.md
+  - id: rust-ch06-q03
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的閉包 `add` 同時捕捉了 `total` 和 `label`。編譯器會把它推斷成哪一種閉包？
+
+          let mut total = 0;
+          let label = String::from("總計");
+          let mut add = |x: i32| {
+              total += x;
+              println!("{}: {}", label, total);
+          };
+    choices:
+      - "Fn：label 只被讀取，所以整個閉包只需要 &self"
+      - "FnMut：total 被修改，整個閉包需要 &mut self"
+      - "FnOnce：閉包捕捉了 String，所以只能呼叫一次"
+      - "fn(i32) 函式指標：閉包有標註參數型別"
+    answer: 1
+    hints: ["呼叫閉包時只有一個 self，要能滿足所有捕捉變數中「最嚴格」的用法", "total += x 需要可變存取；只讀取 label 不會 move 它"]
+    ref: chapter6/04_closure_inference.md
+  - id: rust-ch06-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `repeat_call(n, f)`：呼叫閉包 `f` 共 `n` 次，把每次的回傳值依序收進 `Vec<i32>` 回傳。
+      起始程式碼的參數寫成 `impl Fn() -> i32`，但隱藏測試會傳入「每次呼叫都會修改外部變數」的閉包。
+      請把 `f` 改成最合適的閉包 trait，並完成函式本體。
+    hints: ["會修改捕捉狀態的閉包是 FnMut；要呼叫 FnMut 的閉包，參數本身也要宣告成 mut", "pub fn repeat_call(n: usize, mut f: impl FnMut() -> i32) -> Vec<i32>，再用 for _ in 0..n 把 f() push 進 Vec"]
+    ref: chapter6/05_fn_traits.md
+  - id: rust-ch06-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `make_labeler(prefix)` 要回傳一個閉包：傳入數字 `n`，回傳 `"prefix-n"` 格式的字串，例如 `make_labeler(String::from("A"))(1)` 是 `"A-1"`。
+      **起始程式碼目前無法編譯**。請找出原因並修正，讓回傳的閉包可以被呼叫很多次。
+    hints: ["閉包預設用借用的方式捕捉 prefix，但 prefix 是函式的區域變數，函式結束就被丟掉了", "在閉包前面加上 move：move |n| format!(\"{}-{}\", prefix, n)"]
+    ref: chapter6/06_move_closure.md
+  - id: rust-ch06-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `parse_score(s: &str) -> Result<u32, String>`，把字串解析成 0～100 的分數：
+      - 先 `trim` 掉前後空白，再 `parse::<u32>()`。
+      - 解析失敗：回傳 `Err("不是數字：<trim 後的字串>")`，例如 `Err("不是數字：abc")`。
+      - 數字大於 100：回傳 `Err("超出範圍：<數字>")`，例如 `Err("超出範圍：101")`。
+      - 其他情況回傳 `Ok(分數)`。
+      冒號是全形的「：」。請用 `map_err` 和 `and_then` 串起來，不要寫巢狀 `match`。
+    hints: ["map_err 把 parse 的錯誤換成你要的 String；and_then 的閉包本身回傳 Result，用來檢查範圍", "s.parse::<u32>().map_err(|_| format!(\"不是數字：{}\", s)).and_then(|n| if n <= 100 { Ok(n) } else { Err(format!(\"超出範圍：{}\", n)) })"]
+    ref: chapter6/07_option_result_closure_methods.md
+  - id: rust-ch06-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      為 `Collatz` 實作 `Iterator`，產出考拉茲（Collatz）序列：
+      - 第一個值是起點 `start`。
+      - 目前的值是偶數時，下一個值是它除以 2；是奇數時，下一個值是它乘以 3 再加 1。
+      - 產出 1 之後序列結束，之後每次 `next` 都回傳 `None`。
+      例如 `Collatz::new(6)` 會依序產出 6, 3, 10, 5, 16, 8, 4, 2, 1。
+      `Collatz` 的欄位可以自行調整，但 `Collatz::new(start)` 的簽名要保留。
+    hints: ["欄位 next_value 存「下一次要產出的值」，None 代表已經結束；next 先取出目前的值，再算好下一個存回去", "match self.next_value：None 就回傳 None；Some(current) 時，current == 1 就把 next_value 設成 None，否則依奇偶算出下一個，最後回傳 Some(current)"]
+    ref: chapter6/08_iterator_trait.md
+  - id: rust-ch06-q08
+    difficulty: 1
+    type: short
+    prompt: |
+      `for x in v { ... }` 概念上等同於先把 `v` 轉成迭代器，再用 `while let Some(x) = iter.next()` 一個一個取出元素。
+      把 `v` 轉成迭代器時，呼叫的是哪個方法？（只要填方法名稱）
+    answers:
+      - '^`?(v?\.)?into_iter(\(\))?`?$'
+      - '^`?intoiterator::into_iter(\(\))?`?$'
+    hints: ["這個方法來自 IntoIterator trait", "方法名稱是 into_iter"]
+    ref: chapter6/09_for_loop_rewrite.md
+  - id: rust-ch06-q09
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `add_bonus(scores, bonus)` 要幫 `scores` 裡的每個分數加上 `bonus`，直接修改原本的 `Vec`。
+      起始程式碼可以編譯，但分數一個都沒有變。請選用正確的迭代方式修正它。
+    hints: [".iter() 產出 &i32，只能讀；要原地修改，需要產出 &mut i32 的迭代方式", "for s in scores.iter_mut() { *s += bonus; }"]
+    ref: chapter6/10_into_iter_iter_mut_iter.md
+  - id: rust-ch06-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `digits_to_number(digits: &[u32]) -> u64`：把一串個位數字依序組成一個整數，例如 `[1, 2, 3]` 是 `123`，空切片是 `0`。
+      請用 `fold` 完成，不要寫 `for` 迴圈。
+    hints: ["fold 的初始值是 0；每讀到一個數字，就把目前累積的值乘以 10 再加上它", "digits.iter().fold(0, |acc, d| acc * 10 + *d as u64)"]
+    ref: chapter6/12_aggregation.md
+  - id: rust-ch06-q11
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      起始程式碼有 4 個名字、3 個分數。請用 `zip` 把名字和分數配對（以較短的為準），再用 `enumerate` 加上名次，
+      每行印出 `第 名次 名：名字 分數 分`，名次從 1 開始，最後一行印出 `共 人數 人`。預期輸出：
+
+          第 1 名：Alice 95 分
+          第 2 名：Bob 88 分
+          第 3 名：Carol 72 分
+          共 3 人
+    expected_stdout: "第 1 名：Alice 95 分\n第 2 名：Bob 88 分\n第 3 名：Carol 72 分\n共 3 人\n"
+    hints: ["names.iter().zip(scores.iter()) 產出 (名字, 分數)，接著 .enumerate() 會再包一層變成 (索引, (名字, 分數))", "for (i, (name, score)) in names.iter().zip(scores.iter()).enumerate()，印出時名次用 i + 1，並另外用變數計算人數"]
+    ref: chapter6/13_combine_and_slice.md
+  - id: rust-ch06-q12
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 `decode(pairs: &[(char, usize)]) -> String`：把每組 `(字元, 次數)` 展開後接成一個字串。
+      例如 `[('a', 3), ('b', 1), ('c', 2)]` 會得到 `"aaabcc"`；次數是 0 的字元不出現。
+      請用迭代器方法一條鏈完成，不要寫 `for` 迴圈。
+    hints: ["std::iter::repeat(c).take(n) 會產出 n 個 c；用 flat_map 把每一組展開後攤平，最後 collect 成 String", "pairs.iter().flat_map(|&(c, n)| std::iter::repeat(c).take(n)).collect()"]
+    ref: chapter6/14_transform_and_filter.md
+  - id: rust-ch06-q13
+    difficulty: 3
+    type: choice
+    prompt: |
+      下面的程式會印出什麼？
+
+          let v = vec![1, 2, 3];
+          let it = v.iter().map(|x| {
+              println!("map {}", x);
+              x * 10
+          });
+          println!("start");
+          let total: i32 = it.take(2).sum();
+          println!("total {}", total);
+    choices:
+      - "map 1 → map 2 → map 3 → start → total 30"
+      - "start → map 1 → map 2 → map 3 → total 30"
+      - "start → map 1 → map 2 → total 30"
+      - "map 1 → map 2 → start → total 30"
+    answer: 2
+    hints: ["map 是惰性的：建立迭代器時閉包一次都不會執行，要等 sum 這類消費方法來拉", "take(2) 拉到兩個元素就停了，第三個元素根本不會被 map 處理"]
+    ref: chapter6/15_lazy_evaluation.md

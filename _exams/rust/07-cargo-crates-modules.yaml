@@ -1,0 +1,192 @@
+# 第 7 章：EXERCISES.md 只收第 1、2 章的固定題，這一章的題目都是依課文新出的
+lang: rust
+chapter: "7"
+title: Cargo、Crate 與 Mod 系統
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter7, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 5
+questions:
+  - id: rust-ch07-q01
+    difficulty: 1
+    type: short
+    prompt: |
+      準備發布程式時，想要**只編譯、不執行**，並產生經過最佳化的執行檔（放在 `target/release/`）。
+      要在終端機輸入哪一行指令？
+    answers: ['^cargo (build|b) (--release|-r)$']
+    hints: ["`cargo run` 會編譯再執行；只編譯的是另一個子指令", "在 `cargo build` 後面加上 release 模式的旗標"]
+    ref: chapter7/01_cargo_and_crates_io.md
+
+  - id: rust-ch07-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 裡有巢狀的 `mod math`，底下有 `basic` 與 `advanced` 兩個子 `mod`，但現在 crate 外面完全看不到它們。
+      請修改程式碼，讓別的 crate 能呼叫：
+
+          math::basic::add(a, b)        // 回傳 a + b
+          math::advanced::power(b, e)   // 回傳 b 的 e 次方，e 為 0 時回傳 1
+
+      並且實作 `power`。
+    hints: ["`mod` 裡的東西預設是私有的；從外面一路走到函式，路徑上的每一層 `mod` 和函式本身都要加 `pub`", "`power` 用 `let mut result = 1;` 搭配 `for _ in 0..exp { result *= base; }`"]
+    ref: chapter7/02_mod.md
+
+  - id: rust-ch07-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      這題的 `mod` 拆在好幾個檔案裡：
+
+          src/
+          ├── lib.rs              ← 目前只有一行 TODO
+          ├── shapes.rs           ← 已經宣告 pub mod circle; 和 pub mod square;
+          └── shapes/
+              ├── circle.rs       ← 已完成
+              └── square.rs       ← area 還沒實作
+
+      請完成兩件事：
+      1. 在 `src/lib.rs` 宣告 `shapes` 這個 `mod`，讓 crate 外面能用 `shapes::circle::area` 與 `shapes::square::area`。
+      2. 在 `src/shapes/square.rs` 實作 `area(side: f64) -> f64`，回傳正方形面積。
+    hints: ["`mod shapes;`（分號結尾）會讓 Rust 去找 `src/shapes.rs`；要讓外面看得到就加 `pub`", "lib.rs 只要一行 `pub mod shapes;`；square.rs 的 `area` 回傳 `side * side`"]
+    ref: chapter7/03_file_mod.md
+
+  - id: rust-ch07-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `bank::Account` 是公開的型別，但它的欄位和方法都還是私有的，外部根本用不了。請調整可見性並實作方法，讓別的 crate 能這樣使用：
+
+          let mut acc = Account::new("Ann");   // 餘額從 0 開始
+          println!("{}", acc.owner);            // owner 可以直接讀
+          acc.deposit(100);
+          println!("{}", acc.balance());        // 餘額只能透過方法讀
+
+      `owner` 要公開；`balance` 欄位維持私有，只透過 `balance()` 方法讀取。
+    hints: ["`pub struct` 只公開型別名稱，欄位要一個一個加 `pub`；`impl` 裡的方法也要各自加 `pub`", "有私有欄位的 struct 外部無法直接建構，所以 `pub fn new` 裡要寫 `Account { owner: String::from(owner), balance: 0 }`"]
+    ref: chapter7/04_pub.md
+
+  - id: rust-ch07-q05
+    difficulty: 3
+    type: choice
+    prompt: |
+      有以下程式碼：
+
+          mod database {
+              pub(crate) fn connect() -> String {
+                  String::from("connected")
+              }
+
+              mod queries {
+                  pub(super) fn raw_query() -> String {
+                      String::from("SELECT * FROM users")
+                  }
+              }
+
+              pub fn safe_query() -> String {
+                  queries::raw_query()
+              }
+          }
+
+          fn main() {
+              // 在這裡加一行
+          }
+
+      在 `main` 裡加上哪一行，程式可以通過編譯？
+    choices:
+      - "`database::queries::raw_query();`"
+      - "`database::connect();`"
+      - "`queries::raw_query();`"
+      - "`database::raw_query();`"
+    answer: 1
+    hints: ["`pub(super)` 只對父 `mod`（database）開放；`queries` 這個 `mod` 本身又沒有 `pub`", "`pub(crate)` 讓整個 crate 內部都看得到，`main` 也在同一個 crate 裡"]
+    ref: chapter7/04_pub.md
+
+  - id: rust-ch07-q06
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      `src/main.rs` 裡的 `text` 和 `money` 兩個 `mod` 都有叫 `format` 的函式，而 `outer::inner::call_parent` 還沒寫完。請修改程式碼：
+      1. 用 `use ... as ...` 把 `money::format` 匯入成 `money_format`，並讓 `main` 的第二行改呼叫它。
+      2. 讓 `call_parent` 用 `super::` 呼叫父 `mod` 的 `greet`。
+
+      完成後執行應該印出：
+
+          text 格式
+          money 格式
+          Hello from outer
+    expected_stdout: "text 格式\nmoney 格式\nHello from outer\n"
+    hints: ["同一個作用域不能 `use` 兩個同名的東西，所以要用 `as` 取別名", "`use money::format as money_format;`，`call_parent` 裡寫 `super::greet()`"]
+    ref: chapter7/05_use.md
+
+  - id: rust-ch07-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `divide(a: i32, b: i32) -> i32`：回傳 `a / b`。
+      隱藏測試用 `#[should_panic(expected = "除數不能是 0")]` 檢查 b 為 0 的情況，所以 b 是 0 時要 panic，而且 panic 訊息必須包含 `除數不能是 0`。
+      目前的寫法遇到 0 雖然也會 panic，但訊息不對。
+    hints: ["`expected` 會檢查 panic 訊息是否**包含**指定的字串，只要 panic 了但訊息不符，測試一樣失敗", "先 `if b == 0 { panic!(\"除數不能是 0\"); }`，再回傳 `a / b`"]
+    ref: chapter7/06_cargo_test.md
+
+  - id: rust-ch07-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 的 `Circle` 和 `Rectangle` 藏在 `shapes::circle`、`shapes::rectangle` 裡，使用者得寫很長的路徑。
+      請用重新匯出（re-export），讓使用這個 library 的人下面兩種寫法都能用：
+
+          use rust_ch07_q08::{Circle, Rectangle};          // crate 頂層
+          let r = rust_ch07_q08::shapes::Rectangle::new(2.0, 3.0);  // shapes 這一層
+
+      不要搬動 `circle`、`rectangle` 兩個子 `mod` 的內容。
+    hints: ["`pub use path::Item;` 會把內部的項目重新匯出到目前這個 `mod`", "在 `mod shapes` 裡寫 `pub use circle::Circle;` 和 `pub use rectangle::Rectangle;`，再在 lib.rs 最外層寫 `pub use shapes::{Circle, Rectangle};`"]
+    ref: chapter7/07_pub_use.md
+
+  - id: rust-ch07-q09
+    difficulty: 2
+    type: choice
+    prompt: |
+      在你自己的 crate 裡（`MyPoint`、`MyVec`、`Describable` 都是你定義的），下面哪一個 `impl` 會被編譯器拒絕？
+    choices:
+      - "`impl std::fmt::Display for MyPoint { ... }`"
+      - "`impl Describable for Vec<i32> { ... }`"
+      - "`impl std::fmt::Display for Vec<i32> { ... }`"
+      - "`impl std::fmt::Display for MyVec { ... }`，其中 `struct MyVec(Vec<i32>);`"
+    answer: 2
+    hints: ["orphan rule：`impl Trait for Type` 時，trait 或型別至少要有一個是目前 crate 定義的", "`Display` 和 `Vec<i32>` 都來自標準庫；newtype 包起來的 `MyVec` 則是你的型別"]
+    ref: chapter7/08_orphan_rule.md
+
+  - id: rust-ch07-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      標準庫的 `Vec<i32>` 和 `Display` 都不是你定義的，所以不能直接 `impl Display for Vec<i32>`。請在 `src/lib.rs` 完成：
+      1. 替 newtype `Scores(pub Vec<i32>)` 實作 `Display`，格式是 `[85, 92, 78]，總分 255`（逗號後有一個空白；空的時候印 `[]，總分 0`）。
+      2. 替 `Vec<i32>` 實作自己定義的 trait `Describe`，讓 `vec![1, 2, 3].describe()` 回傳 `有 3 個元素`。
+    hints: ["`self.0` 取出裡面的 `Vec<i32>`；把每個數字 `to_string()` 收集成 `Vec<String>` 再 `join(\", \")`，總分用 `iter().sum()`", "最後 `write!(f, \"[{}]，總分 {}\", items.join(\", \"), total)`；`impl Describe for Vec<i32>` 裡用 `format!(\"有 {} 個元素\", self.len())`"]
+    ref: chapter7/08_orphan_rule.md
+
+  - id: rust-ch07-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 的 `gcd` 本身是對的，但 `cargo test` 失敗了——問題出在 `///` 註解裡 `# Examples` 的範例（doctest）。
+      請修好這個範例，讓 `cargo test` 全部通過。範例要保留，不能直接刪掉。
+      提示：這個 package 在 `Cargo.toml` 裡的名字是 `rust_ch07_q11`。
+    hints: ["doctest 是以「使用這個 library 的人」的身分另外編譯，所以 `use` 要寫這個 crate 真正的名字", "把 `use my_math_lib::gcd;` 改成 `use rust_ch07_q11::gcd;`，再檢查 12 和 8 的最大公因數到底是多少（是 4）"]
+    ref: chapter7/09_doc_comments.md
+
+  - id: rust-ch07-q12
+    difficulty: 2
+    type: short
+    prompt: |
+      你發布在 crates.io 的 crate 目前是 `1.4.2`。下一版**移除了一個 `pub` 函式**，依照 SemVer，新版本號應該是多少？（例如 1.4.3）
+    answers: ['^v?2\.0\.0$', '^v?2\.0$']
+    hints: ["移除公開項目會讓依賴它的程式編譯不過，屬於破壞性變更", "1.0 之後的破壞性變更要改第一個數字（major），後面兩個數字歸零"]
+    ref: chapter7/10_cargo_publish.md

@@ -1,0 +1,333 @@
+# 第 3 章沒有 EXERCISES.md 固定題（EXERCISES.md 規定第 3 章之後不安排固定題），以下題目都是依課文新出的
+# 本章還沒教 derive、Option、參考與所有權，所以題目只用 self（傳值）的 method，隱藏測試只比較整數、bool、char 或公開欄位
+lang: rust
+chapter: "3"
+title: Struct、Enum 與 Pattern Matching
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter3, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 10
+questions:
+  - id: rust-ch03-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 已經定義好 `struct Rectangle`，有 `width` 和 `height` 兩個 `i32` 欄位。請完成兩個函式：
+      - `area(r: Rectangle) -> i32`：回傳寬乘以高。
+      - `is_square(r: Rectangle) -> bool`：寬和高相等時回傳 `true`，否則回傳 `false`。
+      （程式碼裡的 `pub` 是讓判定用的測試能使用這些項目，之後才會教，請保留。）
+    hints: ["用 `.欄位名` 取值，例如 `r.width`", "`r.width * r.height`；判斷正方形用 `r.width == r.height`"]
+    ref: chapter3/01_struct_named_fields.md
+  - id: rust-ch03-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面的程式碼編譯時會發生什麼事？
+
+          struct Meters(i32);
+          struct Feet(i32);
+
+          fn run(distance: Meters) {
+              println!("跑了 {} 公尺", distance.0);
+          }
+
+          fn main() {
+              run(Feet(5));
+          }
+    choices:
+      - 編譯失敗：`run` 要的是 `Meters`，`Feet` 是另一個型別
+      - 可以編譯，印出「跑了 5 公尺」，因為兩者裡面都是一個 `i32`
+      - 可以編譯，但執行時會 panic
+      - 編譯失敗：tuple `struct` 不能當作函式參數
+    answer: 0
+    hints: ["想想 tuple `struct` 只看欄位型別，還是連名字也算數", "就算欄位型別完全一樣，`Meters` 和 `Feet` 仍是兩個不同的型別"]
+    ref: chapter3/02_tuple_struct_unit_struct.md
+  - id: rust-ch03-q03
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面的程式碼會怎樣？
+
+          enum Color {
+              Red,
+              Green,
+              Blue,
+          }
+
+          fn main() {
+              let c = Color::Blue;
+              match c {
+                  Color::Red => println!("紅色"),
+                  Color::Green => println!("綠色"),
+              }
+          }
+    choices:
+      - 可以編譯；因為 `c` 是 `Blue`，所以什麼都不印
+      - 可以編譯，但執行到 `match` 時會 panic
+      - 編譯失敗：`match` 沒有處理 `Color::Blue`，沒有窮舉所有 variant
+      - 可以編譯，只會出現一個警告
+    answer: 2
+    hints: ["`match` 有一條最重要的規則跟「全部」有關", "`match` 必須窮舉所有 variant，少一個就編譯失敗"]
+    ref: chapter3/04_match_c_style_enum.md
+  - id: rust-ch03-q04
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      `src/main.rs` 已經讀入季節編號並轉成 `Season`。請在 TODO 的地方用 **match 表達式**完成：
+      1. 用 `let name = match season { ... };` 算出季節名稱（春天、夏天、秋天、冬天）並印出一行。
+      2. 再用一個 `match` 表達式算出穿著建議：春天「薄外套」、夏天「短袖」、秋天「長袖」、冬天「大衣」，
+         並印出 `建議穿著：<建議>`。其中秋天的分支要用 block，先印出一行 `早晚溫差大`，再回傳「長袖」。
+      輸入 2 時完整輸出：
+
+          請輸入季節編號（0-3）：
+          秋天
+          早晚溫差大
+          建議穿著：長袖
+
+      （判定時會輸入 2）
+    stdin: "2\n"
+    expected_stdout: "請輸入季節編號（0-3）：\n秋天\n早晚溫差大\n建議穿著：長袖\n"
+    hints: ["`let name = match season { Season::Spring => \"春天\", ... };` 結尾別忘了分號", "block 分支寫成 `Season::Autumn => { println!(\"早晚溫差大\"); \"長袖\" }`，最後一行不加分號才是回傳值"]
+    ref: chapter3/05_match_as_expression.md
+  - id: rust-ch03-q05
+    difficulty: 1
+    type: short
+    prompt: |
+      下面的程式執行後會印出什麼？
+
+          fn main() {
+              let x = {
+                  let a = 3;
+                  let b = a * 4;
+                  b + 1
+              };
+              println!("{}", x);
+          }
+    answers: ["^13$"]
+    hints: ["block 最後一行沒有分號，那一行的值就是整個 block 的值", "b 是 3 * 4 = 12，最後一行是 b + 1"]
+    ref: chapter3/06_block_expression.md
+  - id: rust-ch03-q06
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 定義了帶資料的 `enum Shape`：
+      - `Rectangle(寬, 高)`
+      - `Square(邊長)`
+      - `Triangle(底, 高)`
+      請完成 `area(s: Shape) -> i32`，用 `match` 解構每個 variant 回傳面積。三角形面積是 `底 * 高 / 2`（整數除法）。
+    hints: ["在 `match` 的模式裡用變數接住資料，例如 `Shape::Square(side) => ...`", "`Shape::Rectangle(w, h) => w * h`，三角形是 `base * height / 2`"]
+    ref: chapter3/09_match_extract_tuple_variant.md
+  - id: rust-ch03-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 定義了 `enum Transaction`，三個 variant 都是 `struct` variant：
+      - `Deposit { amount }`：存款，餘額加上 `amount`。
+      - `Withdraw { amount, fee }`：提款，餘額扣掉 `amount + fee`；如果不夠扣，交易不成立，餘額不變。
+      - `Interest { rate_percent }`：加上利息 `餘額 * rate_percent / 100`（整數除法）。
+      請完成 `apply(balance: i32, t: Transaction) -> i32`，回傳交易後的餘額。
+    hints: ["用 `Transaction::Withdraw { amount, fee } => ...` 解構欄位（field shorthand），或寫 `amount: a` 換個變數名", "提款先算 `let total = amount + fee;`，`total > balance` 時回傳原本的 `balance`"]
+    ref: chapter3/10_match_extract_struct_variant.md
+  - id: rust-ch03-q08
+    difficulty: 1
+    type: short
+    prompt: |
+      已經有變數 `x` 和 `y`，要建立 `Point`：
+
+          let p = Point { x: x, y: y };
+
+      改用 field shorthand 時，等號右邊要寫成什麼？
+    answers: ["^(let p ?= ?)?point ?\\{ ?x ?, ?y ?,? ?\\} ?;?$"]
+    hints: ["變數名和欄位名一樣時，可以只寫一次", "`Point { x, y }`"]
+    ref: chapter3/11_field_shorthand.md
+  - id: rust-ch03-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      剪刀石頭布：`src/lib.rs` 定義了 `enum Hand { Rock, Paper, Scissors }`。
+      請完成 `judge(a: Hand, b: Hand) -> i32`：`a` 贏回傳 `1`，`b` 贏回傳 `-1`，平手回傳 `0`。
+      規則：石頭贏剪刀、剪刀贏布、布贏石頭。
+      請把兩個值包成 tuple，用**一個** `match` 搭配巢狀模式完成，例如 `(Hand::Rock, Hand::Scissors) => 1`。
+    hints: ["`match (a, b) { ... }`，每個分支的模式是兩個 variant 組成的 tuple", "先列出 a 贏的三種、平手的三種，剩下的用 `_ => -1` 處理"]
+    ref: chapter3/14_nested_pattern_matching.md
+  - id: rust-ch03-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      請完成 `edge_product(v: &[i32]) -> i32`，用 slice pattern 回傳切片「頭尾兩個元素的乘積」：
+      - 空切片回傳 `0`。
+      - 只有一個元素時，頭尾都是它，回傳它的平方（`[7]` → `49`）。
+      - 兩個以上的元素回傳第一個乘以最後一個（`[2, 100, 5]` → `10`、`[3, 4]` → `12`）。
+    hints: ["`match v { [] => ..., [x] => ..., [first, .., last] => ... }`", "`..` 也可以代表零個元素，所以 `[first, .., last]` 也接得住兩個元素的切片；乘法直接寫 `x * x`、`first * last`"]
+    ref: chapter3/13_slice_pattern.md
+  - id: rust-ch03-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      有一個 tuple `let scores = (90, 85, 78, 92, 88);`。
+      在 `match scores { ... }` 裡，下面哪一個模式**無法**編譯？
+    choices:
+      - "`(first, ..)`"
+      - "`(.., last)`"
+      - "`(first, .., last)`"
+      - "`(.., middle, ..)`"
+    answer: 3
+    hints: ["`..` 代表「剩下的我都不要」，想想出現兩次時中間那個值該分到哪裡", "`..` 在一層模式裡只能出現一次"]
+    ref: chapter3/16_dot_dot_ignore.md
+  - id: rust-ch03-q12
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      請完成 `grade(score: i32) -> char`，用 range pattern 回傳等級：
+      - 90 到 100（含）：`'A'`
+      - 80 到 89：`'B'`
+      - 70 到 79：`'C'`
+      - 60 到 69：`'D'`
+      - 0 到 59：`'F'`
+      - 其他（負數或超過 100）：`'?'`
+    hints: ["`90..=100` 包含頭尾，`80..90` 不包含 90", "最後用 `_ => '?'` 接住超出範圍的分數"]
+    ref: chapter3/17_range_pattern.md
+  - id: rust-ch03-q13
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      請完成 `classify(c: char) -> i32`：
+      - 母音 a、e、i、o、u（大小寫都算）回傳 `1`
+      - 其他英文字母回傳 `2`
+      - 數字 `'0'` 到 `'9'` 回傳 `3`
+      - 其他字元回傳 `0`
+      請用 `|` 把多個模式寫在同一個分支裡。
+    hints: ["`'a' | 'e' | 'i' | ... => 1`，分支從上到下比對，所以母音要放在一般字母前面", "一般字母可以寫 `'a'..='z' | 'A'..='Z' => 2`"]
+    ref: chapter3/18_multiple_values.md
+  - id: rust-ch03-q14
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 定義了音量指令 `enum Command`。請完成 `apply(current: i32, cmd: Command) -> i32`，回傳執行後的音量：
+      - `SetVolume(v)`：`v` 在 0 到 100（含）之間就設成 `v`；超出範圍則忽略這個指令，維持 `current`。
+      - `VolumeUp(step)`：音量變成 `current + step`，但結果低於 0 就是 0、高於 100 就是 100（`step` 可能是負的）。
+      - `Mute`：音量變成 0。
+      請至少用一次 `@` 綁定，例如 `Command::SetVolume(level @ 0..=100)`。
+    hints: ["`Command::SetVolume(level @ 0..=100) => level` 之後，再寫一個 `Command::SetVolume(_) => current` 接住超出範圍的", "VolumeUp 可以先算 `let next = current + step;`，再 `match next { v @ 0..=100 => v, ..0 => 0, _ => 100 }`"]
+    ref: chapter3/19_at_binding.md
+  - id: rust-ch03-q15
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 定義了銀行請求 `enum Request`。請用 `match` guard 完成 `review(r: Request, daily_limit: i32) -> i32`，回傳審核結果的編號：
+      - `Transfer` 的 `from == to`（轉給自己）：`0`（拒絕）
+      - `Transfer` 的 `amount <= 0`：`0`（拒絕）
+      - `Transfer` 的 `amount > daily_limit`：`1`（需要額外確認）
+      - 其他 `Transfer`：`2`（直接通過）
+      - `CheckBalance`：`3`
+      轉給自己時，就算金額超過上限也算拒絕。
+    hints: ["guard 的寫法是 `Request::Transfer { from, to, .. } if from == to => 0`，guard 不成立會繼續往下比對", "有 guard 的分支放前面，最後留一個沒有 guard 的 `Request::Transfer { .. } => 2` 讓編譯器確認已窮舉"]
+    ref: chapter3/20_match_guard.md
+  - id: rust-ch03-q16
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的函式編譯時會怎樣？
+
+          fn sign(n: i32) -> i32 {
+              match n {
+                  x if x > 0 => 1,
+                  x if x < 0 => -1,
+                  x if x == 0 => 0,
+              }
+          }
+    choices:
+      - 可以編譯，三個 guard 已經涵蓋所有整數
+      - 編譯失敗：編譯器不會從 guard 的邏輯推論出已窮舉，認為 `match` 沒有處理所有情況
+      - 可以編譯，但 `n` 是 0 時會 panic
+      - 編譯失敗：同一個 `match` 不能有超過一個 guard
+    answer: 1
+    hints: ["窮舉檢查只看 pattern，不太會去分析 guard 之間的邏輯關係", "要讓編譯器確定涵蓋全部，最後需要一個沒有 guard 的分支，例如 `_ => 0`"]
+    ref: chapter3/20_match_guard.md
+  - id: rust-ch03-q17
+    difficulty: 2
+    type: choice
+    prompt: |
+      假設 `p` 是 `Point { x: i32, y: i32 }`，`arr` 的型別是 `[i32; 3]`，`s` 是 `enum Shape { Circle(f64), Rectangle(i32, i32) }` 的值。
+      下面哪一行**無法**編譯？
+    choices:
+      - "`let (a, b) = (1, 2);`"
+      - "`let Point { x, .. } = p;`"
+      - "`let [head, ..] = arr;`"
+      - "`let Shape::Circle(r) = s;`"
+    answer: 3
+    hints: ["`let` 只接受一定會比對成功的模式（irrefutable pattern）", "`s` 也可能是 `Rectangle`，所以 `Shape::Circle(r)` 可能比對失敗"]
+    ref: chapter3/24_function_param_destructure.md
+  - id: rust-ch03-q18
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      `src/main.rs` 有一個陣列 `students`，每個元素是 `(名字, 分數)` 的 tuple。請：
+      1. 用 `for (name, score) in students` 解構，逐行印出 `名字: 分數`。
+      2. 找出最高分的學生，最後印出 `最高分：名字 分數`。
+      預期輸出：
+
+          Alice: 85
+          Bob: 92
+          Carol: 78
+          最高分：Bob 92
+    expected_stdout: "Alice: 85\nBob: 92\nCarol: 78\n最高分：Bob 92\n"
+    hints: ["迴圈前可以用 `let (mut best_name, mut best_score) = students[0];` 解構第一個元素當起點", "迴圈裡遇到 `score > best_score` 就更新兩個變數，迴圈結束後再印出最高分"]
+    ref: chapter3/23_for_destructure.md
+  - id: rust-ch03-q19
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 已經寫好 `enum Step { Value(i32), Done }` 和函式 `step(n)`：`n` 是 1 時回傳 `Done`，
+      否則依 Collatz 規則回傳下一個數字（偶數除以 2，奇數乘 3 加 1）。
+      請用 `while let` 完成 `count_steps(start: i32) -> i32`：從 `start` 開始一直呼叫 `step`，回傳遇到 `Done` 之前走了幾步。
+      例如 `count_steps(6)` 是 8（6 → 3 → 10 → 5 → 16 → 8 → 4 → 2 → 1），`count_steps(1)` 是 0。
+    hints: ["準備 `let mut n = start;` 和 `let mut count = 0;`", "`while let Step::Value(next) = step(n) { n = next; count += 1; }`，迴圈結束後回傳 `count`"]
+    ref: chapter3/26_while_let.md
+  - id: rust-ch03-q20
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 定義了 `enum Order`，有 `Paid { amount, discount }`、`Pending`、`Cancelled` 三種。
+      請完成 `net_income(o: Order) -> i32`，回傳這筆訂單的實收金額：
+      - 不是 `Paid` 的訂單回傳 `0`。
+      - `Paid` 回傳 `amount - discount`；但折扣比金額大時回傳 `0`。
+      請用 `let ... else` 取出 `Paid` 的欄位，不符合時在 `else` 裡提早 `return`。
+    hints: ["`let Order::Paid { amount, discount } = o else { return 0; };`", "`else` 區塊一定要離開函式；通過之後 `amount` 和 `discount` 在後面的程式碼都能用"]
+    ref: chapter3/27_let_else.md
+  - id: rust-ch03-q21
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 定義了 `struct Robot { x, y, moves }` 和指令 `enum Command`。請在 `impl Robot` 裡完成：
+      - `Robot::new()`：associated function，回傳在 `(0, 0)`、`moves` 為 0 的機器人。
+      - `execute(self, cmd: Command) -> Self`：method，回傳執行指令後的新機器人：
+        - `Move { dx, dy }`：座標加上 `dx`、`dy`，`moves` 加 1。
+        - `Teleport(x, y)`：直接移到 `(x, y)`，`moves` 加 1。
+        - `Reset`：回到 `Robot::new()` 的狀態（`moves` 也歸零）。
+      - `distance(self) -> i32`：method，回傳 `x` 的絕對值加 `y` 的絕對值。
+      測試會這樣串接呼叫：`Robot::new().execute(Command::Move { dx: 2, dy: 3 }).execute(Command::Reset)`。
+    hints: ["`execute` 裡 `match cmd { ... }`，每個分支建立新的 `Self { x: ..., y: ..., moves: self.moves + 1 }`", "絕對值可以寫 `if self.x < 0 { -self.x } else { self.x }`；Reset 直接回傳 `Self::new()`"]
+    ref: chapter3/29_method.md
+  - id: rust-ch03-q22
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `src/lib.rs` 定義了紅綠燈 `enum Light { Red, Yellow, Green }`。請在 `impl Light` 裡用大寫 `Self` 完成兩個 method：
+      - `next(self) -> Self`：回傳下一個燈號，順序是紅 → 綠 → 黃 → 紅。
+      - `seconds(self) -> i32`：紅燈 30 秒、黃燈 3 秒、綠燈 25 秒。
+    hints: ["在 `impl Light` 裡，`Self::Red` 就等於 `Light::Red`", "`match self { Self::Red => Self::Green, Self::Green => Self::Yellow, Self::Yellow => Self::Red }`"]
+    ref: chapter3/30_capital_self.md

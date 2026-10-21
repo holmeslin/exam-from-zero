@@ -1,0 +1,339 @@
+lang: rust
+chapter: "2"
+title: 函數、陣列與切片
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter2, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 5
+questions:
+  # 由 EXERCISES.md 第 2 章第 1 集「題 1」轉換
+  - id: rust-ch02-q01
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      寫一個成績判斷程式。請在 `fn main()` **外面**用 `const` 宣告常數 `PASS_SCORE`（型別 `i32`，值 60）。
+      程式請使用者輸入分數，分數大於或等於 `PASS_SCORE` 印出 `及格`，否則印出 `不及格`。
+      判斷時請用 `PASS_SCORE`，不要把 60 寫死在 `if` 裡。
+
+      執行範例（72 是使用者輸入；判定時會輸入 72）：
+
+          請輸入分數：
+          72
+          及格
+    stdin: "72\n"
+    expected_stdout: "請輸入分數：\n及格\n"
+    hints: ["常數寫在 fn main() 上方，格式是 const 名稱: 型別 = 值;（一定要標型別，不能加 mut）", "const PASS_SCORE: i32 = 60; 讀到分數後用 if score >= PASS_SCORE 判斷"]
+    ref: chapter2/01_const.md
+  # 由 EXERCISES.md 第 2 章第 3 集「題 1」轉換
+  - id: rust-ch02-q02
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      寫一個簡單的密碼檢查程式，正確密碼是 `rust`。讓使用者最多輸入 3 次密碼：
+      每次先印 `請輸入密碼：` 再讀一行；輸入正確就印出 `登入成功` 並結束迴圈，輸入錯誤就印出 `密碼錯誤`。
+      這題不需要知道目前是第幾次，請使用 `for _ in 0..3`。（三次都錯不用印額外訊息）
+
+      執行範例（abc 和 rust 是使用者輸入；判定時會依序輸入 abc、rust）：
+
+          請輸入密碼：
+          abc
+          密碼錯誤
+          請輸入密碼：
+          rust
+          登入成功
+    stdin: "abc\nrust\n"
+    expected_stdout: "請輸入密碼：\n密碼錯誤\n請輸入密碼：\n登入成功\n"
+    hints: ["for _ in 0..3 代表重複三次但不需要計數；每一輪都要重新讀一行輸入", "if input.trim() == \"rust\" { println!(\"登入成功\"); break; } else { println!(\"密碼錯誤\"); }"]
+    ref: chapter2/03_underscore.md
+  # 由 EXERCISES.md 第 2 章第 6 集「題 1」轉換
+  - id: rust-ch02-q03
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      定義一個函式 `print_menu()`，裡面印出三行菜單，然後在 `main` 裡呼叫 `print_menu()` **兩次**。
+      這題不需要參數。預期輸出：
+
+          今日菜單
+          1. 拉麵
+          2. 咖哩飯
+          今日菜單
+          1. 拉麵
+          2. 咖哩飯
+    expected_stdout: "今日菜單\n1. 拉麵\n2. 咖哩飯\n今日菜單\n1. 拉麵\n2. 咖哩飯\n"
+    hints: ["先寫 fn print_menu() { ... }，把三行 println! 放進去", "在 main 裡寫兩次 print_menu();（函式名稱後面要有 () 和分號）"]
+    ref: chapter2/06_function_basic.md
+  # 由 EXERCISES.md 第 2 章第 7 集「題 1」轉換
+  - id: rust-ch02-q04
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      定義函式 `print_total(price: i32, count: i32)`，在函式裡直接印出 `總價是 X 元`（X 是 `price * count`）。
+      在 `main` 裡請使用者輸入單價和數量，轉成數字後呼叫 `print_total(price, count)`。
+      這題還不用回傳值，印出的工作交給 `print_total`。
+
+      執行範例（30 和 4 是使用者輸入；判定時會依序輸入 30、4）：
+
+          請輸入單價：
+          30
+          請輸入數量：
+          4
+          總價是 120 元
+    stdin: "30\n4\n"
+    expected_stdout: "請輸入單價：\n請輸入數量：\n總價是 120 元\n"
+    hints: ["函式參數格式是「參數名: 型別」，兩個參數都要標型別；main 先讀到 price 和 count", "fn print_total(price: i32, count: i32) { println!(\"總價是 {} 元\", price * count); }，main 最後寫 print_total(price, count);"]
+    ref: chapter2/07_function_params.md
+  # 由 EXERCISES.md 第 2 章第 8 集「題 1」轉換
+  - id: rust-ch02-q05
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      寫一個函式 `calculate_total(price: i32, count: i32) -> i32`，**回傳**總價 `price * count`（不要在函式裡 `println!`）。
+      在 `main` 裡請使用者輸入單價和數量，呼叫函式接住回傳值後印出 `總價是 X 元`。這集先用「最後一行不加分號」回傳，不要用 `return`。
+
+      執行範例（30 和 4 是使用者輸入；判定時會依序輸入 30、4）：
+
+          請輸入單價：
+          30
+          請輸入數量：
+          4
+          總價是 120 元
+    stdin: "30\n4\n"
+    expected_stdout: "請輸入單價：\n請輸入數量：\n總價是 120 元\n"
+    hints: ["回傳型別寫在參數後面：fn calculate_total(...) -> i32，最後一行不要加分號", "函式本體只要一行 price * count；main 裡 let total = calculate_total(price, count); 再印出"]
+    ref: chapter2/08_function_return.md
+  # 由 EXERCISES.md 第 2 章第 8 集「題 2」轉換
+  - id: rust-ch02-q06
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個函式 `buy_ticket(money: i32, price: i32) -> (i32, i32)`，用 tuple 回傳「可以買幾張票」和「剩下多少錢」。
+      在 `main` 裡請使用者輸入手上的錢和票價（可以假設票價是正整數），最後印出 `可以買 X 張，剩下 Y 元`。不要用 `return`。
+
+      執行範例（230 和 70 是使用者輸入；判定時會依序輸入 230、70）：
+
+          請輸入你有多少錢：
+          230
+          請輸入票價：
+          70
+          可以買 3 張，剩下 20 元
+    stdin: "230\n70\n"
+    expected_stdout: "請輸入你有多少錢：\n請輸入票價：\n可以買 3 張，剩下 20 元\n"
+    hints: ["回傳兩個值時把它們包成 tuple；張數用 /、剩下的錢用 % 算，呼叫後用 .0、.1 取值", "函式裡 let count = money / price; let change = money % price; 最後一行寫 (count, change)"]
+    ref: chapter2/08_function_return.md
+  # 由 EXERCISES.md 第 2 章第 9 集「題 1」轉換
+  - id: rust-ch02-q07
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個函式 `discount_price(price: i32, is_member: bool) -> i32`：
+      如果 `price <= 0`（價格不合理），用 `return 0;` 提前離開；價格合理時，會員打 8 折（`price * 8 / 10`），非會員原價。
+      在 `main` 裡讓使用者輸入價格，用變數 `let is_member = true;` 呼叫函式，印出 `折扣後價格是 X 元`。用整數運算就好。
+
+      執行範例（100 是使用者輸入；判定時會輸入 100）：
+
+          請輸入價格：
+          100
+          折扣後價格是 80 元
+    stdin: "100\n"
+    expected_stdout: "請輸入價格：\n折扣後價格是 80 元\n"
+    hints: ["先寫 guard clause 擋掉不合理的價格，再處理會員和非會員；if 當表達式可以直接當最後一行的回傳值", "if price <= 0 { return 0; } 之後最後一行寫 if is_member { price * 8 / 10 } else { price }"]
+    ref: chapter2/09_early_return.md
+  # 由 EXERCISES.md 第 2 章第 10 集「題 1」轉換
+  - id: rust-ch02-q08
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個函式 `is_power_of_two(n: i32) -> bool`，判斷 `n` 是不是 2 的次方。函式只負責計算並回傳結果，不要在裡面讀 stdin 或印文字。
+      負數和 0 都不是 2 的次方。請用**遞迴**，不要用迴圈。
+      在 `main` 裡讀一個整數，呼叫函式後印出 `是 2 的次方` 或 `不是 2 的次方`。
+
+      執行範例（16 是使用者輸入；判定時會輸入 16）：
+
+          請輸入數字：
+          16
+          是 2 的次方
+    stdin: "16\n"
+    expected_stdout: "請輸入數字：\n是 2 的次方\n"
+    hints: ["停止條件：n == 1 是 true；n <= 0 或「不是 1 的奇數」都是 false", "n 是偶數時把問題縮小：最後一個分支寫 is_power_of_two(n / 2)"]
+    ref: chapter2/10_recursion.md
+  # 由 EXERCISES.md 第 2 章第 10 集「題 2」轉換
+  - id: rust-ch02-q09
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      寫一個函式 `print_collatz(n: i32)`，用**遞迴**一路印出 Collatz 數列到 1（不要用 `loop`、`while`、`for`）：
+      每次先印出目前的 `n`；`n` 是 1 就停止；`n` 是偶數下一個數是 `n / 2`；奇數下一個數是 `3 * n + 1`。
+      在 `main` 裡讀一個 1 到 10000 的整數（不用檢查範圍）後呼叫這個函式。
+
+      執行範例（第二行的 6 是使用者輸入；判定時會輸入 6）：
+
+          請輸入起始數字：
+          6
+          6
+          3
+          10
+          5
+          16
+          8
+          4
+          2
+          1
+    stdin: "6\n"
+    expected_stdout: "請輸入起始數字：\n6\n3\n10\n5\n16\n8\n4\n2\n1\n"
+    hints: ["先 println!(\"{}\", n); 再決定要不要繼續呼叫自己，停止條件是 n == 1", "if n == 1 { return; } 之後 if n % 2 == 0 { print_collatz(n / 2); } else { print_collatz(3 * n + 1); }"]
+    ref: chapter2/10_recursion.md
+  # 由 EXERCISES.md 第 2 章第 11 集「題 1」轉換
+  - id: rust-ch02-q10
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      讓使用者輸入三天的溫度，存成陣列 `temperatures`。接著依序印出：整個陣列（用 `{:?}`）、第一天溫度、第三天溫度，
+      以及第一天和第三天差幾度。差幾度不能是負數，請自己用 `if` 判斷誰比較大再相減（不要用現成的絕對值函式）。
+      請用索引取值，不要用 `for` 走訪陣列。
+
+      執行範例（25、27、22 是使用者輸入；判定時會依序輸入 25、27、22）：
+
+          請輸入第一天溫度：
+          25
+          請輸入第二天溫度：
+          27
+          請輸入第三天溫度：
+          22
+          三天溫度：[25, 27, 22]
+          第一天溫度：25
+          第三天溫度：22
+          第一天和第三天差 3 度
+    stdin: "25\n27\n22\n"
+    expected_stdout: "請輸入第一天溫度：\n請輸入第二天溫度：\n請輸入第三天溫度：\n三天溫度：[25, 27, 22]\n第一天溫度：25\n第三天溫度：22\n第一天和第三天差 3 度\n"
+    hints: ["先讀到 day1、day2、day3，再放進陣列 [day1, day2, day3]；印整個陣列用 {:?}，索引從 0 開始", "第一天是 temperatures[0]、第三天是 temperatures[2]；let difference = if temperatures[2] >= temperatures[0] { temperatures[2] - temperatures[0] } else { temperatures[0] - temperatures[2] };"]
+    ref: chapter2/11_array_basic.md
+  # 由 EXERCISES.md 第 2 章第 12 集「題 1」轉換
+  - id: rust-ch02-q11
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      先建立可變陣列 `expenses`，裡面有 5 個 `0`。用 `for i in 0..5` 讀取 5 筆今日花費，放進 `expenses[i]`（提示文字是 `請輸入第 N 筆花費：`）。
+      輸入完成後，用 `for expense in expenses` 走訪陣列：印出 `花費：X 元`，若這筆大於或等於 100 再多印一行 `這筆比較高`。
+      最後印出 `總花費：X 元`。不要用 `len()`、切片或 `Vec`。
+
+      執行範例（80、120、45、200、60 是使用者輸入；判定時會依序輸入這 5 個數）：
+
+          請輸入第 1 筆花費：
+          80
+          請輸入第 2 筆花費：
+          120
+          請輸入第 3 筆花費：
+          45
+          請輸入第 4 筆花費：
+          200
+          請輸入第 5 筆花費：
+          60
+          花費：80 元
+          花費：120 元
+          這筆比較高
+          花費：45 元
+          花費：200 元
+          這筆比較高
+          花費：60 元
+          總花費：505 元
+    stdin: "80\n120\n45\n200\n60\n"
+    expected_stdout: "請輸入第 1 筆花費：\n請輸入第 2 筆花費：\n請輸入第 3 筆花費：\n請輸入第 4 筆花費：\n請輸入第 5 筆花費：\n花費：80 元\n花費：120 元\n這筆比較高\n花費：45 元\n花費：200 元\n這筆比較高\n花費：60 元\n總花費：505 元\n"
+    hints: ["let mut expenses = [0; 5]; 讀取時提示文字印 i + 1，讀到的數放進 expenses[i]", "走訪前準備 let mut total = 0;，在 for expense in expenses 裡印出、用 if expense >= 100 判斷，再 total += expense"]
+    ref: chapter2/12_array_iteration.md
+  # 由 EXERCISES.md 第 2 章第 14 集「題 1」轉換
+  - id: rust-ch02-q12
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      寫一個函式 `total_steps(steps: &[i32]) -> i32`，回傳切片裡所有步數的總和。
+      在 `main` 裡讓使用者輸入 7 天步數（提示文字是 `請輸入第 N 天步數：`），存成陣列 `steps`。每天目標 8000 步，
+      所以一整週門檻是 `7 * 8000`、平日（前 5 天）是 `5 * 8000`、週末（後 2 天）是 `2 * 8000`。
+      請分別用 `total_steps(&steps)`、`total_steps(&steps[..5])`、`total_steps(&steps[5..])` 算出總步數，並判斷有沒有達標（大於或等於門檻）。
+      達標判斷請放在 `main` 裡比較總和；不要用 `Vec`、`.len()` 或 Iterator 方法。
+
+      執行範例（每個提示下一行的數字是使用者輸入；判定時會依序輸入 9000、7500、8200、6000、10000、3000、12000）：
+
+          請輸入第 1 天步數：
+          9000
+          請輸入第 2 天步數：
+          7500
+          請輸入第 3 天步數：
+          8200
+          請輸入第 4 天步數：
+          6000
+          請輸入第 5 天步數：
+          10000
+          請輸入第 6 天步數：
+          3000
+          請輸入第 7 天步數：
+          12000
+          一整週總步數 55700，未達標
+          平日總步數 40700，達標
+          週末總步數 15000，未達標
+    stdin: "9000\n7500\n8200\n6000\n10000\n3000\n12000\n"
+    expected_stdout: "請輸入第 1 天步數：\n請輸入第 2 天步數：\n請輸入第 3 天步數：\n請輸入第 4 天步數：\n請輸入第 5 天步數：\n請輸入第 6 天步數：\n請輸入第 7 天步數：\n一整週總步數 55700，未達標\n平日總步數 40700，達標\n週末總步數 15000，未達標\n"
+    hints: ["函式裡準備 let mut total = 0;，用 for step in steps 走訪切片並 total += step；main 用 [0; 7] 搭配 for i in 0..7 讀取", "let week_total = total_steps(&steps); 之後 if week_total >= 7 * 8000 { \"達標\" } else { \"未達標\" }，平日和週末同理"]
+    ref: chapter2/14_slice_as_param.md
+  # 由 EXERCISES.md 第 2 章第 15 集「題 1」轉換
+  - id: rust-ch02-q13
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個函式 `print_ticket(name: &str, from: &str, to: &str)`，依序印出 `乘客：…`、`出發：…`、`抵達：…` 三行。
+      在 `main` 裡宣告 `let route = "TPE-TNN";`，用 `&route[0..3]` 切出出發站、`&route[4..7]` 切出抵達站，
+      再分別替 `"Andy"` 和 `"小明"` 印出車票資訊。不要對 `"小明"` 做切片，也不要用 `String`。預期輸出：
+
+          乘客：Andy
+          出發：TPE
+          抵達：TNN
+          乘客：小明
+          出發：TPE
+          抵達：TNN
+    expected_stdout: "乘客：Andy\n出發：TPE\n抵達：TNN\n乘客：小明\n出發：TPE\n抵達：TNN\n"
+    hints: ["三個參數都寫成 &str，函式裡用三個 println! 印出；route 是純英文，用 byte 索引切片是安全的", "let from = &route[0..3]; let to = &route[4..7]; 然後 print_ticket(\"Andy\", from, to); 和 print_ticket(\"小明\", from, to);"]
+    ref: chapter2/15_str.md
+  - id: rust-ch02-q14
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式會印出什麼？（選項中以 / 分隔每一行輸出）
+
+          fn main() {
+              let x = 1;
+              {
+                  let x = x + 10;
+                  println!("{}", x);
+              }
+              let x = x * 2;
+              println!("{}", x);
+          }
+    choices:
+      - "11 / 2"
+      - "11 / 22"
+      - "11 / 11"
+      - "編譯錯誤：x 沒有宣告成 mut，不能改值"
+    answer: 0
+    hints: ["每個 let 都是建立全新的變數，只是剛好同名；大括號裡的遮蔽出了大括號就結束", "區塊外的 x 還是 1，所以 let x = x * 2; 得到 2"]
+    ref: chapter2/02_shadowing.md
+  - id: rust-ch02-q15
+    difficulty: 1
+    type: short
+    prompt: |
+      下面這段程式會印出什麼？請照 `{:?}` 的格式回答。
+
+          let arr = [10, 20, 30, 40, 50];
+          println!("{:?}", &arr[1..=3]);
+    answers: ['^\[? ?20 ?[, ] ?30 ?[, ] ?40 ?\]?$']
+    hints: ["索引從 0 開始；..= 代表連結尾的索引也包含在內", "取索引 1、2、3 三個元素，印出來是 [20, 30, 40]"]
+    ref: chapter2/13_slice.md
