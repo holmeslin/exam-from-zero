@@ -161,19 +161,34 @@ func copyTree(fsys fs.FS, src, dst string) ([]string, error) {
 	return written, err
 }
 
-// gradeCode grades the code in dir; for check=test the hidden tests are overlaid only for the run.
+// gradeCode grades the code in dir. It works on a throwaway sibling copy with the hidden tests overlaid,
+// so the learner's files are never overwritten and the hidden tests never appear in their workspace.
 func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir string) (Result, error) {
-	r, qdir := runners[lang], dir
+	work := filepath.Join(filepath.Dir(dir), "_grade-"+filepath.Base(dir))
+	if err := os.RemoveAll(work); err != nil {
+		return Result{}, err
+	}
+	defer os.RemoveAll(work)
+	if _, err := copyTree(os.DirFS(dir), ".", work); err != nil {
+		return Result{}, err
+	}
+	if q.Check != "stdout" {
+		if _, err := copyTree(b.FS, b.questionDir(lang, q.ID, "test"), work); err != nil {
+			return Result{}, err
+		}
+	}
+
+	r, cwd := runners[lang], work
 	var env []string
 	if r.env != nil {
-		env = r.env(dir)
+		env = r.env(work)
 	}
 	if r.inRoot {
-		r.build, r.test, r.run = inDir(r.build, dir), inDir(r.test, dir), inDir(r.run, dir)
-		dir = filepath.Dir(dir)
+		r.build, r.test, r.run = inDir(r.build, work), inDir(r.test, work), inDir(r.run, work)
+		cwd = filepath.Dir(work)
 	}
 	if r.build != nil {
-		res, _, err := execIn(ctx, dir, r.timeout, env, r.build)
+		res, _, err := execIn(ctx, cwd, r.timeout, env, r.build)
 		if res.Kind != KindPass || err != nil {
 			if res.Kind == KindTest {
 				res.Kind = KindCompile
@@ -182,7 +197,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		}
 	}
 	if q.Check == "stdout" {
-		res, stdout, err := execIn(ctx, dir, r.timeout, env, r.run)
+		res, stdout, err := execIn(ctx, cwd, r.timeout, env, r.run)
 		if err != nil || res.Kind != KindPass {
 			return res, err
 		}
@@ -191,16 +206,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		}
 		return res, nil
 	}
-	files, err := copyTree(b.FS, b.questionDir(lang, q.ID, "test"), qdir)
-	defer func() {
-		for _, f := range files {
-			os.Remove(f)
-		}
-	}()
-	if err != nil {
-		return Result{}, err
-	}
-	res, _, err := execIn(ctx, dir, r.timeout, env, r.test)
+	res, _, err := execIn(ctx, cwd, r.timeout, env, r.test)
 	return res, err
 }
 
@@ -254,7 +260,7 @@ func gradeAnswer(q *Question, choice int, text string) Result {
 	case "short":
 		norm := strings.ToLower(strings.Join(strings.Fields(text), " "))
 		ok = slices.ContainsFunc(q.Answers, func(re string) bool {
-			m, err := regexp.MatchString(re, norm)
+			m, err := regexp.MatchString("(?i)"+re, norm) // input is lower-cased, so patterns must ignore case too
 			return err == nil && m
 		})
 	}

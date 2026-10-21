@@ -329,6 +329,10 @@ func (m *model) enterChapter() {
 		lp.Runs[c.Key] = newRun(c, m.rng, m.flagged)
 	}
 	m.run, lp.Last = lp.Runs[c.Key], c.Key
+	if len(m.run.IDs) == 0 { // every question in the chapter was flagged: nothing to answer, so it must not block progress
+		m.advance(false, true)
+		return
+	}
 	m.save()
 	m.loadQuestion()
 }
@@ -345,12 +349,15 @@ func (m *model) record(res Result) {
 	m.save()
 }
 
-// openEditor suspends the TUI and edits the question's first starter file.
+// manifests are never what the learner should edit first.
+var manifests = []string{"Cargo.toml", "Cargo.lock", "go.mod", "package.json"}
+
+// openEditor suspends the TUI and edits the question's first starter source file.
 func (m *model) openEditor() tea.Cmd {
 	file := m.wsDir
 	starter := m.bank.questionDir(m.lang().ID, m.q.ID, "starter")
 	_ = fs.WalkDir(m.bank.FS, starter, func(p string, d fs.DirEntry, err error) error {
-		if err == nil && !d.IsDir() {
+		if err == nil && !d.IsDir() && !slices.Contains(manifests, d.Name()) {
 			file = filepath.Join(m.wsDir, strings.TrimPrefix(p, starter+"/"))
 			return fs.SkipAll
 		}
@@ -404,6 +411,10 @@ func (m *model) loadQuestion() {
 }
 
 func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// while grading only scrolling is allowed: leaving, flagging or editing would race the pending result
+	if m.grading && msg.String() != "pgup" && msg.String() != "pgdown" {
+		return m, nil
+	}
 	if m.confirmFlag {
 		switch msg.String() {
 		case "y":
@@ -452,9 +463,6 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	case "enter":
-		if m.grading {
-			return m, nil
-		}
 		if m.run.Cleared {
 			m.next()
 			return m, nil

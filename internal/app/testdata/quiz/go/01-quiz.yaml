@@ -16,6 +16,6 @@ questions:
     difficulty: 2
     type: short
     prompt: 型別 T 的指標型別怎麼寫？
-    answers: ["^\\*t$", "^pointer to t$"]
+    answers: ["^\\*T$", "^pointer to T$"] # written as the spec shows; matching must ignore case
     hints: ["加一個符號", "*T"]
     ref: chapter3/02_pointer.md

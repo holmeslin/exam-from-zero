@@ -353,6 +353,11 @@ func TestFlag_ReplacesQuestionAndExcludesItLater(t *testing.T) {
 	e.waitFor("確定檢舉")
 	e.press("y")
 	e.waitFor("過關")
+
+	e.key(tea.KeyEsc) // every question is flagged now: re-entering must not crash
+	e.waitFor("檢舉")
+	e.key(tea.KeyEnter)
+	e.waitFor("答對 0/0")
 }
 
 func TestReset_OnlyAfterAllPassedAndArchivesWorkspace(t *testing.T) {
@@ -476,4 +481,56 @@ func TestNodeLang_FailedInstallCanBeRetried(t *testing.T) {
 	e.waitFor("✗ 安裝失敗")
 	e.key(tea.KeyEsc)
 	e.waitFor("選擇今天要測驗的語言")
+}
+
+func TestKeysThatLeaveTheQuestionAreIgnoredWhileGrading(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/timeout") // grading takes the full timeout
+	e := start(t, cfg)
+	enterFirstQuestion(e, "印出 done")
+	e.key(tea.KeyEnter)
+	e.waitFor("執行中")
+	e.key(tea.KeyEsc) // leaving mid-grade would let the result land on another question
+	e.press("y")
+	e.press("!")
+	e.press("y")
+	e.waitFor("⏱ 逾時")
+}
+
+func TestGradingNeverTouchesLearnerFiles(t *testing.T) {
+	e := start(t, newConfig(t))
+	enterFirstQuestion(e, "實作 Add")
+	mine := "package main\n\n// my own notes, same name as the hidden test\n"
+	e.writeAnswer("go", "go-ch01-q01", "main_test.go", mine)
+	e.writeAnswer("go", "go-ch01-q01", "main.go", addRight)
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+	if got := e.workspaceFile("go", "go-ch01-q01", "main_test.go"); got != mine {
+		t.Fatalf("learner file changed by grading:\n%s", got)
+	}
+}
+
+func TestEditorOpensSourceFileNotManifest(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "opened")
+	script := filepath.Join(dir, "fake-editor")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho \"$1\" > "+log+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("VISUAL", "")
+	t.Setenv("EDITOR", script)
+
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/rust")
+	e := start(t, cfg)
+	enterFirstQuestion(e, "實作 add")
+	e.press("e")
+	e.waitFor("實作 add")
+	raw, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(string(raw)); !strings.HasSuffix(got, filepath.Join("src", "lib.rs")) {
+		t.Fatalf("editor opened %s, want src/lib.rs", got)
+	}
 }
