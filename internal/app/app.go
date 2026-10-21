@@ -54,6 +54,8 @@ type model struct {
 	err         error
 	confirmQuit bool
 	choiceCur   int
+	hintLevel   int  // hints shown for the current question
+	showRef     bool // reference answer expanded
 	input       textinput.Model
 	clearedRun  *Run // the run that just finished, for the cleared screen
 
@@ -206,12 +208,24 @@ func (m *model) record(res Result) {
 	m.save()
 }
 
+func (m *model) showHint() {
+	if m.hintLevel >= len(m.q.Hints) {
+		return
+	}
+	m.hintLevel++
+	m.lp().stat(m.q.ID).Hinted = true
+	if !slices.Contains(m.run.Hinted, m.q.ID) {
+		m.run.Hinted = append(m.run.Hinted, m.q.ID)
+	}
+	m.save()
+}
+
 func (m *model) save() { m.saveErr = saveProgress(m.cfg.ConfigDir, m.prog) }
 
 func (m *model) loadQuestion() {
 	m.scr, m.confirmQuit = scrQuestion, false
 	m.q = m.bank.byID[m.run.Current()]
-	m.result, m.err, m.choiceCur = nil, nil, 0
+	m.result, m.err, m.choiceCur, m.hintLevel, m.showRef = nil, nil, 0, 0, false
 	m.input.Reset()
 	m.input.Focus()
 	if m.run.Cleared {
@@ -230,6 +244,15 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "n", "esc":
 			m.confirmQuit = false
 		}
+		return m, nil
+	}
+	short := m.q.Type == "short" && !m.run.Cleared
+	switch k := msg.String(); {
+	case k == "tab" && m.q.Type == "short", k == "h" && !short:
+		m.showHint()
+		return m, nil
+	case k == "r" && m.run.Cleared:
+		m.showRef = !m.showRef
 		return m, nil
 	}
 	switch msg.String() {
@@ -271,7 +294,7 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.confirmQuit = true
 		return m, nil
 	}
-	if m.q.Type == "short" && !m.run.Cleared {
+	if short {
 		var cmd tea.Cmd
 		m.input, cmd = m.input.Update(msg)
 		return m, cmd
@@ -450,18 +473,29 @@ func (m *model) viewQuestion() string {
 	case m.result != nil:
 		s.WriteString(m.viewResult(*m.result))
 	}
+	if m.hintLevel > 0 {
+		s.WriteString(m.titledBox(fmt.Sprintf("💡 提示 %d/%d", m.hintLevel, len(m.q.Hints)),
+			strings.Join(m.q.Hints[:m.hintLevel], "\n")+"\n📖 "+m.q.Ref) + "\n")
+	}
+	if m.showRef {
+		s.WriteString(m.titledBox("參考答案", m.refAnswer()) + "\n")
+	}
 	s.WriteString("  進度  " + m.progressRow() + "\n")
+	hintKey := "h"
+	if m.q.Type == "short" {
+		hintKey = "tab"
+	}
 	switch {
 	case m.confirmQuit:
 		s.WriteString("\n  確定離開？進度會保留  y 離開   n 繼續作答")
 	case r.Cleared:
-		s.WriteString(help("enter 下一題   esc 離開"))
+		s.WriteString(help("enter 下一題   r 參考答案   esc 離開"))
 	case m.q.Type == "choice":
-		s.WriteString(help("↑/↓ 選擇   enter 送出   esc 離開"))
+		s.WriteString(help("↑/↓ 選擇   enter 送出   " + hintKey + " 提示   esc 離開"))
 	case m.q.Type == "short":
-		s.WriteString(help("enter 送出   esc 離開"))
+		s.WriteString(help("enter 送出   " + hintKey + " 提示   esc 離開"))
 	default:
-		s.WriteString(help("enter 判定   esc 離開"))
+		s.WriteString(help("enter 判定   " + hintKey + " 提示   esc 離開"))
 	}
 	return s.String()
 }
@@ -490,7 +524,7 @@ func (m *model) viewRedoIntro() string {
 
 func (m *model) viewCleared() string {
 	c, r := m.chapter(), m.clearedRun
-	body := fmt.Sprintf("🎉  第 %s 關「%s」過關\n\n答對 %d/%d   曾錯 %d", chapterLabel(c), c.Title, len(r.IDs), len(r.IDs), len(r.Wrong))
+	body := fmt.Sprintf("🎉  第 %s 關「%s」過關\n\n答對 %d/%d   曾錯 %d   看過提示 %d", chapterLabel(c), c.Title, len(r.IDs), len(r.IDs), len(r.Wrong), len(r.Hinted))
 	if m.chapCur+1 < len(m.chapters()) {
 		n := m.chapters()[m.chapCur+1]
 		body += fmt.Sprintf("\n🔓 已解鎖：第 %s 關 %s", chapterLabel(n), n.Title)
@@ -537,6 +571,34 @@ func (m *model) setOutput(body string) {
 	m.out.Height = min(lines, maxOutputLines)
 	m.out.SetContent(body)
 	m.out.GotoTop()
+}
+
+func (m *model) titledBox(title, content string) string {
+	return "  " + title + "\n" + m.box(content)
+}
+
+// refAnswer renders the solution: code files for code questions, the right option or accepted patterns otherwise.
+func (m *model) refAnswer() string {
+	switch m.q.Type {
+	case "choice":
+		return "正確答案：" + m.q.Choices[m.q.Answer]
+	case "short":
+		return "可接受答案（regex）：\n" + strings.Join(m.q.Answers, "\n")
+	}
+	dir := m.bank.questionDir(m.lang().ID, m.q.ID, "solution")
+	var s strings.Builder
+	err := fs.WalkDir(m.bank.FS, dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		raw, err := fs.ReadFile(m.bank.FS, p)
+		fmt.Fprintf(&s, "── %s ──\n%s\n", strings.TrimPrefix(p, dir+"/"), raw)
+		return err
+	})
+	if err != nil {
+		return err.Error()
+	}
+	return strings.TrimRight(s.String(), "\n")
 }
 
 // box wraps content to the terminal so long lines are not truncated by the renderer.

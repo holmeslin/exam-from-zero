@@ -39,10 +39,12 @@ func start(t *testing.T, cfg Config) *env {
 	return &env{t: t, tm: tm, cfg: cfg}
 }
 
-// waitFor consumes output until every s has appeared; output read here is gone for the next call.
-func (e *env) waitFor(ss ...string) {
+// waitFor consumes output until every s has appeared and returns what it read; that output is gone for the next call.
+func (e *env) waitFor(ss ...string) string {
 	e.t.Helper()
+	var seen []byte
 	teatest.WaitFor(e.t, e.tm.Output(), func(b []byte) bool {
+		seen = b
 		for _, s := range ss {
 			if !bytes.Contains(b, []byte(s)) {
 				return false
@@ -50,6 +52,7 @@ func (e *env) waitFor(ss ...string) {
 		}
 		return true
 	}, teatest.WithDuration(30*time.Second))
+	return string(seen)
 }
 
 func (e *env) key(k tea.KeyType) { e.tm.Send(tea.KeyMsg{Type: k}) }
@@ -274,5 +277,42 @@ func TestProgress_CorruptFileIsReportedNotOverwritten(t *testing.T) {
 	}
 	if raw, _ := os.ReadFile(p); string(raw) != "{not json" {
 		t.Fatalf("corrupt progress file was overwritten: %q", raw)
+	}
+}
+
+func TestHintsAndReferenceAnswer(t *testing.T) {
+	cfg := newConfig(t)
+	e := start(t, cfg)
+	e.waitFor("選擇今天要測驗的語言")
+	e.key(tea.KeyEnter)
+	e.waitFor("基礎")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 Add", "h 提示")
+
+	e.press("h")
+	e.waitFor("💡 提示 1/2", "用 + 運算子", "📖 chapter1/05_func.md")
+	e.press("h")
+	e.waitFor("💡 提示 2/2", "return a + b")
+
+	e.press("r") // no reference answer before passing
+	e.writeAnswer("go", "go-ch01-q01", "main.go", goFunc("Add", "+"))
+	e.key(tea.KeyEnter)
+	if out := e.waitFor("✓ 通過"); strings.Contains(out, "── main.go ──") {
+		t.Fatal("reference answer shown before passing")
+	}
+	e.press("r")
+	e.waitFor("參考答案", "── main.go ──")
+
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 Sub")
+	e.writeAnswer("go", "go-ch01-q02", "main.go", goFunc("Sub", "-"))
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+	e.key(tea.KeyEnter)
+	e.waitFor("過關", "看過提示 1")
+
+	raw, _ := os.ReadFile(filepath.Join(cfg.ConfigDir, "progress.json"))
+	if !strings.Contains(string(raw), `"hinted": true`) {
+		t.Fatalf("hint not recorded:\n%s", raw)
 	}
 }

@@ -13,6 +13,7 @@ type Run struct {
 	Redo    bool     `json:"redo,omitzero"`   // in the redo pass; Pos indexes Wrong
 	Pos     int      `json:"pos"`
 	Cleared bool     `json:"cleared,omitzero"` // current question passed, waiting for "next"
+	Hinted  []string `json:"hinted,omitempty"` // questions whose hints were opened in this run
 }
 
 // newRun samples c.Sample questions not rejected by skip and orders them by difficulty.
