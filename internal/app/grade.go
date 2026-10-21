@@ -61,7 +61,7 @@ func nodeRunner(checker string) runner {
 		test:  []string{"npx", "--no-install", "vitest", "run", "--dir", "{dir}"},
 		// type stripping is on by default only from Node 22.18, but vitest accepts 22.12
 		run:     []string{"node", "--experimental-strip-types", "{dir}/main.ts"},
-		timeout: 10 * time.Second, // a warm vitest+jsdom run measured under 1s
+		timeout: 10 * time.Second, // per step: a warm vitest+jsdom run and a type check each measured under 1s
 		inRoot:  true,
 		setup:   []string{"npm", "install", "--no-audit", "--no-fund"},
 		// hidden tests are left out: they may reach into the code in ways the learner's types don't promise
@@ -214,6 +214,7 @@ func materialize(b *Bank, lang string, q *Question, part, dir string) error {
 	return writeScaffold(lang, dir)
 }
 
+// writeScaffold writes the lang's scaffold files (go.mod, tsconfig.json) into dir.
 func writeScaffold(lang, dir string) error {
 	for name, body := range runners[lang].scaffold {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
@@ -311,7 +312,7 @@ func inDir(argv []string, dir string) []string {
 }
 
 // execIn runs argv in dir and returns combined output plus stdout alone; a non-zero exit is a KindTest result, not an error.
-// execIn runs argv in dir; live, when set, also receives the combined output as it arrives.
+// live, when set, also receives the combined output as it arrives.
 func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []string, stdin string, live io.Writer) (Result, string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
