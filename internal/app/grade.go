@@ -38,7 +38,8 @@ func (r Result) Pass() bool { return r.Kind == KindPass }
 type runner struct {
 	build, test, run []string
 	timeout          time.Duration
-	scaffold         map[string]string // extra files written next to the starter
+	scaffold         map[string]string         // extra files written next to the starter
+	env              func(dir string) []string // extra environment for every command
 }
 
 var runners = map[string]runner{
@@ -48,6 +49,16 @@ var runners = map[string]runner{
 		run:      []string{"go", "run", "."},
 		timeout:  10 * time.Second,
 		scaffold: map[string]string{"go.mod": "module q\n\ngo 1.25\n"},
+	},
+	"rust": {
+		build:   []string{"cargo", "build", "-q"},
+		test:    []string{"cargo", "test", "-q"},
+		run:     []string{"cargo", "run", "-q"},
+		timeout: 120 * time.Second, // first build also downloads and compiles dependencies
+		// every question is its own package; a shared target dir lets them reuse compiled deps
+		env: func(dir string) []string {
+			return []string{"CARGO_TARGET_DIR=" + filepath.Join(filepath.Dir(dir), ".target")}
+		},
 	},
 }
 
@@ -110,8 +121,12 @@ func copyTree(fsys fs.FS, src, dst string) ([]string, error) {
 // gradeCode grades the code in dir; for check=test the hidden tests are overlaid only for the run.
 func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir string) (Result, error) {
 	r := runners[lang]
+	var env []string
+	if r.env != nil {
+		env = r.env(dir)
+	}
 	if r.build != nil {
-		res, _, err := execIn(ctx, dir, r.timeout, r.build)
+		res, _, err := execIn(ctx, dir, r.timeout, env, r.build)
 		if res.Kind != KindPass || err != nil {
 			if res.Kind == KindTest {
 				res.Kind = KindCompile
@@ -120,7 +135,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		}
 	}
 	if q.Check == "stdout" {
-		res, stdout, err := execIn(ctx, dir, r.timeout, r.run)
+		res, stdout, err := execIn(ctx, dir, r.timeout, env, r.run)
 		if err != nil || res.Kind != KindPass {
 			return res, err
 		}
@@ -138,16 +153,19 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 	if err != nil {
 		return Result{}, err
 	}
-	res, _, err := execIn(ctx, dir, r.timeout, r.test)
+	res, _, err := execIn(ctx, dir, r.timeout, env, r.test)
 	return res, err
 }
 
 // execIn runs argv in dir and returns combined output plus stdout alone; a non-zero exit is a KindTest result, not an error.
-func execIn(ctx context.Context, dir string, timeout time.Duration, argv []string) (Result, string, error) {
+func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []string) (Result, string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
+	if env != nil {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	var out, stdout bytes.Buffer
 	cmd.Stdout, cmd.Stderr = io.MultiWriter(&out, &stdout), &out
 	// kill the whole group: `go test` / `cargo run` spawn the real binary as a child

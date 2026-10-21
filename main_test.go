@@ -22,7 +22,7 @@ func TestVerify_EmbeddedBankPasses(t *testing.T) {
 }
 
 func TestVerify_FixtureBanksPass(t *testing.T) {
-	for _, dir := range []string{"bank", "stdout", "timeout", "quiz"} {
+	for _, dir := range []string{"bank", "stdout", "timeout", "quiz", "rust"} {
 		t.Run(dir, func(t *testing.T) {
 			if out, err := verify(t, os.DirFS("internal/app/testdata/"+dir)); err != nil {
 				t.Fatalf("fixture bank failed verify: %v\n%s", err, out)

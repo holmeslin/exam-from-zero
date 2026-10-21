@@ -44,7 +44,8 @@ type model struct {
 	flags []Flag
 
 	scr     screen
-	langs   []Lang // langs present in the bank
+	langs   []Lang          // langs present in the bank
+	missing map[string]bool // langs whose toolchain is not on PATH
 	langCur int
 	chapCur int
 
@@ -105,11 +106,17 @@ func New(cfg Config) (tea.Model, error) {
 	m.input.Prompt = "答案："
 	m.resetInput = textinput.New()
 	m.resetInput.Prompt = ""
+	m.missing = map[string]bool{}
 	for _, l := range langs {
-		if len(b.Chapters[l.ID]) > 0 {
-			m.langs = append(m.langs, l)
+		if len(b.Chapters[l.ID]) == 0 {
+			continue
+		}
+		m.langs = append(m.langs, l)
+		if _, err := exec.LookPath(l.Tool); err != nil {
+			m.missing[l.ID] = true
 		}
 	}
+	m.langCur = m.stepLang(-1, +1) // first usable lang
 	return m, nil
 }
 
@@ -171,6 +178,16 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// stepLang returns the next lang from i in direction d whose toolchain is available, or i if there is none.
+func (m *model) stepLang(i, d int) int {
+	for j := i + d; j >= 0 && j < len(m.langs); j += d {
+		if !m.missing[m.langs[j].ID] {
+			return j
+		}
+	}
+	return max(i, 0)
+}
+
 func (m *model) allPassed(lang string) bool {
 	lp := m.prog[lang]
 	return lp != nil && !slices.ContainsFunc(m.bank.Chapters[lang], func(c *Chapter) bool { return !slices.Contains(lp.Passed, c.Key) })
@@ -222,18 +239,20 @@ func (m *model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	switch msg.String() {
+	case "up", "k":
+		m.langCur = m.stepLang(m.langCur, -1)
+	case "down", "j":
+		m.langCur = m.stepLang(m.langCur, +1)
+	case "enter":
+		if !m.missing[m.lang().ID] {
+			m.scr, m.chapCur = scrChapters, 0
+		}
 	case "R":
 		if m.allPassed(m.lang().ID) {
 			m.resetting, m.resetMsg = true, ""
 			m.resetInput.Reset()
 			m.resetInput.Focus()
 		}
-	case "up", "k":
-		m.langCur = max(m.langCur-1, 0)
-	case "down", "j":
-		m.langCur = min(m.langCur+1, len(m.langs)-1)
-	case "enter":
-		m.scr, m.chapCur = scrChapters, 0
 	case "q":
 		return m, tea.Quit
 	}
@@ -541,7 +560,11 @@ func (m *model) viewMenu() string {
 				status = fmt.Sprintf("▸ 第 %s 關進行中 (%d/%d)", chapterLabel(chs[idx]), run.done(), len(run.IDs))
 			}
 		}
-		fmt.Fprintf(&s, "  %s%s %s  %3d/%-3d %s\n", cursor(i == m.langCur), pad(l.Name, 12), bar(done, len(chs)), done, len(chs), status)
+		row := fmt.Sprintf("%s %s  %3d/%-3d %s", pad(l.Name, 12), bar(done, len(chs)), done, len(chs), status)
+		if m.missing[l.ID] {
+			row = helpStyle.Render(fmt.Sprintf("%s %s  %3d/%-3d ✗ 缺少 %s", pad(l.Name, 12), bar(done, len(chs)), done, len(chs), l.Tool))
+		}
+		fmt.Fprintf(&s, "  %s%s\n", cursor(i == m.langCur), row)
 	}
 	if m.resetting {
 		l := m.lang()

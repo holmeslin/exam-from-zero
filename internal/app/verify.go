@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 )
@@ -31,6 +32,10 @@ func Verify(ctx context.Context, fsys fs.FS, only string, w io.Writer) error {
 	seen := map[string]bool{}
 	for _, l := range langs {
 		if only != "" && l.ID != only {
+			continue
+		}
+		if _, err := exec.LookPath(l.Tool); err != nil && len(b.Chapters[l.ID]) > 0 {
+			report(l.ID, "缺少 %s，無法驗證", l.Tool)
 			continue
 		}
 		for _, c := range b.Chapters[l.ID] {

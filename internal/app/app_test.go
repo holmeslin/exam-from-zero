@@ -433,3 +433,18 @@ func TestEditorKeyOpensStarterFileInEditor(t *testing.T) {
 	e.key(tea.KeyEnter)
 	e.waitFor("✓ 通過")
 }
+
+func TestMissingToolchainIsGreyedAndSkipped(t *testing.T) {
+	bin := t.TempDir() // PATH with a fake go but no cargo
+	if err := os.WriteFile(filepath.Join(bin, "go"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/reset")
+	e := start(t, cfg)
+	e.waitFor("Rust", "✗ 缺少 cargo")
+	e.key(tea.KeyDown) // must not land on Rust
+	e.key(tea.KeyEnter)
+	e.waitFor("Go   0/1 過關")
+}
