@@ -509,6 +509,21 @@ func TestNodeLang_InstallsOnFirstEntryThenGrades(t *testing.T) {
 	e.waitFor("✓ 通過")
 }
 
+func TestNodeLang_TypeErrorIsCompileError(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/node")
+	e := start(t, cfg)
+	e.waitFor("TypeScript")
+	e.key(tea.KeyEnter)
+	e.waitFor("第一步")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 add")
+	// runs fine once types are stripped, so only the type check can catch it
+	e.writeAnswer("typescript", "ts-add", "add.ts", "export function add(a: number, b: number): number { return `${a + b}` as any as string }\n")
+	e.key(tea.KeyEnter)
+	e.waitFor("✗ 編譯錯誤", "TS2322")
+}
+
 func TestNodeLang_ReinstallsWhenBankWorkspaceChanges(t *testing.T) {
 	bank := t.TempDir() // typescript only, so the ⚙ marker can only be its own
 	if err := os.CopyFS(filepath.Join(bank, "typescript"), os.DirFS("testdata/node/typescript")); err != nil {

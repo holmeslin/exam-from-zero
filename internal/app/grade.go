@@ -54,14 +54,18 @@ type runner struct {
 	slowFirstBuild bool
 }
 
-func nodeRunner() runner {
+// nodeRunner type-checks with checker (tsc, or vue-tsc for .vue files) before running.
+func nodeRunner(checker string) runner {
 	return runner{
-		test: []string{"npx", "--no-install", "vitest", "run", "--dir", "{dir}"},
+		build: []string{"npx", "--no-install", checker, "-p", "{dir}/tsconfig.json"},
+		test:  []string{"npx", "--no-install", "vitest", "run", "--dir", "{dir}"},
 		// type stripping is on by default only from Node 22.18, but vitest accepts 22.12
 		run:     []string{"node", "--experimental-strip-types", "{dir}/main.ts"},
 		timeout: 10 * time.Second, // a warm vitest+jsdom run measured under 1s
 		inRoot:  true,
 		setup:   []string{"npm", "install", "--no-audit", "--no-fund"},
+		// hidden tests are left out: they may reach into the code in ways the learner's types don't promise
+		scaffold: map[string]string{"tsconfig.json": `{"extends": "../tsconfig.base.json", "include": ["**/*"], "exclude": ["**/*.test.ts", "**/*.test.tsx"]}` + "\n"},
 	}
 }
 
@@ -84,9 +88,9 @@ var runners = map[string]runner{
 			return []string{"CARGO_TARGET_DIR=" + filepath.Join(filepath.Dir(dir), ".target")}
 		},
 	},
-	"typescript": nodeRunner(),
-	"vue":        nodeRunner(),
-	"react":      nodeRunner(),
+	"typescript": nodeRunner("tsc"),
+	"vue":        nodeRunner("vue-tsc"),
+	"react":      nodeRunner("tsc"),
 }
 
 const setupTimeout = 10 * time.Minute
@@ -207,6 +211,10 @@ func materialize(b *Bank, lang string, q *Question, part, dir string) error {
 	if _, err := copyTree(b.FS, b.questionDir(lang, q.ID, part), dir); err != nil {
 		return err
 	}
+	return writeScaffold(lang, dir)
+}
+
+func writeScaffold(lang, dir string) error {
 	for name, body := range runners[lang].scaffold {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
 			return err
@@ -248,6 +256,10 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 	if _, err := copyTree(os.DirFS(dir), ".", work); err != nil {
 		return Result{}, err
 	}
+	// workspaces made before a scaffold file existed don't have it
+	if err := writeScaffold(lang, work); err != nil {
+		return Result{}, err
+	}
 	if q.Check != "stdout" {
 		if _, err := copyTree(b.FS, b.questionDir(lang, q.ID, "test"), work); err != nil {
 			return Result{}, err
@@ -263,7 +275,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		r.build, r.test, r.run = inDir(r.build, work), inDir(r.test, work), inDir(r.run, work)
 		cwd = filepath.Dir(work)
 	}
-	if r.build != nil {
+	if r.build != nil && !q.js {
 		res, _, err := execIn(ctx, cwd, r.timeout, env, r.build, "", nil)
 		if res.Kind != KindPass || err != nil {
 			if res.Kind == KindTest {

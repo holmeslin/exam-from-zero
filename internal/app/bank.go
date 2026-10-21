@@ -34,6 +34,7 @@ type Chapter struct {
 		SHA  string `yaml:"sha"`
 	} `yaml:"source"`
 	Sample    int        `yaml:"sample"`
+	JS        bool       `yaml:"js"` // teaches plain JavaScript: its .ts files skip the type check
 	Questions []Question `yaml:"questions"`
 }
 
@@ -50,6 +51,7 @@ type Question struct {
 	Answers        []string `yaml:"answers"` // regexes for short questions
 	Hints          []string `yaml:"hints"`
 	Ref            string   `yaml:"ref"`
+	js             bool     // from its Chapter
 }
 
 // UnmarshalYAML starts Answer at -1 so a missing or null answer fails the range check instead of meaning the first choice.
@@ -93,6 +95,7 @@ func LoadBank(fsys fs.FS) (*Bank, error) {
 		}
 		b.Chapters[lang] = append(b.Chapters[lang], c)
 		for i := range c.Questions {
+			c.Questions[i].js = c.JS
 			b.byID[c.Questions[i].ID] = &c.Questions[i]
 		}
 	}
