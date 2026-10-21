@@ -124,7 +124,7 @@ questions:
       - "`<li v-html=\"message.text\" />`"
       - "`<li>{{ message.text }}</li>`"
       - "`<li :title=\"message.text\">留言</li>`"
-      - "以上都不會，Vue 一律會跳脫 HTML"
+      - "另外三種寫法都不會，Vue 一律會跳脫 HTML"
     answer: 0
     hints: ["`{{ }}` 一律把內容當成文字，會把 `<`、`>` 跳脫", "哪個指令是「把字串當成 HTML 放進頁面」？"]
     ref: chapter14/06_validation_and_security.md

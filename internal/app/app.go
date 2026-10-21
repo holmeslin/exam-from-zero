@@ -43,6 +43,7 @@ type model struct {
 	cfg   Config
 	bank  *Bank
 	rng   *rand.Rand
+	shuf  *rand.Rand // choice order; separate so it does not shift sampling
 	prog  map[string]*LangProgress
 	flags []Flag
 
@@ -72,6 +73,7 @@ type model struct {
 	confirmQuit bool
 	confirmFlag bool
 	choiceCur   int
+	choiceOrder []int          // display position -> index into q.Choices
 	editor      textarea.Model // inline editor for the question's main file
 	editFile    string         // file the inline editor shows; "" when the question has none
 	editSaved   string         // editor content last loaded from / written to editFile
@@ -115,6 +117,7 @@ func New(cfg Config) (tea.Model, error) {
 		cfg:   cfg,
 		bank:  b,
 		rng:   rand.New(rand.NewPCG(cfg.Seed, cfg.Seed)),
+		shuf:  rand.New(rand.NewPCG(cfg.Seed, ^cfg.Seed)),
 		prog:  prog,
 		flags: flags,
 		out:   viewport.New(0, 0),
@@ -422,6 +425,7 @@ func (m *model) loadQuestion() {
 	m.result, m.err, m.choiceCur, m.hintLevel, m.showRef = nil, nil, 0, 0, false
 	m.input.Reset()
 	m.input.Focus()
+	m.choiceOrder = m.shuf.Perm(len(m.q.Choices)) // the bank tends to list the answer first
 	if m.run.Cleared {
 		m.result = &Result{Kind: KindPass}
 	}
@@ -557,7 +561,11 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.q.Type != "code" {
-			res := gradeAnswer(m.q, m.choiceCur, m.input.Value())
+			choice := -1 // short questions have no choices
+			if m.q.Type == "choice" {
+				choice = m.choiceOrder[m.choiceCur]
+			}
+			res := gradeAnswer(m.q, choice, m.input.Value())
 			m.result, m.err = &res, nil
 			m.record(res)
 			m.setOutput("")
@@ -788,7 +796,8 @@ func (m *model) viewQuestion() string {
 		body += "\n\n📁 " + tildePath(m.wsDir)
 	case "choice":
 		body += "\n"
-		for i, c := range m.q.Choices {
+		for i, ci := range m.choiceOrder {
+			c := m.q.Choices[ci]
 			mark := "( )"
 			if i == m.choiceCur {
 				mark = "(•)"

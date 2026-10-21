@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -89,13 +90,13 @@ func TestGoCodeQuestion_PassAndFail(t *testing.T) {
 	}
 }
 
-func enterFirstQuestion(e *env, want ...string) {
+func enterFirstQuestion(e *env, want ...string) string {
 	e.t.Helper()
 	e.waitFor("選擇今天要測驗的語言")
 	e.key(tea.KeyEnter)
 	e.waitFor("1")
 	e.key(tea.KeyEnter)
-	e.waitFor(want...)
+	return e.waitFor(want...)
 }
 
 func TestStdoutQuestion_MismatchThenPass(t *testing.T) {
@@ -210,11 +211,21 @@ func TestChoiceAndShortQuestions(t *testing.T) {
 	cfg := newConfig(t)
 	cfg.Bank = os.DirFS("testdata/quiz")
 	e := start(t, cfg)
-	enterFirstQuestion(e, "哪個 receiver 能修改原本的 struct", "func (r *T) M()") // inline markdown is rendered, not shown raw
+	screen := enterFirstQuestion(e, "哪個 receiver 能修改原本的 struct", "兩者皆可") // inline markdown is rendered, not shown raw
 
-	e.key(tea.KeyEnter) // first option is wrong
+	right := slices.Index(choiceOrder(screen, quizChoices...), "func (r *T) M()")
+	wrong := (right + 1) % len(quizChoices)
+	for range wrong {
+		e.key(tea.KeyDown)
+	}
+	e.key(tea.KeyEnter)
 	e.waitFor("✗ 答錯")
-	e.key(tea.KeyDown)
+	for range wrong {
+		e.key(tea.KeyUp)
+	}
+	for range right {
+		e.key(tea.KeyDown)
+	}
 	e.key(tea.KeyEnter)
 	e.waitFor("✓ 通過")
 	e.key(tea.KeyEnter)
@@ -227,6 +238,28 @@ func TestChoiceAndShortQuestions(t *testing.T) {
 	e.tm.Type("  Pointer   to T ") // normalized: trimmed, lower-cased, spaces collapsed
 	e.key(tea.KeyEnter)
 	e.waitFor("✓ 通過")
+}
+
+var quizChoices = []string{"func (r T) M()", "func (r *T) M()", "兩者皆可"}
+
+// choiceOrder returns choices in the order the screen lists them.
+func choiceOrder(screen string, choices ...string) []string {
+	order := slices.Clone(choices)
+	slices.SortFunc(order, func(a, b string) int { return strings.Index(screen, a) - strings.Index(screen, b) })
+	return order
+}
+
+func TestChoices_AreShuffled(t *testing.T) {
+	for seed := range uint64(8) {
+		cfg := newConfig(t)
+		cfg.Bank, cfg.Seed = os.DirFS("testdata/quiz"), seed
+		e := start(t, cfg)
+		screen := enterFirstQuestion(e, "兩者皆可")
+		if !slices.Equal(choiceOrder(screen, quizChoices...), quizChoices) {
+			return
+		}
+	}
+	t.Fatal("choices were listed in bank order for every seed")
 }
 
 func TestProgress_ResumesAfterRestart(t *testing.T) {

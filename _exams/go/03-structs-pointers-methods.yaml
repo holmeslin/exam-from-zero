@@ -156,7 +156,7 @@ questions:
           }
 
       哪一個 struct literal 可以編譯通過？
-    choices: ["Dog{Animal: Animal{Legs: 4}, Name: \"Lucky\"}", "Dog{Animal.Name: \"Lucky\"}", "Dog{Name: \"Lucky\", Breed: \"柴犬\"}", "以上都不行，嵌入的欄位一定要寫成 Animal: Animal{...}"]
+    choices: ["Dog{Animal: Animal{Legs: 4}, Name: \"Lucky\"}", "Dog{Animal.Name: \"Lucky\"}", "Dog{Name: \"Lucky\", Breed: \"柴犬\"}", "另外三種寫法都不行，嵌入的欄位一定要寫成 Animal: Animal{...}"]
     answer: 2
     hints: ["Go 1.27 起，literal 裡可以直接寫提升上來的欄位名稱", "不能同時寫 Animal: 和 Name:，key 也不能寫成 Animal.Name 這種路徑"]
     ref: chapter3/14_nested_field_literal.md
