@@ -1,0 +1,14 @@
+lang: go
+chapter: 1
+title: 輸出
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: go-stdout
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: 印出 hello
+    expected_stdout: "hello\n"
+    hints: ["fmt.Println", "fmt.Println(\"hello\")"]
+    ref: chapter1/01.md

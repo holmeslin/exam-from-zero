@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -41,6 +42,7 @@ type model struct {
 	result  *Result
 	err     error
 	width   int
+	out     viewport.Model // scrollable grading output
 }
 
 type gradedMsg struct {
@@ -53,7 +55,7 @@ func New(cfg Config) (tea.Model, error) {
 	if err != nil {
 		return nil, err
 	}
-	m := &model{cfg: cfg, bank: b}
+	m := &model{cfg: cfg, bank: b, out: viewport.New(0, 0)}
 	for _, l := range langs {
 		if len(b.Chapters[l.ID]) > 0 {
 			m.langs = append(m.langs, l)
@@ -72,6 +74,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case gradedMsg:
 		m.grading = false
 		m.result, m.err = &msg.res, msg.err
+		m.setOutput(resultBody(msg.res))
 		return m, nil
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -125,6 +128,10 @@ func (m *model) updateChapters(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
+	case "pgup", "pgdown":
+		var cmd tea.Cmd
+		m.out, cmd = m.out.Update(msg)
+		return m, cmd
 	case "enter":
 		if m.grading {
 			return m, nil
@@ -229,9 +236,42 @@ func tildePath(p string) string {
 	return p
 }
 
+var resultTitles = map[string]string{
+	KindTest:    "✗ 測試失敗",
+	KindCompile: "✗ 編譯錯誤",
+	KindStdout:  "✗ 輸出不符",
+	KindTimeout: "⏱ 逾時",
+	KindWrong:   "✗ 答錯",
+}
+
 func (m *model) viewResult(r Result) string {
 	if r.Pass() {
 		return okStyle.Render("  ✓ 通過") + "\n"
 	}
-	return badStyle.Render("  ✗ 測試失敗") + "\n" + m.box(strings.TrimRight(r.Output, "\n")) + "\n"
+	s := badStyle.Render("  "+resultTitles[r.Kind]) + "\n"
+	if m.out.TotalLineCount() > 0 && resultBody(r) != "" {
+		s += m.box(m.out.View()) + "\n"
+		if !m.out.AtTop() || !m.out.AtBottom() {
+			s += helpStyle.Render("  pgup/pgdn 捲動輸出") + "\n"
+		}
+	}
+	return s
+}
+
+func resultBody(r Result) string {
+	if r.Kind == KindStdout {
+		return "預期：\n" + r.Expected + "\n實際：\n" + r.Output
+	}
+	return strings.TrimRight(r.Output, "\n")
+}
+
+const maxOutputLines = 15
+
+// setOutput loads grading output into the viewport, capped so long compiler errors scroll instead of overflowing.
+func (m *model) setOutput(body string) {
+	lines := strings.Count(body, "\n") + 1
+	m.out.Width = max(m.width-6, 20)
+	m.out.Height = min(lines, maxOutputLines)
+	m.out.SetContent(body)
+	m.out.GotoTop()
 }

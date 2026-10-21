@@ -84,3 +84,42 @@ func TestGoCodeQuestion_PassAndFail(t *testing.T) {
 		t.Fatalf("hidden test left in workspace: %v", err)
 	}
 }
+
+func enterFirstQuestion(e *env, want ...string) {
+	e.t.Helper()
+	e.waitFor("選擇今天要測驗的語言")
+	e.key(tea.KeyEnter)
+	e.waitFor("1")
+	e.key(tea.KeyEnter)
+	e.waitFor(want...)
+}
+
+func TestStdoutQuestion_MismatchThenPass(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/stdout")
+	e := start(t, cfg)
+	enterFirstQuestion(e, "印出 hello")
+	e.key(tea.KeyEnter)
+	e.waitFor("執行中")
+	e.waitFor("✗ 輸出不符", "預期", "hello", "實際", "bye")
+	e.writeAnswer("go", "go-stdout", "main.go", "package main\n\nimport \"fmt\"\n\nfunc main() { fmt.Println(\"hello\") }\n")
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+}
+
+func TestCompileError(t *testing.T) {
+	e := start(t, newConfig(t))
+	enterFirstQuestion(e, "實作 Add")
+	e.writeAnswer("go", "go-ch01-q01", "main.go", "package main\n\nfunc Add(a, b int) int { return a + }\n")
+	e.key(tea.KeyEnter)
+	e.waitFor("✗ 編譯錯誤", "syntax error")
+}
+
+func TestInfiniteLoopTimesOut(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/timeout")
+	e := start(t, cfg)
+	enterFirstQuestion(e, "印出 done")
+	e.key(tea.KeyEnter)
+	e.waitFor("⏱ 逾時")
+}
