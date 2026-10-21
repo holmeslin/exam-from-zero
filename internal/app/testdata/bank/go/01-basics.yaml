@@ -1,0 +1,14 @@
+lang: go
+chapter: 1
+title: 基礎
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter1, sha: fixture }
+sample: 1
+questions:
+  - id: go-ch01-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 Add(a, b int) int，回傳兩數之和。
+    hints: ["用 + 運算子", "return a + b"]
+    ref: chapter1/05_func.md
