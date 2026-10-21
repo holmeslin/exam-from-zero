@@ -724,9 +724,17 @@ var (
 )
 
 // md renders the inline markdown bank text uses: `code` and **bold**.
+// Indented code lines and lines with a double-backtick span stay as written, since their backticks are code.
 func md(s string) string {
-	s = codeSpan.ReplaceAllStringFunc(s, func(m string) string { return codeStyle.Render(m[1 : len(m)-1]) })
-	return boldSpan.ReplaceAllStringFunc(s, func(m string) string { return boldStyle.Render(m[2 : len(m)-2]) })
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		if strings.HasPrefix(l, "    ") || strings.HasPrefix(l, "\t") || strings.Contains(l, "``") {
+			continue
+		}
+		l = codeSpan.ReplaceAllStringFunc(l, func(m string) string { return codeStyle.Render(m[1 : len(m)-1]) })
+		lines[i] = boldSpan.ReplaceAllStringFunc(l, func(m string) string { return boldStyle.Render(m[2 : len(m)-2]) })
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (m *model) View() string {
@@ -1022,7 +1030,7 @@ func (m *model) titledBox(title, content string) string {
 func (m *model) refAnswer() string {
 	switch m.q.Type {
 	case "choice":
-		return "正確答案：" + m.q.Choices[m.q.Answer]
+		return "正確答案：" + md(m.q.Choices[m.q.Answer])
 	case "short":
 		return "可接受答案（regex）：\n" + strings.Join(m.q.Answers, "\n")
 	}

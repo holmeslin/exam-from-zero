@@ -214,6 +214,9 @@ func TestChoiceAndShortQuestions(t *testing.T) {
 	cfg.Bank = os.DirFS("testdata/quiz")
 	e := start(t, cfg)
 	screen := enterFirstQuestion(e, "哪個 receiver 能修改原本的 struct", "兩者皆可") // inline markdown is rendered, not shown raw
+	if !strings.Contains(screen, "type T struct { N int `json:\"n\"` }") {
+		t.Errorf("an indented code line must keep its backticks:\n%s", screen)
+	}
 
 	right := slices.Index(choiceOrder(screen, quizChoices...), "func (r *T) M()")
 	wrong := (right + 1) % len(quizChoices)
@@ -230,6 +233,8 @@ func TestChoiceAndShortQuestions(t *testing.T) {
 	}
 	e.key(tea.KeyEnter)
 	e.waitFor("✓ 通過")
+	e.press("r")
+	e.waitFor("正確答案：func (r *T) M()")
 	e.key(tea.KeyEnter)
 	e.waitFor("指標型別怎麼寫", "答案：")
 
@@ -516,6 +521,14 @@ func TestNodeLang_ReinstallsWhenBankWorkspaceChanges(t *testing.T) {
 	e.key(tea.KeyEnter)
 	e.waitFor("安裝 TypeScript 依賴中")
 	e.waitFor("第一步") // chapter list after npm install
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+
+	e = start(t, cfg) // same bank: no reinstall
+	if screen := e.waitFor("TypeScript", "選擇今天要測驗的語言"); strings.Contains(screen, "⚙") {
+		t.Fatalf("an unchanged workspace asked to reinstall:\n%s", screen)
+	}
 	if err := e.tm.Quit(); err != nil {
 		t.Fatal(err)
 	}
