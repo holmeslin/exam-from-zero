@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -646,8 +647,12 @@ func TestInlineEditor_MissingMainFileShowsError(t *testing.T) {
 }
 
 func TestNodeLang_InstallShowsLiveOutput(t *testing.T) {
-	bin := t.TempDir() // a fake npm that prints in steps
-	script := "#!/bin/sh\ni=1\nwhile [ $i -le 30 ]; do printf 'line %02d\\n' $i; i=$((i+1)); done\nsleep 1\necho 'line 31'\nsleep 1\n"
+	bin := t.TempDir() // a fake npm that prints CRLF lines in two steps; the first 30 in one write, so none is drawn as the last line
+	var lines strings.Builder
+	for i := 1; i <= 30; i++ {
+		fmt.Fprintf(&lines, "line %02d\\r\\n", i)
+	}
+	script := "#!/bin/sh\nprintf '" + lines.String() + "'\nsleep 1\nprintf 'line 31\\r\\n'\nsleep 1\n"
 	if err := os.WriteFile(filepath.Join(bin, "npm"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -657,7 +662,7 @@ func TestNodeLang_InstallShowsLiveOutput(t *testing.T) {
 	e := start(t, cfg)
 	e.waitFor("TypeScript")
 	e.key(tea.KeyEnter)
-	e.waitFor("安裝 TypeScript 依賴中", "line 30", "秒")
+	e.waitFor("安裝 TypeScript 依賴中", "line 29", "秒")
 	if out := e.waitFor("line 31"); strings.Contains(out, "line 05") {
 		t.Fatalf("the install view should keep only the last lines:\n%s", out)
 	}

@@ -968,6 +968,7 @@ func (m *model) viewSetup() string {
 			lines = lines[max(len(lines)-liveSetupLines, 0):]
 			clip := helpStyle.MaxWidth(max(m.width-8, 20)) // inside the box; a long line must not wrap and push the view
 			for i, l := range lines {
+				l = strings.TrimSuffix(l, "\r")                          // a CRLF line end, not a redraw
 				lines[i] = clip.Render(l[strings.LastIndex(l, "\r")+1:]) // keep what a progress line last drew
 			}
 			body += "\n\n" + strings.Join(lines, "\n")
