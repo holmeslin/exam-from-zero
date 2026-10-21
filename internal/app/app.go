@@ -9,7 +9,9 @@ import (
 	"math/rand/v2"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -40,11 +42,12 @@ const (
 )
 
 type model struct {
-	cfg   Config
-	bank  *Bank
-	rng   *rand.Rand
-	prog  map[string]*LangProgress
-	flags []Flag
+	cfg       Config
+	bank      *Bank
+	rng       *rand.Rand
+	choiceRng *rand.Rand // choice order; separate so it does not shift sampling
+	prog      map[string]*LangProgress
+	flags     []Flag
 
 	scr     screen
 	langs   []Lang          // langs present in the bank
@@ -72,6 +75,7 @@ type model struct {
 	confirmQuit bool
 	confirmFlag bool
 	choiceCur   int
+	choiceOrder []int          // display position -> index into q.Choices
 	editor      textarea.Model // inline editor for the question's main file
 	editFile    string         // file the inline editor shows; "" when the question has none
 	editSaved   string         // editor content last loaded from / written to editFile
@@ -117,12 +121,13 @@ func New(cfg Config) (tea.Model, error) {
 		return nil, err
 	}
 	m := &model{
-		cfg:   cfg,
-		bank:  b,
-		rng:   rand.New(rand.NewPCG(cfg.Seed, cfg.Seed)),
-		prog:  prog,
-		flags: flags,
-		out:   viewport.New(0, 0),
+		cfg:       cfg,
+		bank:      b,
+		rng:       rand.New(rand.NewPCG(cfg.Seed, cfg.Seed)),
+		choiceRng: rand.New(rand.NewPCG(cfg.Seed, ^cfg.Seed)),
+		prog:      prog,
+		flags:     flags,
+		out:       viewport.New(0, 0),
 	}
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.input = textinput.New()
@@ -267,20 +272,9 @@ func (m *model) allPassed(lang string) bool {
 	return lp != nil && !slices.ContainsFunc(m.bank.Chapters[lang], func(c *Chapter) bool { return !slices.Contains(lp.Passed, c.Key) })
 }
 
-// archiveDir is where a reset moves the old workspace; it never overwrites an earlier archive.
+// archiveDir is where a reset moves the old workspace.
 func (m *model) archiveDir(lang string) (string, error) {
-	base := filepath.Join(m.cfg.DataDir, "workspace", lang+".bak-"+time.Now().Format("2006-01-02"))
-	p := base
-	for i := 2; ; i++ {
-		_, err := os.Stat(p)
-		if errors.Is(err, fs.ErrNotExist) {
-			return p, nil
-		}
-		if err != nil { // e.g. permission denied: every candidate would fail the same way
-			return "", err
-		}
-		p = fmt.Sprintf("%s-%d", base, i)
-	}
+	return archivePath(filepath.Join(m.cfg.DataDir, "workspace", lang))
 }
 
 func (m *model) reset() {
@@ -329,7 +323,7 @@ func (m *model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		switch {
 		case m.missing[m.lang().ID]:
-		case !langReady(m.lang().ID, m.langRoot()):
+		case !langReady(m.bank, m.lang().ID, m.langRoot()):
 			m.scr = scrSetup
 			return m, m.startSetup()
 		default:
@@ -366,12 +360,14 @@ func (m *model) updateChapters(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // enterChapter resumes the chapter's unfinished run, or samples a new one.
 func (m *model) enterChapter() {
 	c, lp := m.chapter(), m.lp()
-	// a saved run may name questions the bank has since dropped; resample instead of crashing
-	if r := lp.Runs[c.Key]; r != nil && slices.ContainsFunc(r.IDs, func(id string) bool { return m.bank.byID[id] == nil }) {
+	// a bank release may have changed the chapter (sample size, or what a question id asks); resample
+	stamp := treeStamp(m.bank.FS, path.Join(c.Lang, c.Key+".yaml"))
+	if r := lp.Runs[c.Key]; r != nil && r.Chapter != stamp {
 		delete(lp.Runs, c.Key)
 	}
 	if lp.Runs[c.Key] == nil {
 		lp.Runs[c.Key] = newRun(c, m.rng, m.flagged)
+		lp.Runs[c.Key].Chapter = stamp
 	}
 	m.run, lp.Last = lp.Runs[c.Key], c.Key
 	if len(m.run.IDs) == 0 { // every question in the chapter was flagged: nothing to answer, so it must not block progress
@@ -453,6 +449,7 @@ func (m *model) loadQuestion() {
 	m.result, m.err, m.choiceCur, m.hintLevel, m.showRef = nil, nil, 0, 0, false
 	m.input.Reset()
 	m.input.Focus()
+	m.choiceOrder = m.choiceRng.Perm(len(m.q.Choices)) // the bank tends to list the answer first
 	if m.run.Cleared {
 		m.result = &Result{Kind: KindPass}
 	}
@@ -468,7 +465,7 @@ func (m *model) loadQuestion() {
 func (m *model) loadEditor() {
 	raw, err := os.ReadFile(m.editFile)
 	if err != nil {
-		m.editFile = ""
+		m.editFile, m.err = "", err // say why the editor is missing instead of silently hiding it
 		return
 	}
 	m.editor.SetValue(string(raw))
@@ -608,7 +605,11 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.q.Type != "code" {
-			res := gradeAnswer(m.q, m.choiceCur, m.input.Value())
+			choice := -1 // short questions have no choices
+			if m.q.Type == "choice" {
+				choice = m.choiceOrder[m.choiceCur]
+			}
+			res := gradeAnswer(m.q, choice, m.input.Value())
 			m.result, m.err = &res, nil
 			m.record(res)
 			m.setOutput("")
@@ -707,7 +708,26 @@ var (
 	helpStyle  = lipgloss.NewStyle().Faint(true)
 	okStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true)
 	badStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true)
+	codeStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	boldStyle  = lipgloss.NewStyle().Bold(true)
+
+	codeSpan = regexp.MustCompile("`([^`\n]+)`")
+	boldSpan = regexp.MustCompile(`\*\*([^*\n]+)\*\*`)
 )
+
+// md renders the inline markdown bank text uses: `code` and **bold**.
+// Indented code lines and lines with a double-backtick span stay as written, since their backticks are code.
+func md(s string) string {
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		if strings.HasPrefix(l, "    ") || strings.HasPrefix(l, "\t") || strings.Contains(l, "``") {
+			continue
+		}
+		l = codeSpan.ReplaceAllStringFunc(l, func(m string) string { return codeStyle.Render(m[1 : len(m)-1]) })
+		lines[i] = boldSpan.ReplaceAllStringFunc(l, func(m string) string { return boldStyle.Render(m[2 : len(m)-2]) })
+	}
+	return strings.Join(lines, "\n")
+}
 
 func (m *model) View() string {
 	s := m.screen()
@@ -753,7 +773,7 @@ func (m *model) viewMenu() string {
 	for i, l := range m.langs {
 		chs, lp := m.bank.Chapters[l.ID], m.prog[l.ID]
 		done, status := 0, ""
-		if !langReady(l.ID, filepath.Join(m.cfg.DataDir, "workspace", l.ID)) {
+		if !langReady(m.bank, l.ID, filepath.Join(m.cfg.DataDir, "workspace", l.ID)) {
 			status = "⚙ 首次進入將安裝依賴"
 		}
 		if m.allPassed(l.ID) {
@@ -837,18 +857,19 @@ func (m *model) viewQuestion() string {
 	var s strings.Builder
 	s.WriteString(helpStyle.Render(fmt.Sprintf("%s › %s %s", m.lang().Name, chapterLabel(c), c.Title)) +
 		"   " + pos + " " + stars(m.q.Difficulty) + "\n")
-	body := strings.TrimRight(m.q.Prompt, "\n")
+	body := md(strings.TrimRight(m.q.Prompt, "\n"))
 	switch m.q.Type {
 	case "code":
 		body += "\n\n📁 " + tildePath(m.wsDir)
 	case "choice":
 		body += "\n"
-		for i, c := range m.q.Choices {
+		for i, ci := range m.choiceOrder {
+			c := m.q.Choices[ci]
 			mark := "( )"
 			if i == m.choiceCur {
 				mark = "(•)"
 			}
-			body += fmt.Sprintf("\n%s%s %s", cursor(i == m.choiceCur), mark, c)
+			body += fmt.Sprintf("\n%s%s %s", cursor(i == m.choiceCur), mark, md(c))
 		}
 	case "short":
 		body += "\n\n" + m.input.View()
@@ -871,7 +892,7 @@ func (m *model) viewQuestion() string {
 	}
 	if m.hintLevel > 0 {
 		s.WriteString(m.titledBox(fmt.Sprintf("💡 提示 %d/%d", m.hintLevel, len(m.q.Hints)),
-			strings.Join(m.q.Hints[:m.hintLevel], "\n")+"\n📖 "+m.q.Ref) + "\n")
+			md(strings.Join(m.q.Hints[:m.hintLevel], "\n"))+"\n📖 "+m.q.Ref) + "\n")
 	}
 	if m.showRef {
 		s.WriteString(m.titledBox("參考答案", m.refAnswer()) + "\n")
@@ -1001,7 +1022,7 @@ func (m *model) titledBox(title, content string) string {
 func (m *model) refAnswer() string {
 	switch m.q.Type {
 	case "choice":
-		return "正確答案：" + m.q.Choices[m.q.Answer]
+		return "正確答案：" + md(m.q.Choices[m.q.Answer])
 	case "short":
 		return "可接受答案（regex）：\n" + strings.Join(m.q.Answers, "\n")
 	}

@@ -1,7 +1,5 @@
 package main
 
-func Grade(score int) string {
-	return ""
+func main() {
+	// TODO: 在這裡寫你的程式
 }
-
-func main() {}

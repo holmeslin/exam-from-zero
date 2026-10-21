@@ -1,28 +1,394 @@
-# 格式樣本（#14）：#16 產生題庫時會補齊這一章
 lang: rust
-chapter: 1
+chapter: "1"
 title: 基礎
 source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter1, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
-sample: 2
+sample: 9
 questions:
+  # 由 EXERCISES.md 第 1 章第 3 集「題 1」轉換
   - id: rust-ch01-q01
     difficulty: 1
     type: code
-    check: test
+    check: stdout
     prompt: |
-      實作 is_adult(age: u32) -> bool：18 歲以上（含）回傳 true，否則回傳 false。
-    hints: ["用比較運算子 >=", "age >= 18"]
-    ref: chapter1/07_comparison_operators.md
-  # 由 EXERCISES.md 第 1 章第 20 集「題 2」轉換；執行範例中使用者輸入的那一行改放進 stdin
+      建立一個叫 `name` 的變數，值是 "小明"，然後用 `println!` 和 `{}` 印出 `Hello, 小明!`。
+    expected_stdout: "Hello, 小明!\n"
+    hints: ["用 `let` 建立文字變數，`println!` 裡的 `{}` 會被後面的值取代", "let name = \"小明\"; 然後 println!(\"Hello, {}!\", name);"]
+    ref: chapter1/03_variables_and_output.md
+  # 由 EXERCISES.md 第 1 章第 4 集「題 1」轉換
   - id: rust-ch01-q02
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      起始程式現在會印出兩行。請用 `//` 註解掉其中一行（不要刪掉），讓程式只印出 `Hello, Rust!`。
+
+          fn main() {
+              println!("Hello, world!");
+              println!("Hello, Rust!");
+          }
+    expected_stdout: "Hello, Rust!\n"
+    hints: ["`//` 後面的內容會被忽略，不會執行", "在 println!(\"Hello, world!\"); 那一行最前面加上 //"]
+    ref: chapter1/04_comments.md
+  # 由 EXERCISES.md 第 1 章第 5 集「題 1」轉換
+  - id: rust-ch01-q03
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      建立兩個變數 `total = 17` 和 `group = 5`，用這兩個變數（不要把數字寫死在字串裡）印出下面兩行：
+
+          17 / 5 = 3
+          17 % 5 = 2
+    expected_stdout: "17 / 5 = 3\n17 % 5 = 2\n"
+    hints: ["整數除法會捨去小數，`%` 取得餘數；一個 `println!` 可以放多個 `{}`，依序對應後面的值", "println!(\"{} / {} = {}\", total, group, total / group); 第二行把 / 換成 %"]
+    ref: chapter1/05_arithmetic_operators.md
+  - id: rust-ch01-q04
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這段程式會印出什麼？
+
+          fn main() {
+              println!("{}", (1 + 2) * 3 + 4 * 2);
+          }
+    choices: ["17", "26", "15", "42"]
+    answer: 0
+    hints: ["Rust 跟數學一樣：括號優先，再來先乘除、後加減", "括號先算：1 + 2 = 3；接著乘法 3 * 3 = 9、4 * 2 = 8；最後相加"]
+    ref: chapter1/06_operator_precedence.md
+  - id: rust-ch01-q05
+    difficulty: 1
+    type: short
+    prompt: |
+      下面這段程式會印出什麼？請直接輸入印出的內容。
+
+          fn main() {
+              println!("{}", 7 != 7);
+          }
+    answers: ["^false$"]
+    hints: ["比較運算子的結果只會是 `true` 或 `false`", "`!=` 是「不等於」，7 不等於 7 嗎？"]
+    ref: chapter1/07_comparison_operators.md
+  # 由 EXERCISES.md 第 1 章第 8 集「題 1」轉換
+  - id: rust-ch01-q06
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      建立一個變數 `score = 85`。如果 `score >= 60`，就印出 `及格`。（這題只用 `if`，不需要 `else`）
+    expected_stdout: "及格\n"
+    hints: ["條件成立時要做的事放進 `if` 後面的 `{}` 裡，條件不用加小括號", "if score >= 60 { println!(\"及格\"); }"]
+    ref: chapter1/08_if.md
+  # 由 EXERCISES.md 第 1 章第 9 集「題 1」轉換
+  - id: rust-ch01-q07
     difficulty: 2
     type: code
     check: stdout
     prompt: |
-      寫一個 FizzBuzz 程式，請使用 for。讓使用者輸入一個正整數 n，從 1 印到 n：
-      同時是 3 和 5 的倍數印 FizzBuzz；只是 3 的倍數印 Fizz；只是 5 的倍數印 Buzz；其他照原樣印出。
+      起始程式**目前無法編譯**，因為 `message` 在大括號外面用不到。請只移動 `let message = "Hello";` 這一行，讓程式可以編譯並印出 `Hello`。（不要把 `println!` 移進內層）
+
+          fn main() {
+              {
+                  let message = "Hello";
+              }
+
+              println!("{}", message);
+          }
+    expected_stdout: "Hello\n"
+    hints: ["在 `{}` 裡建立的變數，出了那對 `{}` 就看不到了", "把 let message = \"Hello\"; 移到內層大括號外面、跟 println! 同一層"]
+    ref: chapter1/09_scope.md
+  # 由 EXERCISES.md 第 1 章第 10 集「題 1」轉換
+  - id: rust-ch01-q08
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      建立一個變數 `temperature = 18`。如果 `temperature >= 25`，印出 `熱`；否則印出 `涼`。請用 `if ... else ...`，不要寫成兩個獨立的 `if`。
+    expected_stdout: "涼\n"
+    hints: ["條件不成立時要做的事放在 `else` 的大括號裡", "if temperature >= 25 { println!(\"熱\"); } else { println!(\"涼\"); }"]
+    ref: chapter1/10_else.md
+  # 由 EXERCISES.md 第 1 章第 11 集「題 1」轉換
+  - id: rust-ch01-q09
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      建立一個變數 `temperature = 32`，用 `if ... else if ... else` 依照下面規則印出結果：
+      - `temperature >= 35`：印出 `很熱`
+      - `temperature >= 25`：印出 `溫暖`
+      - 其他情況：印出 `偏涼`
+    expected_stdout: "溫暖\n"
+    hints: ["Rust 會從上到下檢查條件，第一個成立的分支執行後就不再往下看，所以要先判斷最嚴格的條件", "if temperature >= 35 { ... } else if temperature >= 25 { ... } else { ... }"]
+    ref: chapter1/11_else_if.md
+  # 由 EXERCISES.md 第 1 章第 12 集「題 2」轉換
+  - id: rust-ch01-q10
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      建立三個變數：`age = 16`、`with_parent = true`、`has_ticket = true`。規則是：**有票**，而且「年滿 18 歲**或者**有家長陪同」，就可以入場。請印出 `可以入場` 或 `不能入場`。
+
+      起始程式只檢查了年齡，請改成符合規則的條件。
+    expected_stdout: "可以入場\n"
+    hints: ["「而且」對應 `&&`，「或者」對應 `||`；不確定運算順序時加括號", "if has_ticket && (age >= 18 || with_parent) { ... } else { ... }"]
+    ref: chapter1/12_logical_operators.md
+  # 由 EXERCISES.md 第 1 章第 13 集「題 1」轉換
+  - id: rust-ch01-q11
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      起始程式想把 `coins` 從 `3` 改成 `5`，但**目前無法編譯**。請修正它，讓程式最後印出 `5`。（改值那一行不要再寫 `let`）
+
+          fn main() {
+              let coins = 3;
+              coins = 5;
+              println!("{}", coins);
+          }
+    expected_stdout: "5\n"
+    hints: ["Rust 的變數預設不能改值，之後要改的話宣告時要特別標明", "把宣告改成 let mut coins = 3;"]
+    ref: chapter1/13_let_mut.md
+  # 由 EXERCISES.md 第 1 章第 14 集「題 1」轉換
+  - id: rust-ch01-q12
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      老師在調整分數：`score` 原本是 `60` 分，先加 `10` 分鼓勵分，再把分數乘以 `2`，最後印出 `140`。請用**複合賦值運算子**完成兩次更新（不要直接寫 `score = 140`）。
+    expected_stdout: "140\n"
+    hints: ["`x = x + 5` 可以簡寫成 `x += 5`，乘法也有對應的簡寫", "score += 10; 再寫 score *= 2;"]
+    ref: chapter1/14_compound_assignment.md
+  # 由 EXERCISES.md 第 1 章第 15 集「題 1」轉換
+  - id: rust-ch01-q13
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      寫一個程式，請使用者輸入最喜歡的食物，然後印出 `你喜歡 OOO！`。輸出格式：
+
+          請輸入你最喜歡的食物：
+          你喜歡 拉麵！
+
+      起始程式印出來的結果多了一個換行，請修正。（判定時會輸入 拉麵）
+    stdin: "拉麵\n"
+    expected_stdout: "請輸入你最喜歡的食物：\n你喜歡 拉麵！\n"
+    hints: ["讀進來的 `input` 尾巴會帶著使用者按下的換行", "println!(\"你喜歡 {}！\", input.trim());"]
+    ref: chapter1/15_stdin.md
+  # 由 EXERCISES.md 第 1 章第 16 集「題 1」轉換
+  - id: rust-ch01-q14
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      寫一個程式，請使用者輸入一個數字，然後印出這個數字加 `10` 的結果。格式：
+
+          請輸入一個數字：
+          32 加 10 等於 42
+
+      （判定時會輸入 32）
+    stdin: "32\n"
+    expected_stdout: "請輸入一個數字：\n32 加 10 等於 42\n"
+    hints: ["先把輸入的文字用 `.trim().parse::<i32>()` 轉成數字，再拿數字做運算", "let num = input.trim().parse::<i32>().expect(\"不是數字\"); println!(\"{} 加 10 等於 {}\", num, num + 10);"]
+    ref: chapter1/16_parse.md
+  # 由 EXERCISES.md 第 1 章第 17 集「題 1」轉換
+  - id: rust-ch01-q15
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      起始程式會讀入分數並判斷等第（90 以上 A、80 以上 B、70 以上 C、其他 F）。請加入 D 等第：`60` 到 `69` 分印出 `你的成績是 D`，其他規則不變。
+
+          請輸入你的分數：
+          你的成績是 D
+
+      （判定時會輸入 65）
+    stdin: "65\n"
+    expected_stdout: "請輸入你的分數：\n你的成績是 D\n"
+    hints: ["`else if` 從上到下檢查，D 的條件要放在對的位置，否則 70 分以上會被錯抓", "在 else if score >= 70 後面、最後的 else 前面加 else if score >= 60 { println!(\"你的成績是 D\"); }"]
+    ref: chapter1/17_practice.md
+  # 由 EXERCISES.md 第 1 章第 18 集「題 1」轉換
+  - id: rust-ch01-q16
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個程式，用 `loop` 反覆請使用者輸入數字：大於 `0` 就印出 `收到正數！` 並結束；小於或等於 `0` 就印出 `請再試一次`，然後繼續要求輸入。每一輪都先印出 `請輸入一個正數：`。
+
+          請輸入一個正數：
+          請再試一次
+          請輸入一個正數：
+          請再試一次
+          請輸入一個正數：
+          收到正數！
+
+      （判定時會依序輸入 -3、0、5）
+    stdin: "-3\n0\n5\n"
+    expected_stdout: "請輸入一個正數：\n請再試一次\n請輸入一個正數：\n請再試一次\n請輸入一個正數：\n收到正數！\n"
+    hints: ["用 `loop { ... }` 包住「提示、讀取、parse、判斷」整段流程，每一輪都建立新的 `input`", "if num > 0 { println!(\"收到正數！\"); break; } else { println!(\"請再試一次\"); }"]
+    ref: chapter1/18_loop_break.md
+  # 由 EXERCISES.md 第 1 章第 19 集「題 1」轉換
+  - id: rust-ch01-q17
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      寫一個「存錢達標」程式，請使用 `while`。先讀入目標金額 `goal`，再讀入目前金額 `money`。只要 `money` 還小於 `goal`，每一輪就多存 `30` 元並印出 `目前存到 OOO 元`；達標後印出 `達標！`。
+
+          請輸入目標金額：
+          請輸入目前金額：
+          目前存到 70 元
+          目前存到 100 元
+          達標！
+
+      （判定時會依序輸入 100、40）
+    stdin: "100\n40\n"
+    expected_stdout: "請輸入目標金額：\n請輸入目前金額：\n目前存到 70 元\n目前存到 100 元\n達標！\n"
+    hints: ["`money` 會在迴圈裡改變，宣告時要用 `let mut`；條件寫成 `while money < goal`", "while money < goal { money += 30; println!(\"目前存到 {} 元\", money); } 迴圈後印出 達標！"]
+    ref: chapter1/19_while.md
+  # 由 EXERCISES.md 第 1 章第 20 集「題 2」轉換
+  - id: rust-ch01-q18
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個 FizzBuzz 程式，請使用 `for`。讓使用者輸入一個正整數 `n`，從 1 印到 n：同時是 3 和 5 的倍數印 `FizzBuzz`；只是 3 的倍數印 `Fizz`；只是 5 的倍數印 `Buzz`；其他照原樣印出。請用 `&&` 組合兩個條件（不要用 `% 15`）。
+
       （判定時會輸入 15）
     stdin: "15\n"
     expected_stdout: "請輸入一個正整數：\n1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n"
-    hints: ["要包含 n，range 用 ..=；取餘數用 %", "先判斷 i % 3 == 0 && i % 5 == 0，再判斷單獨的 3 或 5"]
+    hints: ["要包含 n，range 用 `..=`；取餘數用 `%`", "先判斷 i % 3 == 0 && i % 5 == 0，再用 else if 判斷單獨的 3 或 5"]
     ref: chapter1/20_for_range.md
+  # 由 EXERCISES.md 第 1 章第 21 集「題 2」轉換
+  - id: rust-ch01-q19
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      請使用者輸入層數 `levels`，用巢狀 `for` 印出左靠齊的星星金字塔：第 1 行 1 顆、第 2 行 2 顆……
+
+          請輸入層數：
+          *
+          **
+          ***
+          ****
+
+      （判定時會輸入 4）
+    stdin: "4\n"
+    expected_stdout: "請輸入層數：\n*\n**\n***\n****\n"
+    hints: ["外層控制第幾行，內層控制這一行印幾次；`print!` 不換行，`println!()` 換行", "for row in 1..=levels { for col in 1..=row { print!(\"*\"); } println!(); }"]
+    ref: chapter1/21_nested_loops.md
+  # 由 EXERCISES.md 第 1 章第 21 集「題 3」轉換
+  - id: rust-ch01-q20
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      請使用者輸入目標數字 `target`。用巢狀 `for` 在 `1..=9` 和 `1..=9` 裡找**第一組** `a * b >= target` 的組合，印出 `a = OOO, b = OOO`，並用 loop label 直接跳出兩層迴圈（只印一行）。
+
+          請輸入目標數字：
+          a = 3, b = 7
+
+      （判定時會輸入 20）
+    stdin: "20\n"
+    expected_stdout: "請輸入目標數字：\na = 3, b = 7\n"
+    hints: ["單純的 `break` 只會跳出最內層；外層迴圈前面加 label 才能一次跳出兩層", "'outer: for a in 1..=9 { for b in 1..=9 { if a * b >= target { println!(...); break 'outer; } } }"]
+    ref: chapter1/21_nested_loops.md
+  # 由 EXERCISES.md 第 1 章第 22 集「題 1」轉換
+  - id: rust-ch01-q21
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      請使用者輸入一個正整數 `n`，印出 `2` 到 `n` 之間所有質數，一行一個。請使用 `continue 'outer`：發現某個數可以被其他數整除時，直接跳到下一個候選數。起始程式目前把每個數都印出來了。
+
+          請輸入上限：
+          2
+          3
+          5
+          ...
+
+      （判定時會輸入 20）
+    stdin: "20\n"
+    expected_stdout: "請輸入上限：\n2\n3\n5\n7\n11\n13\n17\n19\n"
+    hints: ["外層迴圈逐一檢查 `num`，內層迴圈找有沒有 `divisor` 能整除 `num`；找到就代表不是質數", "'outer: for num in 2..=n { for divisor in 2..num { if num % divisor == 0 { continue 'outer; } } println!(\"{}\", num); }"]
+    ref: chapter1/22_continue.md
+  - id: rust-ch01-q22
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式會印出哪兩行？
+
+          fn main() {
+              println!("{}", 7 / 2);
+              println!("{}", 7.0 / 2.0);
+          }
+    choices: ["3 和 3.5", "3.5 和 3.5", "3 和 3", "4 和 3.5"]
+    answer: 0
+    hints: ["`7` 預設是 `i32`，`7.0` 預設是 `f64`，兩種除法的行為不同", "整數除法直接捨去小數部分，浮點數除法會保留小數"]
+    ref: chapter1/24_number_types.md
+  - id: rust-ch01-q23
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式會發生什麼事？
+
+          fn main() {
+              let a: i32 = 5;
+              let b: i64 = 10;
+              println!("{}", a + b);
+          }
+    choices: ["印出 15", "編譯錯誤：i32 和 i64 不能直接相加", "印出 15，結果自動變成 i64", "可以編譯，但執行時會 panic"]
+    answer: 1
+    hints: ["Rust 一般不會自動幫你轉換型別", "`a` 是 `i32`、`b` 是 `i64`，不同型別的數字不能直接混著算"]
+    ref: chapter1/24_number_types.md
+  - id: rust-ch01-q24
+    difficulty: 1
+    type: choice
+    prompt: |
+      下列哪一個可以放進 `let c: char = ___;` 的空格，讓程式通過編譯？
+    choices: ["'AB'", "\"A\"", "'🦀'", "\"🦀\""]
+    answer: 2
+    hints: ["`char` 用單引號包起來，而且只能放一個字元", "雙引號是字串；單引號裡放兩個字元會報錯；Unicode 字元（含 emoji）都算一個 char"]
+    ref: chapter1/25_char.md
+  # 由 EXERCISES.md 第 1 章第 26 集「題 2」轉換
+  - id: rust-ch01-q25
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      寫一個程式，印出下面這句話，包含雙引號：
+
+          他說："Rust 很有趣！"
+
+      起始程式少了雙引號，請修正。
+    expected_stdout: "他說：\"Rust 很有趣！\"\n"
+    hints: ["字串本身用雙引號包起來，裡面要印雙引號就需要跳脫字元", "把要印出的雙引號寫成 \\\""]
+    ref: chapter1/26_escape_characters.md
+  # 由 EXERCISES.md 第 1 章第 26 集「題 3」轉換
+  - id: rust-ch01-q26
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個程式，印出下面這個 Windows 路徑（用反斜線，不是斜線）：
+
+          C:\Users\Ferris\code
+
+      起始程式用的是斜線 `/`，請改成正確的輸出。
+    expected_stdout: "C:\\Users\\Ferris\\code\n"
+    hints: ["`\\` 在字串裡是跳脫字元的開頭，不能直接單獨寫", "每個要印出的反斜線都寫成 \\\\，例如 \"C:\\\\Users\\\\...\""]
+    ref: chapter1/26_escape_characters.md
+  # 由 EXERCISES.md 第 1 章第 27 集「題 1」轉換
+  - id: rust-ch01-q27
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個票價程式。請使用者輸入年齡 `age`：小於 `18` 票價是 `50`，否則是 `100`。請用 `if` 表達式直接決定 `ticket_price`（不需要 `let mut`），最後印出票價。
+
+          請輸入年齡：
+          票價是 50 元
+
+      （判定時會輸入 12）
+    stdin: "12\n"
+    expected_stdout: "請輸入年齡：\n票價是 50 元\n"
+    hints: ["`if` 可以直接回傳值，整個放在 `let ticket_price =` 右邊；回傳值後面不加分號", "let ticket_price = if age < 18 { 50 } else { 100 };"]
+    ref: chapter1/27_if_expression.md

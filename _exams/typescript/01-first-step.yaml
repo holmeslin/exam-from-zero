@@ -1,25 +1,169 @@
-# 格式樣本（#14）：#17 產生題庫時會補齊這一章
 lang: typescript
-chapter: 1
+chapter: "1"
 title: TypeScript 第一步
 source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter1, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
-sample: 2
+sample: 5
 questions:
   - id: ts-ch01-q01
     difficulty: 1
     type: code
-    check: test
+    check: stdout
     prompt: |
-      在 area.ts 實作 area(width, height)，回傳長方形面積。參數和回傳值都要標註成 number。
-    hints: ["參數寫成 width: number", "export function area(width: number, height: number): number"]
-    ref: chapter1/06_type_annotations.md
+      在 main.ts 宣告變數 `name`，型別標註為 `string`，值是 `"小華"`，
+      再用 template literal 印出「你好，小華」。
+    expected_stdout: "你好，小華\n"
+    hints: ["型別標註寫在變數名稱後面：`const name: string = ...`", "console.log(`你好，${name}`)"]
+    ref: chapter1/03_first_file.md
   - id: ts-ch01-q02
-    difficulty: 2
+    difficulty: 1
     type: code
     check: stdout
     prompt: |
-      在 main.ts 宣告 name: string = 'ada' 與 age: number = 36，
-      用 template literal 印出「ada is 36」。
-    expected_stdout: "ada is 36\n"
-    hints: ["template literal 用反引號，變數寫成 ${name}", "console.log(`${name} is ${age}`)"]
+      main.ts 執行後印出「undefined 今年 20 歲，買了 100 元」，JavaScript 卻沒有報錯。
+      `npx tsc` 會在這裡報 **TS2339**（Property ... does not exist）。
+      找出錯字並改正，讓它印出「小明 今年 20 歲，買了 100 元」。
+    expected_stdout: "小明 今年 20 歲，買了 100 元\n"
+    hints: ["TS2339 代表物件沒有這個屬性，看看 `user` 有哪些屬性", "把 `user.nmae` 改成 `user.name`"]
+    ref: chapter1/05_error_messages.md
+  - id: ts-ch01-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      在 greet.ts 完成 `greet(name: string, times: number): string`：
+      回傳 `times` 個「你好，<name>！」接在一起的字串。
+      例如 `greet("小華", 2)` 回傳 `"你好，小華！你好，小華！"`；`times` 是 0 時回傳空字串。
+    hints: ["先宣告 `let result = \"\"`，用 for 迴圈跑 times 次", "迴圈裡寫 result += `你好，${name}！`，最後 return result"]
     ref: chapter1/06_type_annotations.md
+  - id: ts-ch01-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      tax.ts 的 `addTaxFromInput(input: string): number` 收到從表單讀進來的字串（例如 `"100"`），
+      要回傳加上 5% 稅之後的**數字**。現在它回傳的是 `"1005"`，請修好它，
+      讓 `addTaxFromInput("100")` 回傳 `105`。
+    hints: ["`+` 碰到字串會把兩邊接起來，所以要先把字串轉成數字", "const price: number = Number(input); return price + price * 0.05"]
+    ref: chapter1/01_why_typescript.md
+  - id: ts-ch01-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      price.ts 有兩個函式，參數都還沒標型別，邏輯也寫錯了。請：
+      1. 幫參數和回傳值加上型別標註（`price`、`quantity`、`amount` 都是數字）。
+      2. `subtotal(price, quantity)` 回傳單價乘以數量。
+      3. `formatPrice(amount)` 回傳四捨五入到整數、後面接「 元」的字串，例如 `formatPrice(99.6)` 是 `"100 元"`。
+    hints: ["數字四捨五入到整數可以用 `amount.toFixed(0)`", "return `${amount.toFixed(0)} 元`；subtotal 是 price * quantity"]
+    ref: chapter1/10_practice.md
+  - id: ts-ch01-q06
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 是文具店結帳程式，執行後印出「總計：NaN 元」。
+      裡面藏了兩個 `npx tsc` 抓得到的錯誤（一個 TS2339、一個「算術運算右邊不是數字」）。
+      把兩個錯誤都改掉，讓輸出變成：
+
+          總計：255 元
+          共 3 項商品
+    expected_stdout: "總計：255 元\n共 3 項商品\n"
+    hints: ["看看 `items` 裡的物件有哪些屬性，`item.qty` 存在嗎？", "把 `item.qty` 改成 `item.quantity`，`discount` 改成數字 `50`"]
+    ref: chapter1/10_practice.md
+  - id: ts-ch01-q07
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 用了 `enum`，`node main.ts` 會出現 `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`。
+      不要用 `enum`，改用一個普通物件 `Size`（`Small` 是 0、`Medium` 是 1、`Large` 是 2），
+      讓程式照樣印出 `Size.Small` 和 `Size.Large`，也就是：
+
+          0
+          2
+    expected_stdout: "0\n2\n"
+    hints: ["Node.js 只會拿掉型別，`enum` 拿掉之後不是完整的 JavaScript，所以跑不了", "const Size = { Small: 0, Medium: 1, Large: 2 };"]
+    ref: chapter1/09_types_are_erased.md
+  - id: ts-ch01-q08
+    difficulty: 1
+    type: short
+    prompt: |
+      `npx tsc` 印出這行錯誤：
+
+          typo.ts:1:7 - error TS2322: Type 'string' is not assignable to type 'number'.
+
+      這則錯誤發生在第幾行？請填數字。
+    answers: ["^1$", "^第 ?1 ?行$"]
+    hints: ["格式是「檔名:行:字」", "`typo.ts:1:7` 的第一個數字就是行號"]
+    ref: chapter1/05_error_messages.md
+  - id: ts-ch01-q09
+    difficulty: 1
+    type: short
+    prompt: |
+      在 `ts-practice` 資料夾裡裝好 TypeScript 之後，要用什麼指令確認 `tsc` 的版本？請寫出完整指令。
+    answers: ["^npx tsc (-v|--version)$"]
+    hints: ["TypeScript 裝在這個資料夾的 node_modules 裡，不能直接打 `tsc`", "前面要加 `npx`，後面加 `-v`"]
+    ref: chapter1/02_setup.md
+  - id: ts-ch01-q10
+    difficulty: 2
+    type: choice
+    prompt: |
+      資料夾裡有 `tsconfig.json`，你只想檢查 `double.ts`，於是執行 `npx tsc double.ts`。會發生什麼事？
+    choices:
+      - "只檢查 double.ts，並照 tsconfig.json 的設定檢查"
+      - "出現 TS5112 錯誤，因為指定了檔案就不會讀 tsconfig.json，tsc 乾脆拒絕執行"
+      - "tsc 會執行 double.ts，並印出它的輸出"
+      - "什麼都不印，代表 double.ts 沒有型別錯誤"
+    answer: 1
+    hints: ["`npx tsc` 後面加檔名，設定檔會怎樣？", "記住：`npx tsc` 後面什麼都不要加"]
+    ref: chapter1/04_tsc.md
+  - id: ts-ch01-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式碼一個型別標註都沒寫：
+
+          let count = 0;
+          count = "零";
+          console.log(count);
+
+      分別用 `node` 執行、用 `npx tsc` 檢查，結果是？
+    choices:
+      - "node 印出「零」；npx tsc 報 TS2322，因為 count 被推論成 number"
+      - "node 印出「零」；npx tsc 不報錯，因為沒寫型別就不會檢查"
+      - "node 直接出錯；npx tsc 報 TS2322"
+      - "node 印出 0；npx tsc 報 TS7006"
+    answer: 0
+    hints: ["node 只拿掉型別、不檢查；tsc 會從初始值推論型別", "`let count = 0` 讓 TypeScript 推論出 count 是 number"]
+    ref: chapter1/07_type_inference.md
+  - id: ts-ch01-q12
+    difficulty: 3
+    type: choice
+    prompt: |
+      執行下面這段程式碼，並用 `npx tsc` 檢查：
+
+          const data = JSON.parse('{ "name": "小明" }');
+          console.log(data.nmae);
+
+      結果是？
+    choices:
+      - "npx tsc 報 TS2339，因為 data 沒有 nmae 屬性"
+      - "npx tsc 不報錯，執行印出 undefined，因為 TypeScript 看不到字串裡的資料長什麼樣子"
+      - "npx tsc 不報錯，執行印出「小明」"
+      - "npx tsc 報 TS2552，提示 Did you mean 'name'?"
+    answer: 1
+    hints: ["TypeScript 只能檢查它看得到的程式碼", "`JSON.parse` 讀的是一段字串，TypeScript 只好放棄檢查"]
+    ref: chapter1/09_types_are_erased.md
+  - id: ts-ch01-q13
+    difficulty: 2
+    type: choice
+    prompt: |
+      在 VS Code 寫下 `const city = "台北";`，把滑鼠游標移到 `city` 上，會看到什麼？
+    choices:
+      - "const city: string"
+      - "const city: \"台北\""
+      - "const city: any"
+      - "什麼都不顯示，因為沒有寫型別標註"
+    answer: 1
+    hints: ["`let city = \"台北\"` 會顯示 `let city: string`，但 const 不一樣", "書上說改成 const 會看到值本身，第 5 章會解釋"]
+    ref: chapter1/08_vscode.md

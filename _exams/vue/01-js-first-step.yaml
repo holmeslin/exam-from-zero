@@ -1,0 +1,167 @@
+lang: vue
+chapter: "1"
+title: JavaScript 第一步
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter1, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch01-q01
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 想記錄網站的瀏覽次數，從 0 開始再加 2 次，但一執行就出現 `TypeError: Assignment to constant variable.`。
+      請修正它，讓執行結果變成：
+
+          0
+          2
+    expected_stdout: "0\n2\n"
+    hints: ["`const` 建立的變數不能重新指定值，會變的值要用另一個關鍵字宣告", "把 `const visits = 0;` 改成 `let visits = 0;`，後面兩行不用加 `let`"]
+    ref: chapter1/04_const_and_let.md
+  - id: vue-ch01-q02
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 已經從輸入讀進總分鐘數 `totalMinutes`（一個整數）。請算出它是幾小時又幾分鐘，印成「X 小時 Y 分」。
+      批改時會輸入 135，執行結果：
+
+          2 小時 15 分
+    stdin: "135\n"
+    expected_stdout: "2 小時 15 分\n"
+    hints: ["一小時是 60 分鐘；「除完剩下多少」可以用 `%` 取餘數", "`const minutes = totalMinutes % 60;`，扣掉剩下的分鐘數再除以 60 就是小時：`(totalMinutes - minutes) / 60`"]
+    ref: chapter1/06_numbers_and_arithmetic.md
+  - id: vue-ch01-q03
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 已經從輸入讀進一個英文名字 `name`。請用**樣板字面值**印出兩行：
+      第一行是「哈囉，名字！你的名字有 N 個字母。」（N 是名字的長度），第二行是全部轉成大寫的名字。
+      批改時會輸入 Evan，執行結果：
+
+          哈囉，Evan！你的名字有 4 個字母。
+          EVAN
+    stdin: "Evan\n"
+    expected_stdout: "哈囉，Evan！你的名字有 4 個字母。\nEVAN\n"
+    hints: ["樣板字面值用反引號包起來，`${}` 裡可以放變數；字串長度是 `.length`", "第一行用反引號包住：哈囉，`${name}`！你的名字有 `${name.length}` 個字母。第二行印 `name.toUpperCase()`"]
+    ref: chapter1/07_strings_and_template_literals.md
+  - id: vue-ch01-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這行程式會印出什麼？
+
+          console.log(1 + 2 + "3");
+    choices: ["6", "33", "123", "出現 TypeError"]
+    answer: 1
+    hints: ["`+` 從左到右算；兩邊都是數字時是加法，碰到字串就變成接起來", "先算 `1 + 2` 得到數字 3，再和字串 `\"3\"` 接起來"]
+    ref: chapter1/07_strings_and_template_literals.md
+  - id: vue-ch01-q05
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 要依分數印出評等：90 分以上「優等」，60 分以上「及格」，其餘「不及格」。
+      現在 95 分和 90 分都被印成「及格」，請修正它，讓執行結果變成：
+
+          95 分：優等
+          90 分：優等
+          89 分：及格
+          60 分：及格
+          59 分：不及格
+    expected_stdout: "95 分：優等\n90 分：優等\n89 分：及格\n60 分：及格\n59 分：不及格\n"
+    hints: ["`else if` 由上往下檢查，碰到第一個成立的條件就停，後面全部跳過", "把 `score >= 90` 的判斷放到最前面，`score >= 60` 放第二"]
+    ref: chapter1/09_if_else.md
+  - id: vue-ch01-q06
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      入場規則：成年人（18 歲以上）、或是有家長陪同的人可以進場，但前提是**一定要有票**。
+      main.ts 的判斷寫錯了，沒有票的小美也能進場。請修正條件，讓執行結果變成：
+
+          小明：可以進入
+          小華：可以進入
+          小美：不能進入
+          小強：不能進入
+    expected_stdout: "小明：可以進入\n小華：可以進入\n小美：不能進入\n小強：不能進入\n"
+    hints: ["`&&` 和 `||` 混在一起時，JavaScript 會先算 `&&`", "用括號把「成年或有家長」包起來，再 `&& visitor.hasTicket`"]
+    ref: chapter1/10_logical_operators.md
+  - id: vue-ch01-q07
+    difficulty: 1
+    type: short
+    prompt: |
+      下面的程式執行後會印出什麼？（照實輸入印出的那一行）
+
+          const count = 0;
+          console.log(`你有 ${count} 則${count > 0 ? "新" : ""}訊息`);
+    answers: ["^你有 ?0 ?則訊息$"]
+    hints: ["三元運算子是「條件 ? 成立時的值 : 不成立時的值」", "`0 > 0` 是 `false`，所以中間放進去的是空字串"]
+    ref: chapter1/11_ternary.md
+  - id: vue-ch01-q08
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 想印出價格清單有幾項、最後一項的價格，以及全部加起來的總計，但最後一項印成 undefined，總計也印了好幾次而且不對。
+      請修正它，讓執行結果變成：
+
+          共 4 項
+          最後一項：45 元
+          總計：545 元
+    expected_stdout: "共 4 項\n最後一項：45 元\n總計：545 元\n"
+    hints: ["索引從 0 開始，最後一個的索引是 `length - 1`；累加用的變數每一輪都歸零就加不起來", "`prices[prices.length - 1]`；把 `let total = 0;` 移到迴圈外面，迴圈結束後再印一次總計"]
+    ref: chapter1/13_for_of.md
+  - id: vue-ch01-q09
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 走訪使用者清單時，在小美那一筆出現 `TypeError: Cannot read properties of undefined (reading 'city')`，
+      而且小華的暱稱被印成 null。請修正它：暱稱是 `null` 時印「（無暱稱）」，沒有 `address` 時印「沒有地址」。
+      執行結果：
+
+          小明（阿明）：台北
+          小華（無暱稱）：高雄
+          小美（美美）：沒有地址
+    expected_stdout: "小明（阿明）：台北\n小華（無暱稱）：高雄\n小美（美美）：沒有地址\n"
+    hints: ["小美的物件根本沒有 `address`，所以 `user.address` 是 `undefined`，不能再對它用點；先檢查再使用", "用 `user.nickname === null` 決定暱稱那段要印什麼；用 `if (user.address !== undefined)` 才讀 `user.address.city`，不然用「沒有地址」"]
+    ref: chapter1/15_null_undefined.md
+  - id: vue-ch01-q10
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      完成購物車結帳程式 main.ts：
+      1. 每一項印出「名稱 × 數量 = 小計 元」（小計是單價乘以數量）。
+      2. 印出全部商品的件數「共 N 件商品」（把每項的數量加起來）。
+      3. 印出「總金額：X 元」。
+      4. 總金額滿 3000 元印「滿 3000 元，打九折」並打九折，否則印「未滿 3000 元，不打折」；接著印「應付金額：Y 元」。
+      5. 印出單價最高的商品名稱。
+      執行結果：
+
+          耳機 × 1 = 890 元
+          充電線 × 4 = 600 元
+          手機殼 × 2 = 640 元
+          共 7 件商品
+          總金額：2130 元
+          未滿 3000 元，不打折
+          應付金額：2130 元
+          最貴的商品：耳機
+    expected_stdout: "耳機 × 1 = 890 元\n充電線 × 4 = 600 元\n手機殼 × 2 = 640 元\n共 7 件商品\n總金額：2130 元\n未滿 3000 元，不打折\n應付金額：2130 元\n最貴的商品：耳機\n"
+    hints: ["一個 `for...of` 就能同時印小計、累加 `total` 和 `count`、並更新最高單價", "迴圈裡 `const subtotal = item.price * item.quantity;`；`if (item.price > highestPrice)` 時更新 `highestPrice` 和 `mostExpensiveName`；迴圈外用 `let finalAmount = total;` 搭配 `if`／`else` 處理打折"]
+    ref: chapter1/16_practice.md
+  - id: vue-ch01-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面哪幾行執行時會出現 `TypeError: Assignment to constant variable.`？
+
+          const fruits = ["蘋果", "香蕉"];
+          fruits.push("芭樂");   // A
+          fruits[0] = "葡萄";    // B
+          fruits = ["西瓜"];     // C
+    choices: ["只有 A", "只有 C", "A 和 C", "A、B、C 都會"]
+    answer: 1
+    hints: ["`const` 鎖的是「變數指向哪個陣列」，不是陣列裡的內容", "`push` 和用索引改值都只是改同一個陣列的內容；只有整個換成新陣列才會出錯"]
+    ref: chapter1/12_arrays.md

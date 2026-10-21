@@ -1,0 +1,369 @@
+lang: vue
+chapter: "11"
+title: 測試
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter11, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+# 這一章的程式題都是「寫測試」：在 checks.ts 裡完成一個檢查函式，用 expect 檢查傳進來的元件或函式。
+# 隱藏測試會拿正確的版本和幾個有 bug 的版本來呼叫它：正確的要通過，有 bug 的要被 expect 抓到。
+questions:
+  - id: vue-ch11-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      規格是「**滿** 3000 元打九折」，但程式寫成：
+
+          export function applyDiscount(total: number): number {
+            return total > 3000 ? total * 0.9 : total;
+          }
+
+      下面哪一個測試會失敗，抓到這個 bug？
+    choices:
+      - "expect(applyDiscount(5000)).toBe(4500)"
+      - "expect(applyDiscount(1000)).toBe(1000)"
+      - "expect(applyDiscount(3000)).toBe(2700)"
+      - "expect(applyDiscount(0)).toBe(0)"
+    answer: 2
+    hints: ["bug 出在 > 和 >= 的差別，什麼樣的值會讓兩者結果不同？", "剛好在邊界上的 3000：> 不成立、>= 成立"]
+    ref: chapter11/01_why_test.md
+
+  - id: vue-ch11-q02
+    difficulty: 1
+    type: short
+    prompt: |
+      `npm run test:unit` 執行的是 `vitest`，預設是監看模式，跑完不會結束。
+      如果只想把測試跑一次就結束，要在終端機輸入什麼指令？
+    answers:
+      - "^(npx )?vitest run$"
+      - "^npx vitest --run$"
+      - "^npm run test:unit -- --run$"
+    hints: ["還是用 vitest，只是多加一個子指令", "npx vitest run"]
+    ref: chapter11/02_vitest_setup.md
+
+  - id: vue-ch11-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `cart.ts` 裡有兩個函式：
+
+          export function applyDiscount(total: number): number {
+            return total >= 3000 ? total * 0.9 : total;
+          }
+
+          export function parseQuantity(text: string): number {
+            const quantity = Number(text);
+            if (!Number.isInteger(quantity) || quantity < 1) {
+              throw new Error("數量必須是正整數");
+            }
+            return quantity;
+          }
+
+      完成 `checks.ts` 的 `checkCart({ applyDiscount, parseQuantity })`，用 `expect` 檢查傳進來的兩個函式：
+
+      - `applyDiscount(3000)` 是 2700，`applyDiscount(2999)` 是 2999（兩側的邊界都要測）
+      - `parseQuantity("3")` 是 3
+      - `parseQuantity("0")` 會丟出「數量必須是正整數」，`parseQuantity("abc")` 也會丟出錯誤
+
+      隱藏測試會傳入正確的版本（要通過）和幾個有 bug 的版本（你的 `expect` 要失敗）。
+    hints: ["比數字用 toBe；測丟出錯誤要用 toThrow", "toThrow 要包一層函式：expect(() => parseQuantity(\"0\")).toThrow(\"數量必須是正整數\")"]
+    ref: chapter11/04_describe_test_expect.md
+
+  - id: vue-ch11-q04
+    difficulty: 1
+    type: choice
+    prompt: |
+      測試寫成 `expect(formatPrice(1200)).toBe("NT$ 1200");`，執行後失敗：
+
+          AssertionError: expected 'NT$ 1,200' to be 'NT$ 1200' // Object.is equality
+
+          Expected: "NT$ 1200"
+          Received: "NT$ 1,200"
+
+      `formatPrice(1200)` 實際回傳的是什麼？
+    choices:
+      - "\"NT$ 1,200\""
+      - "\"NT$ 1200\""
+      - "看不出來，要先加 console.log 才知道"
+    answer: 0
+    hints: ["Expected 是你寫在 toBe 裡的預期值，Received 是實際拿到的值", "expected 後面接的是實際值：'NT$ 1,200'"]
+    ref: chapter11/03_first_test.md
+
+  - id: vue-ch11-q05
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `ProductCard.vue`（價格用 `price.ts` 的 `formatPrice` 加上千分位）：
+
+          <script setup lang="ts">
+          import { formatPrice } from "./price";
+
+          defineProps<{ name: string; price: number; soldOut?: boolean }>();
+          </script>
+
+          <template>
+            <article class="card">
+              <h2>{{ name }}</h2>
+              <p class="price">{{ formatPrice(price) }}</p>
+              <p v-if="soldOut" class="sold-out">已售完</p>
+            </article>
+          </template>
+
+      完成 `checks.ts` 的 `checkProductCard(ProductCard)`：
+
+      - 用 props `{ name: "機械鍵盤", price: 2490 }` 掛載：`h2` 的文字是「機械鍵盤」、`.price` 的文字是「NT$ 2,490」、畫面上**沒有** `.sold-out`
+      - 再加上 `soldOut: true` 掛載一次：畫面上**有** `.sold-out`
+
+      隱藏測試會傳入正確的元件（要通過）和幾個有 bug 的元件（你的 `expect` 要失敗）。
+    hints: ["要讀文字用 get(選擇器).text()；檢查在不在用 find(選擇器).exists()", "expect(wrapper.find(\".sold-out\").exists()).toBe(false)，售完的那次改成 toBe(true)"]
+    ref: chapter11/06_find_get.md
+
+  - id: vue-ch11-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `NameInput.vue`：
+
+          <script setup lang="ts">
+          import { ref } from "vue";
+
+          const name = ref("");
+          const agreed = ref(false);
+          </script>
+
+          <template>
+            <input v-model="name" type="text" />
+            <label><input v-model="agreed" type="checkbox" /> 我同意</label>
+            <p v-if="name">哈囉，{{ name }}！</p>
+            <button :disabled="!agreed">送出</button>
+          </template>
+
+      完成 `checks.ts` 的 `checkNameInput(NameInput)`：
+
+      - 在文字輸入框輸入「小明」後，`<p>` 的文字是「哈囉，小明！」
+      - 一開始送出按鈕是停用的（有 `disabled` 屬性）
+      - 勾選核取方塊後，送出按鈕不再停用
+
+      隱藏測試會傳入正確的元件（要通過）和幾個有 bug 的元件（你的 `expect` 要失敗）。
+    hints: ["用 setValue 打字和勾選，它和 trigger 一樣要 await，不然畫面還沒更新", "attributes(\"disabled\") 停用時是 \"\"，沒停用時是 undefined：用 toBeDefined() 和 toBeUndefined()"]
+    ref: chapter11/07_trigger_setvalue.md
+
+  - id: vue-ch11-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `SearchBox.vue`：
+
+          <script setup lang="ts">
+          import { ref } from "vue";
+
+          defineProps<{ placeholder: string }>();
+          const emit = defineEmits<{ search: [keyword: string] }>();
+
+          const keyword = ref("");
+
+          function submit() {
+            const text = keyword.value.trim();
+            if (text === "") {
+              return;
+            }
+            emit("search", text);
+          }
+          </script>
+
+          <template>
+            <form @submit.prevent="submit">
+              <input v-model="keyword" :placeholder="placeholder" />
+              <button>搜尋</button>
+            </form>
+          </template>
+
+      完成 `checks.ts` 的 `checkSearchBox(SearchBox)`，每種情況各掛載一次：
+
+      - 傳 `placeholder: "找商品"`，輸入框的 `placeholder` 屬性是「找商品」
+      - 輸入「  滑鼠 」（前後有空白）再送出表單，`search` 事件的紀錄是 `[["滑鼠"]]`
+      - 只輸入空白（例如 `"   "`）就送出，不會發出 `search` 事件
+
+      隱藏測試會傳入正確的元件（要通過）和幾個有 bug 的元件（你的 `expect` 要失敗）。
+    hints: ["送出表單用 trigger(\"submit\")，事件紀錄用 wrapper.emitted(\"search\")", "emitted 是兩層陣列，比內容用 toEqual([[\"滑鼠\"]])；沒發出過是 undefined，用 toBeUndefined()"]
+    ref: chapter11/08_props_emit.md
+
+  - id: vue-ch11-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `UserList.vue` 從 props 接收載入資料的函式：
+
+          <script setup lang="ts">
+          import { onMounted, ref } from "vue";
+
+          const props = defineProps<{ loadUsers: () => Promise<string[]> }>();
+          const users = ref<string[] | null>(null);
+          const error = ref("");
+
+          onMounted(async () => {
+            try {
+              users.value = await props.loadUsers();
+            } catch {
+              error.value = "載入失敗";
+            }
+          });
+          </script>
+
+          <template>
+            <p v-if="error">{{ error }}</p>
+            <p v-else-if="users === null">載入中…</p>
+            <ul v-else>
+              <li v-for="user in users" :key="user">{{ user }}</li>
+            </ul>
+          </template>
+
+      完成 `checks.ts` 的 `checkUserList(UserList)`，用 `vi.fn` 做出假的 `loadUsers`：
+
+      - 假函式回傳成功的 Promise，資料是 `["小明", "小華"]`。剛掛載時文字是「載入中…」；等 Promise 都完成後，`li` 的文字依序是「小明」「小華」，而且 `loadUsers` 只被呼叫了 **1 次**
+      - 另一個假函式回傳失敗的 Promise，掛載並等完成後，文字是「載入失敗」
+
+      隱藏測試會傳入正確的元件（要通過）和幾個有 bug 的元件（你的 `expect` 要失敗）。
+    hints: ["vi.fn().mockResolvedValue(資料) 和 vi.fn().mockRejectedValue(new Error(...)) 做出成功／失敗的假函式；await flushPromises() 等 Promise 完成", "檢查次數用 expect(loadUsers).toHaveBeenCalledTimes(1)；名單用 findAll(\"li\").map((li) => li.text())"]
+    ref: chapter11/09_flush_promises.md
+
+  - id: vue-ch11-q09
+    difficulty: 2
+    type: short
+    prompt: |
+      `SearchBox` 會執行 `emit("search", 關鍵字)`。不用 `emitted()`，改成像父元件一樣監聽這個事件：
+
+          const handler = vi.fn();
+          const wrapper = mount(SearchBox, {
+            props: { placeholder: "找商品", ???: handler },
+          });
+
+      `???` 這個 prop 要叫什麼名字，`handler` 才會在元件發出 `search` 時被呼叫？
+    answers:
+      - "^[\"']?onsearch[\"']?$"
+    hints: ["父元件寫 @search 時，Vue 會把它變成一個 prop：on 加上事件名稱", "on 加上第一個字母大寫的事件名稱：onSearch"]
+    ref: chapter11/10_vi_fn.md
+
+  - id: vue-ch11-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `products.ts`：
+
+          export type Product = { id: number; name: string };
+
+          export async function fetchProducts(): Promise<Product[]> {
+            const response = await fetch("/api/products");
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+          }
+
+      完成 `checks.ts` 的 `checkFetchProducts(fetchProducts)`，**只換掉 `fetch`**，測傳進來的函式本身：
+
+      - 讓 `fetch` 回傳 `Response.json([{ id: 1, name: "機械鍵盤" }])`：結果要等於這份資料，而且 `fetch` 是用 `"/api/products"` 呼叫的
+      - 讓 `fetch` 回傳 `new Response("找不到", { status: 404 })`：Promise 要失敗，錯誤訊息包含「HTTP 404」
+      - 最後把 `fetch` 還原
+
+      隱藏測試會傳入正確的版本（要通過）和幾個有 bug 的版本（你的 `expect` 要失敗）。
+    hints: ["vi.spyOn(globalThis, \"fetch\").mockResolvedValue(假的 Response)；最後 vi.restoreAllMocks() 還原", "檢查失敗的 Promise：await expect(fetchProducts()).rejects.toThrow(\"HTTP 404\")；檢查參數：expect(fetch).toHaveBeenCalledWith(\"/api/products\")"]
+    ref: chapter11/11_vi_mock.md
+
+  - id: vue-ch11-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      `useWindowWidth` 在 `onMounted` 裡讀 `window.innerWidth`、開始監聽 `resize`。測試裡直接呼叫它：
+
+          test("一開始是視窗的寬度", () => {
+            const width = useWindowWidth();
+            expect(width.value).toBe(1024);
+          });
+
+      會發生什麼事？
+    choices:
+      - "出現 [Vue warn] 說沒有正在設定中的元件，onMounted 裡的程式不會執行，width 一直是 0，測試失敗"
+      - "測試通過，因為 jsdom 的假視窗寬度預設就是 1024"
+      - "丟出「no active Pinia」的錯誤，要先呼叫 setActivePinia"
+      - "要在 width.value 前面加 await，等 onMounted 執行完就會通過"
+    answer: 0
+    hints: ["生命週期 Hook 要在元件的 setup 裡同步呼叫，Vue 才知道它屬於哪個元件", "沒有元件，onMounted 不會執行；要用 withSetup 借一個元件來呼叫 composable"]
+    ref: chapter11/12_composables.md
+
+  - id: vue-ch11-q12
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `cart.ts` 是一個 setup store，名字是 `"cart"`：
+
+          export const useCartStore = defineStore("cart", () => {
+            const items = ref<CartItem[]>([]);
+            const total = computed(() =>
+              items.value.reduce((sum, item) => sum + item.price * item.quantity, 0),
+            );
+            const count = computed(() =>
+              items.value.reduce((sum, item) => sum + item.quantity, 0),
+            );
+
+            function addItem(name: string, price: number) {
+              const found = items.value.find((item) => item.name === name);
+              if (found) {
+                found.quantity++;
+              } else {
+                items.value.push({ name, price, quantity: 1 });
+              }
+            }
+
+            function clear() {
+              items.value = [];
+            }
+
+            return { items, total, count, addItem, clear };
+          });
+
+      完成 `checks.ts` 的 `checkCartStore(useCartStore)`，不掛載元件，直接測傳進來的 store：
+
+      - 每次呼叫都先準備一個**全新的** Pinia，再取得 store
+      - 一開始 `items` 是 `[]`，`count` 和 `total` 都是 0
+      - 依序 `addItem("鍵盤", 1200)`、`addItem("鍵盤", 1200)`、`addItem("滑鼠", 600)` 之後：`items` 是 `[{ name: "鍵盤", price: 1200, quantity: 2 }, { name: "滑鼠", price: 600, quantity: 1 }]`，`count` 是 3，`total` 是 3000
+      - 呼叫 `clear()` 之後，`items` 是 `[]`
+
+      隱藏測試會傳入正確的 store（要通過）和幾個有 bug 的 store（你的 `expect` 要失敗）。
+    hints: ["測試裡沒有 app.use(pinia)，直接用 store 會出現「no active Pinia」", "setActivePinia(createPinia()) 之後再呼叫 useCartStore()；讀 state 和 getters 不用 .value"]
+    ref: chapter11/13_pinia_store.md
+
+  - id: vue-ch11-q13
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `CartSummary.vue` 用了一個名字是 `"cart"` 的購物車 setup store（`cart.ts`：state `items` 是商品陣列，getter `count` 是總件數、`total` 是總價，action `clear` 清空）：
+
+          <script setup lang="ts">
+          import { useCartStore } from "./cart";
+          import { formatPrice } from "./price";
+
+          const cart = useCartStore();
+          </script>
+
+          <template>
+            <p data-test="count">購物車裡有 {{ cart.count }} 件商品</p>
+            <p data-test="total">合計 {{ formatPrice(cart.total) }}</p>
+            <button @click="cart.clear()">清空</button>
+          </template>
+
+      完成 `checks.ts` 的 `checkCartSummary(CartSummary)`，用 `@pinia/testing` 的 `createTestingPinia`：
+
+      - 掛載時把 `cart` store 的初始 state 設成 `items: [{ name: "鍵盤", price: 1200, quantity: 2 }]`
+      - `[data-test="count"]` 的文字是「購物車裡有 2 件商品」，`[data-test="total"]` 是「合計 NT$ 2,400」
+      - 按下按鈕後，store 的 `clear` 被呼叫了 **1 次**
+
+      隱藏測試會傳入正確的元件（要通過）和幾個有 bug 的元件（你的 `expect` 要失敗）。
+    hints: ["mount 的 global.plugins 放 createTestingPinia({ createSpy: vi.fn, initialState: { cart: { items: [...] } } })", "掛載之後呼叫 useCartStore() 拿到同一個 store，再 expect(cart.clear).toHaveBeenCalledTimes(1)"]
+    ref: chapter11/14_testing_pinia.md

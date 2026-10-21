@@ -1,0 +1,130 @@
+# 第 5 章：錯誤處理與 defer（EXERCISES.md 沒有本章固定題，全部為新出題）
+lang: go
+chapter: "5"
+title: 錯誤處理與 `defer`
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter5, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch05-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      幫 TooHotError 加上 Error() string 方法，讓它可以當成 error 使用。
+      訊息格式是「溫度 <Temp> 度太熱了」，例如 Temp 是 40 時回傳 "溫度 40 度太熱了"。
+    hints: ["error 是只有 Error() string 一個方法的介面", "return fmt.Sprintf(\"溫度 %d 度太熱了\", e.Temp)"]
+    ref: chapter5/01_error_interface.md
+  - id: go-ch05-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 SafeDiv(a, b int) (int, error)：
+      b 是 0 時回傳 0 和訊息為「除數不能是 0」的錯誤；否則回傳 a / b 和 nil。
+    hints: ["用 errors.New 建立錯誤，error 放在最後一個回傳值", "if b == 0 { return 0, errors.New(\"除數不能是 0\") }，最後 return a / b, nil"]
+    ref: chapter5/02_errors_new.md
+  - id: go-ch05-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 ParseScore(s string) (int, error)，把字串轉成 0～100 的分數：
+      - strconv.Atoi 失敗時，回傳 0 和「讀取分數失敗：<原本的錯誤>」，而且要用 %w 包住原本的錯誤。
+      - 轉成功但不在 0～100 之間時，回傳 0 和「分數 <n> 超出範圍」。
+      - 其他情況回傳分數和 nil。
+    hints: ["先 if err != nil 處理錯誤並 return，正常流程貼著左邊往下寫", "return 0, fmt.Errorf(\"讀取分數失敗：%w\", err)；範圍錯誤用 fmt.Errorf(\"分數 %d 超出範圍\", n)"]
+    ref: chapter5/04_errorf_wrap.md
+  - id: go-ch05-q04
+    difficulty: 1
+    type: short
+    prompt: |
+      用 fmt.Errorf 包裝錯誤時，要用哪個格式動詞，之後 errors.Is 才找得到原本的錯誤？（例如回答 %d）
+    answers: ["^%w$", "^w$"]
+    hints: ["%v 只會把文字抄過去，原本的錯誤就不見了", "w 是 wrap（包裝）的縮寫"]
+    ref: chapter5/04_errorf_wrap.md
+  - id: go-ch05-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      商店有兩個哨兵錯誤 ErrNotFound、ErrOutOfStock（已宣告好）。
+      1. 實作 Buy(stock map[string]int, item string) error：商品不在 stock 裡回傳 ErrNotFound，
+         庫存是 0 回傳 ErrOutOfStock，兩者都要用「購買 <item>：%w」包裝；成功時庫存減 1 並回傳 nil。
+      2. 實作 Advice(err error) string：nil 回傳「購買成功」、ErrNotFound 回傳「要不要看看別的？」、
+         ErrOutOfStock 回傳「請等補貨」、其他回傳「發生未知錯誤」。錯誤可能被包裝過好幾層。
+    hints: ["查 map 用 comma-ok：n, ok := stock[item]", "包裝過的錯誤用 == 比不到，要用 errors.Is(err, ErrNotFound)"]
+    ref: chapter5/06_errors_is.md
+  - id: go-ch05-q06
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      1. 讓 *ValidationError 的 Error() 回傳「欄位 <Field> 的值 <Value> 不合法」。
+      2. 實作 BadField(err error) (string, bool)：err 可能被 %w 包了好幾層，或是用 errors.Join 合併過；
+         只要裡面有 *ValidationError，就回傳它的 Field 和 true，否則回傳 "" 和 false。
+    hints: ["型別斷言只看最外層，要找「某一種型別」的錯誤要用 errors.As", "var ve *ValidationError，然後 if errors.As(err, &ve) { return ve.Field, true }（注意要傳 &ve）"]
+    ref: chapter5/08_errors_as.md
+  - id: go-ch05-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      改寫 Validate(name string, age int) error，一次回報所有問題：
+      name 是空字串時要有 ErrEmptyName；age 不在 0～150 之間時要有 ErrBadAge。
+      兩個都有問題就兩個都回報（名字的錯誤排前面），全部通過時回傳 nil。
+    hints: ["errors.Join 可以把多個錯誤合成一個，而且會略過 nil", "為每個檢查準備一個 error 變數，有問題才填，最後 return errors.Join(nameErr, ageErr)"]
+    ref: chapter5/09_errors_join.md
+  - id: go-ch05-q08
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      在 visit 裡加上一行 defer，讓每次離開 visit 前都印出「離開 <room>」，
+      不管是從 return 提早離開還是正常結束。main 不用改。
+    expected_stdout: "進入 書房\n在 書房 看書\n離開 書房\n進入 倉庫\n倉庫上鎖了\n離開 倉庫\n回家\n"
+    hints: ["defer 會在包住它的函式結束時執行，不管從哪一個 return 離開", "在「進入」那行下面寫 defer fmt.Println(\"離開\", room)"]
+    ref: chapter5/10_defer.md
+  - id: go-ch05-q09
+    difficulty: 3
+    type: choice
+    prompt: |
+      下面這段程式會印出什麼？（選項中以 / 分隔每一行輸出）
+
+          n := 1
+          defer fmt.Println("A", n)
+          n = 2
+          for i := range 2 {
+              defer fmt.Println("B", i)
+          }
+          fmt.Println("C", n)
+    choices:
+      - "C 2 / B 1 / B 0 / A 1"
+      - "C 2 / B 1 / B 0 / A 2"
+      - "C 2 / A 1 / B 0 / B 1"
+      - "A 1 / B 0 / B 1 / C 2"
+    answer: 0
+    hints: ["多個 defer 是後進先出（LIFO）", "defer 的參數在寫下 defer 那一刻就算好了，所以 A 記下的是 1"]
+    ref: chapter5/11_defer_order.md
+  - id: go-ch05-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      Divide(a, b int) int 遇到 b 是 0 時會 panic。請完成：
+      1. handlePanic()：用 recover 接住 panic，並把 panic 的值用 fmt.Sprint 轉成字串存進 LastPanic；沒有 panic 時什麼都不做。
+      2. 在 Divide 裡用 defer 呼叫 handlePanic，讓 Divide(10, 0) 回傳 0 而不是讓程式當掉。
+    hints: ["recover() 只有在被 defer 的函式裡直接呼叫才有效；沒有 panic 時回傳 nil", "if r := recover(); r != nil { LastPanic = fmt.Sprint(r) }，並在 Divide 第一行寫 defer handlePanic()"]
+    ref: chapter5/13_recover.md
+  - id: go-ch05-q11
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面哪一種情況，最適合用 panic 而不是回傳 error？
+    choices:
+      - "使用者輸入的年齡不是數字"
+      - "查詢的商品不存在"
+      - "程式寫錯，走到照理說絕對不會發生的分支"
+      - "網路連線中斷"
+    answer: 2
+    hints: ["可以預期的失敗，應該交給呼叫者決定怎麼處理", "panic 只留給「程式本身寫錯了」的情況"]
+    ref: chapter5/12_panic.md

@@ -1,0 +1,351 @@
+lang: rust
+chapter: "12"
+title: 非同步
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter12, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 10
+questions:
+  - id: rust-ch12-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      一個使用**單執行緒** runtime 的 `async` 伺服器，同時掛著一萬個正在等待資料的連線。下面哪個描述最精確？
+    choices:
+      - "有並行（concurrency），但沒有平行（parallelism）"
+      - "有平行，但沒有並行"
+      - "兩者都有，因為 async 會自動把工作分到多個 CPU 核心"
+      - "兩者都沒有，因為一次只能處理一個連線，要等它結束才換下一個"
+    answer: 0
+    hints: ["並行是「交錯切換、同時處理很多事」，一條執行緒就做得到；平行需要多個核心同一瞬間一起執行", "咖啡師比喻：一位咖啡師輪流服務多桌，是哪一種？"]
+    ref: chapter12/02_why_async.md
+  - id: rust-ch12-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面的程式執行後會印出什麼？
+
+          async fn say_hello() {
+              println!("hello");
+          }
+
+          #[tokio::main]
+          async fn main() {
+              say_hello();
+              println!("done");
+          }
+    choices:
+      - "先印 hello，再印 done"
+      - "只印 done；編譯器還會對 say_hello(); 這行發出警告"
+      - "先印 done，再印 hello（say_hello 在背景執行）"
+      - "編譯錯誤：async fn 只能搭配 .await 呼叫"
+    answer: 1
+    hints: ["呼叫 async fn 只會拿到一個 Future，它是惰性的", "沒有 .await 也沒有人 poll 它，函式本體一行都不會跑；#[must_use] 會提醒你"]
+    ref: chapter12/03_async_fn_returns_future.md
+  - id: rust-ch12-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      自己寫一個最陽春的 executor：實作 `block_on<F: Future>(future: F) -> F::Output`。
+      它要不斷 `poll` 傳進來的 future，回 `Poll::Pending` 就再 `poll` 一次，回 `Poll::Ready(value)` 就把 `value` 回傳。
+      `Context` 用 `Context::from_waker(Waker::noop())` 做就好（這一題的 executor 不睡覺，所以 Waker 用不到）。
+    hints: ["poll 需要 Pin<&mut F>：先用 Box::pin(future) 把它釘在 heap 上，每次 poll 前用 .as_mut() 重新借出", "let mut future = Box::pin(future); let mut cx = Context::from_waker(Waker::noop()); 然後 loop { match future.as_mut().poll(&mut cx) { ... } }"]
+    ref: chapter12/06_future_trait.md
+  - id: rust-ch12-q04
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      替 `Countdown` 實作 `Future`（`Output = u32`），規則如下：
+      每次被 `poll` 都先把 `polls` 加 1；如果 `remaining` 已經是 0，就回傳 `Poll::Ready(polls)`（總共被 poll 的次數）；
+      否則把 `remaining` 減 1，回傳 `Poll::Pending`。
+      例如 `Countdown::new(2)` 依序 poll 會得到 `Pending`、`Pending`、`Ready(3)`。
+    hints: ["Countdown 的欄位都是普通可搬的值，可以用 self.get_mut() 拿回 &mut Countdown 來修改欄位", "let this = self.get_mut(); this.polls += 1; if this.remaining == 0 { Poll::Ready(this.polls) } else { this.remaining -= 1; Poll::Pending }"]
+    ref: chapter12/07_delay_future.md
+  - id: rust-ch12-q05
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 `JoinAll` 的 `poll`，讓它把多個 `Future` **並行**推進：
+      每次被 `poll` 時，把 `futures` 裡每一個還沒完成（仍是 `Some`）的子 `Future` 各 `poll` 一次；
+      完成的就換成 `None`、之後**不准再 poll**（契約二），還沒完成的放回去；全部完成時回 `Ready(())`，否則回 `Pending`。
+      隱藏測試會檢查兩個 worker 是否交錯執行（a1、b1、a2、b2），以及已完成的子 `Future` 有沒有被再次 poll。
+    hints: ["for slot in &mut this.futures 走訪每個 &mut Option<BoxFuture>；Option::take 可以把 Future 拿出來、原位置留下 None", "if let Some(mut fut) = slot.take() { match fut.as_mut().poll(cx) { Poll::Ready(()) => {}, Poll::Pending => { *slot = Some(fut); all_done = false; } } }"]
+    ref: chapter12/09_naive_join.md
+  - id: rust-ch12-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      起始程式碼的 `block_on` 是第 6 集那個會空轉燒 CPU 的版本。請把它改成會睡覺的 executor：
+      1. 實作 `ThreadWaker` 的 `wake`：叫醒它記住的那條 `Thread`。
+      2. `block_on` 改用 `Waker::from(Arc::new(ThreadWaker { thread: thread::current() }))` 做 `Context`；拿到 `Pending` 就 `thread::park()` 睡覺，被叫醒後再 `poll`。
+      隱藏測試會用一個 50ms 後才完成的 Future，檢查它被 `poll` 的次數不能太多。
+    hints: ["Thread 有 unpark() 方法；executor 那邊用 thread::park() 睡到被 unpark", "wake 裡寫 self.thread.unpark();，block_on 的 Poll::Pending 分支改成 thread::park()"]
+    ref: chapter12/10_waker.md
+  - id: rust-ch12-q07
+    difficulty: 2
+    type: choice
+    prompt: |
+      手寫 executor 的 `Task::wake` 這樣寫：
+
+          fn wake(self: Arc<Self>) {
+              if !self.queued.swap(true, Ordering::SeqCst) {
+                  self.queue.lock().expect("鎖失敗").push_back(self.clone());
+                  self.executor_thread.unpark();
+              }
+          }
+
+      為什麼不改成先 `self.queued.load(...)` 檢查是 `false`，再 `self.queued.store(true, ...)`？
+    choices:
+      - "swap 只是比較快，load 再 store 的結果完全一樣"
+      - "wake 可能同時從不同執行緒呼叫；load 和 store 分開時，兩條執行緒可能都讀到 false，把同一個 Task 重複排進 queue"
+      - "AtomicBool 沒有 store 方法，只能用 swap"
+      - "用 load 會讓已經完成的 Task 再被 poll，違反契約二"
+    answer: 1
+    hints: ["swap 會「拿到舊值，同時把新值留下」，而且是一次 atomic 操作", "想像兩條執行緒同時對同一個 Task 呼叫 wake，load 和 store 中間有空檔"]
+    ref: chapter12/11_spawn_ready_queue.md
+  - id: rust-ch12-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      仿照手寫 runtime 的 `JoinHandle`，完成一對「完成方 / 等待方」：`pair()` 已經寫好，它們共用 `Shared<T>`（裡面是 `(結果, 等待者的 Waker)`）。
+      1. `JoinHandle<T>` 的 `poll`：結果已經在就取出來回 `Ready`；還沒好就把**這次** `cx.waker()` 的複本存進共享狀態，回 `Pending`。
+      2. `Completer::complete(value)`：把結果放進共享狀態；如果有人存了 `Waker`，就取出來 `wake`。
+      隱藏測試也會檢查：被 poll 兩次時，只有最近一次給的 `Waker` 會被叫醒（契約一）。
+    hints: ["共享狀態在 self.shared.state，是一個 Mutex：先 lock() 拿到 guard，再用 state.0、state.1 存取兩個欄位", "poll：if let Some(v) = state.0.take() { Poll::Ready(v) } else { state.1 = Some(cx.waker().clone()); Poll::Pending }；complete：state.0 = Some(value); if let Some(w) = state.1.take() { w.wake(); }"]
+    ref: chapter12/12_join_handle.md
+  - id: rust-ch12-q09
+    difficulty: 3
+    type: choice
+    prompt: |
+      手寫 reactor 裡的 `Read::poll` 是「先 `set_waker`，再試 `read`」。如果把順序反過來：
+      先試 `read`，拿到 `WouldBlock` 之後才 `set_waker`，可能會發生什麼事？
+    choices:
+      - "不會有問題，順序只影響效能"
+      - "資料剛好在兩步之間到達時，reactor 在 HashMap 裡找不到 Waker 可叫醒，這個 Future 可能永遠不會再被 poll"
+      - "read 會回傳 Ok(0)，讓程式以為連線已經關閉"
+      - "reactor 會對同一個 Token 叫醒兩次，讓 Task 被重複 poll"
+    answer: 1
+    hints: ["reactor 收到事件時，是照 Token 去 HashMap 找 Waker 來 wake", "如果事件發生在「試完 read」和「登記 Waker」之間，那次喚醒會落到哪裡？"]
+    ref: chapter12/14_reactor.md
+  - id: rust-ch12-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      把下面這個 `async fn` **手寫**成狀態機。`enum AddTwice` 的四個狀態和 `yield_now()` 都已經寫好，請完成 `poll`：
+
+          async fn add_twice(a: i32, b: i32) -> i32 {
+              yield_now().await;
+              let sum = a + b;
+              yield_now().await;
+              sum * 2
+          }
+
+      `Start` 切到 `First`；`First` 裡的 `YieldNow` 完成時算出 `sum`、切到 `Second`；`Second` 裡的 `YieldNow` 完成時切到 `Done` 並回 `Ready(sum * 2)`；
+      子 Future 回 `Pending` 就回 `Pending`。`Done` 狀態再被 poll 要 `panic!`。
+      所以 `add_twice(3, 4)` 依序 poll 會得到 `Pending`、`Pending`、`Ready(14)`。
+    hints: ["用 let this = self.get_mut(); 再 loop { match this { ... } }，狀態切換寫成 *this = AddTwice::First { ... };", "YieldNow 是 Unpin，可以用 Pin::new(y).poll(cx) 推進它：Ready(()) 就切到下一個狀態繼續 loop，Pending 就 return Poll::Pending"]
+    ref: chapter12/15_state_machine.md
+  - id: rust-ch12-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      已知：
+
+          struct Counter { count: u32 }   // 欄位都是普通的值
+
+          async fn other() {}
+          async fn demo() {
+              let s = String::from("hi");
+              let r = &s;
+              other().await;
+              println!("{}", r);
+          }
+
+      下面四行（各自獨立，都放在 `fn main` 裡）哪一行會**編譯失敗**？
+    choices:
+      - "let mut c = Counter { count: 0 }; let p = Pin::new(&mut c);"
+      - "let mut fut = demo(); let p = Pin::new(&mut fut);"
+      - "let p = Box::pin(demo());"
+      - "let p = std::pin::pin!(demo());"
+    answer: 1
+    hints: ["Pin::new 只接受被指的型別是 Unpin 的指標；Box::pin 和 pin! 不要求 Unpin", "demo() 的 Future 跨 .await 借用了區域變數，編譯器會說它 cannot be unpinned"]
+    ref: chapter12/18_unpin.md
+  - id: rust-ch12-q12
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `poll_once(fut)` 要把任意 Future poll 一次：好了回傳 `Some(結果)`，還沒好回傳 `None`。
+      **起始程式碼無法編譯**（`Pin::new(&mut fut)` 對一般的 `F` 行不通）。請在**不改函式簽名、不加 `F: Unpin` 限制**、也不配置 heap 的前提下修好它。
+      隱藏測試會傳入 `async` block，包括跨 `.await` 借用區域變數的那種。
+    hints: ["async block 產生的 Future 不是 Unpin，所以 Pin::new 不能用；要在 stack 上釘住它", "use std::pin::pin; 然後 let mut fut = pin!(fut);，再用 fut.as_mut().poll(&mut cx)"]
+    ref: chapter12/19_pin_macro.md
+  - id: rust-ch12-q13
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `sum_to(n)` 用遞迴計算 1 + 2 + … + n（`n` 為 0 時回傳 0）。
+      **起始程式碼無法編譯**（`async fn` 直接呼叫自己）。請保留遞迴寫法，改一行讓它通過編譯。
+    hints: ["編譯器沒辦法決定一個「包含自己」的狀態機型別有多大；把遞迴呼叫放到 heap 上，狀態機裡就只存一個固定大小的指標", "把 sum_to(n - 1).await 改成 Box::pin(sum_to(n - 1)).await"]
+    ref: chapter12/20_async_recursion.md
+  - id: rust-ch12-q14
+    difficulty: 1
+    type: short
+    prompt: |
+      想讓 `#[tokio::main]` 改用**單執行緒** runtime，要寫成 `#[tokio::main(flavor = "＿＿＿")]`。空格要填什麼？
+    answers:
+      - '^"?current_thread"?$'
+      - '^flavor ?= ?"?current_thread"?$'
+    hints: ["多執行緒的 flavor 叫 multi_thread", "單執行緒的叫 current_＿＿＿"]
+    ref: chapter12/21_back_to_tokio.md
+  - id: rust-ch12-q15
+    difficulty: 1
+    type: short
+    prompt: |
+      在 `async` 程式裡有一段要跑好幾秒、完全沒有 `.await` 的同步重計算。
+      Tokio 提供哪個函式，能把它丟到專用的 blocking 執行緒池去做，並回傳一個可以 `.await` 的 handle？（寫函式名稱）
+    answers:
+      - '^(tokio::)?(task::)?spawn_blocking(\(.*\))?$'
+    hints: ["它和 tokio::spawn 很像，名字多了一個字", "tokio::task::spawn_＿＿＿"]
+    ref: chapter12/22_spawn_blocking.md
+  - id: rust-ch12-q16
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `slow_number()` 和 `slow_text()` 各要等 100ms。起始程式碼的 `fetch_both()` 一個接一個等，總共花 200ms。
+      請改成在同一個 `Task` 裡**同時**等這兩個 Future，總共只花約 100ms，並回傳 `(7, "hi")`。
+    hints: ["Tokio 有一個巨集可以同時等多個 Future，全部完成後把結果包成 tuple 回傳", "tokio::join!(slow_number(), slow_text())"]
+    ref: chapter12/23_join.md
+  - id: rust-ch12-q17
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `download_all(count, limit)` 會 `spawn` 出 `count` 個各要 100ms 的下載，並回傳觀察到的「最高同時下載數」。
+      起始程式碼沒有任何限制，所有下載會一起開始。請用 `tokio::sync::Semaphore` 讓同時進行的下載最多只有 `limit` 個。
+      例如 `download_all(10, 3)` 應該回傳 3，而且分 4 輪、約 400ms 完成。
+    hints: ["Semaphore::new(limit) 包進 Arc，每個 task clone 一份；開始下載前先 acquire().await 拿 permit", "let _permit = semaphore.acquire().await.expect(\"semaphore 已關閉\");（不要寫成 let _ = ...，那樣 permit 會立刻被 drop）"]
+    ref: chapter12/24_semaphore.md
+  - id: rust-ch12-q18
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `sum_from_producers(producers, per)` 開 `producers` 個生產者 task，各自把 `1..=per` 送進 bounded `mpsc` channel，消費者把收到的數字加總後回傳。
+      但起始程式碼執行後**永遠不會結束**。請找出原因並修正，例如 `sum_from_producers(3, 10)` 應該回傳 165。
+    hints: ["rx.recv().await 要等到「所有發送端都 drop、剩下的訊息都收完」才會回 None", "迴圈裡 clone 給生產者的都會在 task 結束時 drop，但函式自己手上那個 tx 呢？在開始 recv 之前 drop(tx);"]
+    ref: chapter12/25_mpsc.md
+  - id: rust-ch12-q19
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      程式建立一個容量 16 的 `broadcast` channel 和兩個接收端 `rx1`、`rx2`，送出 10、20、30 後關閉發送端，
+      再依序印出 `rx1` 和 `rx2` 收到的每一則訊息。預期輸出：
+
+          rx1 收到 10
+          rx1 收到 20
+          rx1 收到 30
+          rx2 收到 10
+          rx2 收到 20
+          rx2 收到 30
+
+      但起始程式碼的 `rx2` 什麼都沒收到。請修正它。
+    expected_stdout: "rx1 收到 10\nrx1 收到 20\nrx1 收到 30\nrx2 收到 10\nrx2 收到 20\nrx2 收到 30\n"
+    hints: ["broadcast 只會把訊息送給「送出當下已經訂閱」的接收端", "把 let mut rx2 = tx.subscribe(); 移到 for 迴圈送出訊息之前"]
+    ref: chapter12/26_oneshot_watch_broadcast.md
+  - id: rust-ch12-q20
+    difficulty: 3
+    type: choice
+    prompt: |
+      下面的迴圈想一邊讀固定長度的封包、一邊每秒印一次心跳：
+
+          loop {
+              tokio::select! {
+                  r = stream.read_exact(&mut buf) => {
+                      r.expect("讀取失敗");
+                      handle(&buf);
+                  }
+                  _ = sleep(Duration::from_secs(1)) => {
+                      println!("還活著");
+                  }
+              }
+          }
+
+      這段程式最主要的問題是什麼？
+    choices:
+      - "心跳的 branch 永遠不會執行，因為 read_exact 排在前面"
+      - "每當心跳先到，read_exact 的 Future 就被 drop；它可能已經讀走一部分 bytes 卻沒讀滿，下一輪重新 read_exact 會讓資料錯位"
+      - "select! 會同時執行兩個 branch 的大括號，buf 會被兩邊同時修改"
+      - "read_exact 回傳 Result，不能放在 select! 的 branch 裡"
+    answer: 1
+    hints: ["select! 有一個 branch 勝出時，其他還沒完成的 branch 會被 drop，也就是取消", "read_exact 跨多次推進、累積中間進度，它不是 cancellation safe"]
+    ref: chapter12/28_select.md
+  - id: rust-ch12-q21
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `with_timeout(fut, ms)`：最多等 `fut` `ms` 毫秒。
+      時間內完成就回傳 `Some(結果)`；逾時就回傳 `None`，而且 `fut` 要被取消（不能在背景繼續跑完）。
+      起始程式碼完全沒管期限，請用 `tokio::select!` 讓 `fut` 和 `tokio::time::sleep` 賽跑。
+    hints: ["select! 的 branch 寫成 pattern = future => 結果，等號右邊不要自己加 .await", "tokio::select! { value = fut => Some(value), _ = sleep(Duration::from_millis(ms)) => None, }"]
+    ref: chapter12/28_select.md
+  - id: rust-ch12-q22
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的程式無法編譯，錯誤說 future 不是 `Send`、不能 `spawn`：
+
+          let data = Arc::new(std::sync::Mutex::new(0));
+          tokio::spawn(async move {
+              let mut guard = data.lock().expect("鎖失敗");
+              do_io().await;
+              *guard += 1;
+          });
+
+      在「`do_io()` 不需要在持有鎖時執行」的前提下，最建議的修法是哪一個？
+    choices:
+      - "改用 tokio::sync::Mutex，因為它比標準庫的鎖快"
+      - "用 {} 把上鎖和 *guard += 1 包起來，讓 guard 在 .await 之前就被 drop"
+      - "把 tokio::spawn 改成 std::thread::spawn"
+      - "把 guard 再包一層 Arc，讓它變成 Send"
+    answer: 1
+    hints: ["標準庫的 MutexGuard 不是 Send；Future 跨 .await 持有它，整個 Future 就不是 Send", "lock 的作用域越短越好，別抓著鎖等 I/O；Tokio 的鎖其實比較慢，只在非得跨 .await 持有鎖時才用"]
+    ref: chapter12/29_async_sync_primitives.md
+  - id: rust-ch12-q23
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 `sum_evens(stream)`：走訪一個 `Stream<Item = i32>`，把其中的偶數加總後回傳。
+      例如傳入 `tokio_stream::iter(vec![1, 2, 3, 4])` 應該回傳 6。
+    hints: ["Stream 不能用 for 走訪；StreamExt 提供的 next() 回傳一個 Future，.await 後得到 Option", "while let Some(x) = stream.next().await { if x % 2 == 0 { total += x; } }"]
+    ref: chapter12/30_stream.md
+  - id: rust-ch12-q24
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `finish_order(delays)`：`delays[i]` 是第 `i` 個工作要花的毫秒數。所有工作要**同時**開始，回傳它們**完成的順序**（以索引表示）。
+      例如 `finish_order(vec![300, 100, 200])` 應該在約 300ms 後回傳 `[1, 2, 0]`。
+      起始程式碼是一個接一個做，請改用 `tokio::task::JoinSet`。
+    hints: ["用 set.spawn(async move { ... ; i }) 把每個工作丟進 JoinSet，工作完成時回傳自己的索引", "while let Some(result) = set.join_next().await { order.push(result.expect(\"task 失敗\")); }"]
+    ref: chapter12/31_joinset_futures_unordered.md
+  - id: rust-ch12-q25
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `run_worker(jobs, shutdown)` 不斷從 `jobs` 收工作，把每份工作 `x` 處理成 `x * 10` 存起來，最後回傳結果。
+      它要在兩種情況下結束：`shutdown` 收到變更（發送端送出 `true`），或 `jobs` 已經關閉（`recv()` 回 `None`）。
+      起始程式碼完全沒在聽 `shutdown`，如果 `jobs` 一直沒關閉就會永遠等下去。請用 `tokio::select!` 同時等「下一份工作」和「shutdown 訊號」，
+      並把處理工作的那一步放在 `select!` 外面。
+    hints: ["watch::Receiver 的 changed().await 會等到值被更新；select! 的 handler 裡可以直接 break 跳出外層 loop", "let job = tokio::select! { _ = shutdown.changed() => break, job = jobs.recv() => match job { Some(job) => job, None => break }, }; done.push(job * 10);"]
+    ref: chapter12/32_graceful_shutdown.md

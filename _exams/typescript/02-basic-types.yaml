@@ -1,0 +1,155 @@
+lang: typescript
+chapter: "2"
+title: 基本型別
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter2, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  - id: ts-ch02-q01
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 裡的 a 和 b 是字串 "12" 和 "30"，直接相加只會得到 1230。
+      請把它們轉成數字再相加，印出 42。
+    expected_stdout: "42\n"
+    hints: ["TypeScript 不會把 \"12\" 自動當成 12，要自己呼叫 `Number()`", "console.log(Number(a) + Number(b))"]
+    ref: chapter2/01_primitive_types.md
+  - id: ts-ch02-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面關於 `string`、`number`、`boolean` 的敘述，哪一個是**正確**的？
+    choices:
+      - "`Number(\"abc\")` 得到的 `NaN`，型別是 `number`"
+      - "整數的型別是 `number`，小數另外有 `float` 型別"
+      - "寫型別時大寫的 `String` 和小寫的 `string` 完全一樣，習慣用大寫"
+      - "`const count: number = \"3\"` 可以通過檢查，因為 \"3\" 會自動轉成數字"
+    answer: 0
+    hints: ["想想 TypeScript 對整數和小數有沒有分開", "`NaN` 的意思是「不是數字」，但它的型別仍然是 `number`"]
+    ref: chapter2/01_primitive_types.md
+  - id: ts-ch02-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      在 evens.ts 實作 evens(nums: number[]): number[]，
+      回傳一個新的陣列，只留下 nums 裡的偶數。
+    hints: ["陣列的 `filter` 會留下 callback 回傳 true 的元素", "return nums.filter((n) => n % 2 === 0)"]
+    ref: chapter2/02_arrays.md
+  - id: ts-ch02-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      total.ts 的 total(scores: number[]) 用 `reduce` 加總成績，
+      但傳入空陣列時會當掉。請修好它，讓 total([]) 回傳 0，其他情況照常加總。
+    hints: ["`reduce` 沒給初始值時，空陣列會丟出 TypeError", "把初始值 0 當成 reduce 的第二個參數：scores.reduce((sum, score) => sum + score, 0)"]
+    ref: chapter2/02_arrays.md
+  - id: ts-ch02-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 minMax.ts 實作 minMax(nums: number[]): [number, number]，
+      回傳一個元組：第一個位置是最小值、第二個位置是最大值。
+      可以假設 nums 至少有一個元素。
+    hints: ["元組的寫法是 [第一個, 第二個]，長度固定為 2", "return [Math.min(...nums), Math.max(...nums)]"]
+    ref: chapter2/03_tuples.md
+  - id: ts-ch02-q06
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面哪一行**可以**通過 TypeScript 的型別檢查？
+    choices:
+      - "`const student: [string, number] = [\"小明\", 20];`"
+      - "`const student: [string, number] = [20, \"小明\"];`"
+      - "`const point: [number, number] = [3, 4, 5];`"
+      - "`const point: [number, number] = [3];`"
+    answer: 0
+    hints: ["元組照位置檢查型別，而且長度固定", "`[string, number]` 剛好兩個元素，第一個是字串、第二個是數字"]
+    ref: chapter2/03_tuples.md
+  - id: ts-ch02-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      shout.ts 的 shout(name: string | null) 直接呼叫 name.toUpperCase()，
+      name 是 null 時就會當掉。請修好它：
+      有名字時回傳轉成大寫的名字，name 是 null 時回傳 "無名氏"。
+    hints: ["型別包含 null 的值，使用前要先確認不是 null", "if (name !== null) { return name.toUpperCase(); } return \"無名氏\";"]
+    ref: chapter2/04_null_and_undefined.md
+  - id: ts-ch02-q08
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 從 `JSON.parse` 拿到 price，再算 price + 5，最後用 toFixed(2) 印出。
+      `npx tsc` 不報錯，執行卻當掉了。請找出原因並修好，讓它印出 105.00。
+    expected_stdout: "105.00\n"
+    hints: ["`JSON.parse` 回傳的是 `any`，裡面的 price 其實是字串 \"100\"，\"100\" + 5 會得到字串 \"1005\"", "先轉成數字：const price: number = Number(data.price)"]
+    ref: chapter2/05_any.md
+  - id: ts-ch02-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 describe.ts 實作 describe(value: unknown): string：
+      - value 是字串時，回傳轉成大寫的字串
+      - value 是數字時，回傳 value.toFixed(1)
+      - 其他情況回傳 "不支援"
+    hints: ["`unknown` 的值不能直接使用，要先用 `typeof` 確認型別", "if (typeof value === \"string\") { return value.toUpperCase(); }，數字也照這個做法"]
+    ref: chapter2/06_unknown.md
+  - id: ts-ch02-q10
+    difficulty: 1
+    type: short
+    prompt: |
+      `JSON.parse` 的回傳值，TypeScript 給它的型別是什麼？請填型別名稱。
+    answers: ["^any$"]
+    hints: ["TypeScript 不知道那段字串裡是什麼，所以乾脆不檢查", "就是「什麼都可以」、會關掉型別檢查的那個型別"]
+    ref: chapter2/05_any.md
+  - id: ts-ch02-q11
+    difficulty: 1
+    type: choice
+    prompt: |
+      有下面這段程式碼：
+
+          type Score = number;
+          const math: Score = 90;
+          const total: number = math + 5;
+
+      關於 `type Score = number`，哪一個敘述正確？
+    choices:
+      - "`Score` 只是 `number` 的別名，兩者可以互相放，這段程式碼沒有錯"
+      - "`Score` 是新的型別，`math + 5` 的結果不能放進 `number`"
+      - "`type` 那一行在執行時會留下來，變成一個 JavaScript 變數"
+      - "型別別名的名稱規定要全部小寫"
+    answer: 0
+    hints: ["型別別名不會產生新的型別", "`type` 只在型別檢查時存在，名稱習慣用大寫開頭"]
+    ref: chapter2/07_type_aliases.md
+  - id: ts-ch02-q12
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      從標準輸入讀進學生成績，每一行是「名字 成績 成績 ...」（用空白分隔，可能沒有成績）。
+      在 main.ts：
+      - 用 `type Student = [string, number[]]` 存每個學生
+      - 實作 average(scores: number[]): number | null，空陣列回傳 null
+      - 每個學生印一行「名字：平均 分」；沒有成績的印「名字：還沒有成績」
+      例如輸入：
+
+          小明 90 85 77
+          小華
+          小美 100 95
+          小強 60
+
+      要輸出：
+
+          小明：84 分
+          小華：還沒有成績
+          小美：97.5 分
+          小強：60 分
+    stdin: "小明 90 85 77\n小華\n小美 100 95\n小強 60\n"
+    expected_stdout: "小明：84 分\n小華：還沒有成績\n小美：97.5 分\n小強：60 分\n"
+    hints: ["用 readFileSync(0, 'utf8').split('\\n') 拆行，每行再用 split(/\\s+/) 拆開，記得略過空行", "const [name, ...rest] = parts; students.push([name, rest.map(Number)])，印的時候先用 if (result === null) 處理沒有成績的情況"]
+    ref: chapter2/08_practice.md

@@ -1,15 +1,178 @@
-# 格式樣本（#14）：#19 產生題庫時會從第 1 章補齊
 lang: react
-chapter: 4
+chapter: "4"
 title: 第一個 React 程式
 source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter4, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
-sample: 1
+sample: 5
 questions:
   - id: react-ch04-q01
+    difficulty: 1
+    type: short
+    prompt: |
+      你用 Vite 建好了 `hello-react` 專案，昨天按 Ctrl+C 把開發伺服器停掉了。
+      今天要繼續練習，在專案資料夾的終端機要輸入哪一行指令，才能重新啟動開發伺服器？
+    hints: ["這個指令是 package.json 裡 scripts 的一個別名", "格式是 npm run 加上別名，別名是「開發」的英文縮寫"]
+    ref: chapter4/01_create_vite_project.md
+    answers:
+      - '^npm run dev$'
+  - id: react-ch04-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      Vite 產生的 React 專案裡，`index.html` 的 `<body>` 只有一個空的 `<div id="root">` 和一行 `<script>`。
+      畫面上的內容是怎麼出現在這個 `<div>` 裡的？
+    choices:
+      - "src/main.jsx 用 createRoot 把 root 交給 React，再用 .render() 把 <App /> 畫進去"
+      - "Vite 在打包時把 App.jsx 的 JSX 直接複製進 index.html"
+      - "瀏覽器會自動尋找 id 為 root 的元素，載入同資料夾的 App.jsx"
+      - "package.json 的 scripts 指定了要把哪個元件畫進 root"
+    answer: 0
+    hints: ["整個 React 程式的起點是 <script> 載入的那支檔案", "看 src/main.jsx：createRoot(document.getElementById('root')).render(...)"]
+    ref: chapter4/02_project_structure.md
+  - id: react-ch04-q03
     difficulty: 1
     type: code
     check: test
     prompt: |
-      讓 TodoList 元件接收 items: string[]，用 <ul> 與 <li> 列出每一項，key 用項目本身。
-    hints: ["在 JSX 裡用 items.map(...)", "<ul>{items.map(item => <li key={item}>{item}</li>)}</ul>"]
+      在 `App.tsx` 裡新增一個 `Greeting` 元件，回傳 `<p>歡迎來到我的第一個 React 網頁。</p>`。
+      然後讓 `App` 回傳一個 `<div>`，裡面依序放 `<h1>哈囉，React！</h1>` 和兩個 `<Greeting />`。
+      `App` 要維持 `export default`。
+    hints: ["元件就是回傳 JSX 的函式，名稱一定要大寫開頭", "多個元素要包在同一個 <div> 裡：<div><h1>…</h1><Greeting /><Greeting /></div>"]
+    ref: chapter4/03_first_component.md
+  - id: react-ch04-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Profile` 元件有兩個問題，請修正：
+      1. 外面多包了一層 `<div>`。請改用 Fragment，讓網頁上不留下多餘的元素。
+      2. 點「信箱」這個 `<label>` 時沒有跳到輸入框。請讓 `<label>` 指向 `id` 為 `email` 的 `<input>`。
+    hints: ["Fragment 寫成一組空的 <> 和 </>", "HTML 的 for 屬性在 JSX 裡要寫成 htmlFor"]
+    ref: chapter4/04_jsx_rules.md
+  - id: react-ch04-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `UserBadge` 把整個 `user` 物件直接放進 `{}`，畫面會出現
+      `Objects are not valid as a React child` 的錯誤。請修正它：
+      - `<p>` 的文字要是 `小明，20 歲`（名字和年齡從 `user` 取出）
+      - 用行內樣式讓文字是 `crimson` 色、字級 24px
+    hints: ["物件不能直接放進 {}，要挑出屬性：{user.name}", "style 要傳物件，所以是兩層大括號，屬性用 camelCase：style={{ color: 'crimson', fontSize: 24 }}"]
+    ref: chapter4/05_jsx_curly_braces.md
+  - id: react-ch04-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `App.tsx` 從 `./Header.tsx` 和 `./Footer.tsx` 匯入元件，但現在畫面跑不出來：
+      - `Header.tsx` 的元件寫好了，卻少了一行讓別的檔案能匯入它的程式碼。
+      - `Footer.tsx` 還是空的，請寫出 `Footer` 元件，回傳 `<footer><p>© 2026 我的小商店</p></footer>`。
+      `App.tsx` 不用改。
+    hints: ["被匯入的檔案最後要寫 export default 元件名稱", "Footer.tsx 的寫法和 Header.tsx 一樣：先定義函式，最後 export default Footer"]
+    ref: chapter4/06_compose_and_split.md
+  - id: react-ch04-q07
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      完成 `ProductCard` 元件：在參數位置用解構取出 `name`、`price`、`isNew`，`isNew` 預設為 `false`。
+      - `<h2>` 顯示名稱；`isNew` 為 `true` 時在名稱後面加上 `（新品）`
+      - `<p>` 顯示 `價格 元`，例如 `1200 元`
+    hints: ["參數寫成 { name, price, isNew = false }", "<h2>{name}{isNew ? '（新品）' : ''}</h2>"]
+    ref: chapter4/07_props.md
+  - id: react-ch04-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      讓 `Card` 元件可以像 HTML 標籤一樣包住內容：
+
+          <Card title="今日特價">
+            <p>機械鍵盤九折</p>
+          </Card>
+
+      `<section className="card">` 裡要先放 `<h2>{title}</h2>`，緊接著放標籤中間的內容。
+      沒有傳內容時也不能出錯。
+    hints: ["標籤中間的內容會透過特別的 props children 傳進來", "從參數解構出 children，再用 {children} 擺在 <h2> 後面"]
+    ref: chapter4/08_children.md
+  - id: react-ch04-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `CartSummary` 有兩個要求還沒做到：
+      1. `count` 是 `0` 時，畫面上不應出現任何字，但現在會多出一個 `0`。
+      2. `disabled` 為 `true` 時，整個元件什麼都不畫（連外層 `<div>` 都不要）。
+      有商品時照常顯示 `購物車裡有 N 件商品`。
+    hints: ["0 && ... 的結果是 0，而數字 0 會被畫出來；讓 && 左邊是真正的布林值，例如 count > 0", "在 return 之前用 if 判斷 disabled，什麼都不畫就 return null"]
+    ref: chapter4/09_conditional_rendering.md
+  - id: react-ch04-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 `ProductList`，它收到 `products` 陣列（每筆有 `id`、`name`、`inStock`）：
+      - 只列出 `inStock` 為 `true` 的商品，每筆畫成 `<li>{name}</li>`，放在 `<ul>` 裡，`key` 用 `id`
+      - 一筆現貨都沒有時，改成只顯示 `<p>目前沒有商品。</p>`，不要畫 `<ul>`
+    hints: ["先用 filter 挑出有現貨的，存成變數，再對它 map", "available.length === 0 時提早 return <p>目前沒有商品。</p>；<li> 上寫 key={product.id}"]
     ref: chapter4/10_lists_and_keys.md
+  - id: react-ch04-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `Glossary` 把每個名詞畫成相鄰的 `<dt>` 和 `<dd>`，外面用 `<>...</>` 包住，
+      但 React 在主控台警告：`Each child in a list should have a unique "key" prop.`
+      請修正警告，而且 `<dl>` 裡仍要直接是 `dt`、`dd` 交錯，不能多包一層元素。
+    hints: ["簡寫的 <> 沒辦法加 key", "從 react 匯入 Fragment，寫成 <Fragment key={term.id}>…</Fragment>"]
+    ref: chapter4/10_lists_and_keys.md
+  - id: react-ch04-q12
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `Ticket` 在渲染時修改了外面的變數 `orderNumber`，在 `<StrictMode>` 底下號碼牌會變成 2、4、6。
+      請把它改成純的元件：`Ticket` 從 props 接收 `number`，顯示 `號碼牌 {number}`；
+      `App` 用 `[1, 2, 3]` 畫出三張號碼牌，不管開不開 `<StrictMode>`、畫幾次，都要是 1、2、3。
+    hints: ["StrictMode 在開發時會把元件函式多呼叫一次，所以元件不能改動函式外面的東西", "function Ticket({ number }) { return <p>號碼牌 {number}</p> }；App 裡用 [1, 2, 3].map(n => <Ticket key={n} number={n} />)"]
+    ref: chapter4/11_pure_components.md
+  - id: react-ch04-q13
+    difficulty: 2
+    type: choice
+    prompt: |
+      `ProductCard.jsx` 有 `import "./ProductCard.css"`，裡面寫了 `.title { color: crimson; }`；
+      `Card.jsx` 有 `import "./Card.css"`，裡面也寫了 `.title { color: steelblue; }`。
+      兩個元件都用了 `className="title"`。會發生什麼事？
+    choices:
+      - "兩份規則都會套用到整個網頁所有 class 為 title 的元素，後載入的蓋掉先載入的，兩個元件互相干擾"
+      - "每份 CSS 只對匯入它的那個元件有效，兩個元件各自顯示自己的顏色"
+      - "Vite 偵測到 class 撞名，會在終端機報錯並停止執行"
+      - "React 會自動把 title 換成不重複的名字，所以不會互相影響"
+    answer: 0
+    hints: ["用 import \"./X.css\" 匯入的一般 CSS 檔，作用範圍是整個網頁", "自動換成不重複名字的，是檔名以 .module.css 結尾的 CSS Modules，不是一般 CSS 檔"]
+    ref: chapter4/12_css_files.md
+  - id: react-ch04-q14
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `ProductCard.tsx` 已經 `import styles from './ProductCard.module.css'`，卻還在用寫死的 class 字串，
+      CSS Modules 換過名字的樣式根本套不上去。請改用 `styles`：
+      - 外框 `<div>` 用 `card`；`inStock` 為 `false` 時同時套上 `card` 和 `soldOut`
+      - 價格的 `<p>` 用 `price`
+    hints: ["styles 是一個物件，屬性就是 CSS 裡的 class 名稱：className={styles.card}", "兩個 class 用樣板字面值接起來，中間隔一個空格：`${styles.card} ${styles.soldOut}`"]
+    ref: chapter4/13_css_modules.md
+  - id: react-ch04-q15
+    difficulty: 1
+    type: choice
+    prompt: |
+      你在 React DevTools 的 Components 分頁點了一個 `ProductCard`，在右邊面板把 `price` 從 1200 改成 999，畫面立刻跟著變了。
+      接著你重新整理頁面，會怎樣？
+    choices:
+      - "price 恢復成 1200，面板裡的修改不會動到程式碼"
+      - "price 維持 999，因為 DevTools 已經把修改存回 ProductCard.jsx"
+      - "price 維持 999，因為 DevTools 會把修改記在瀏覽器裡"
+      - "頁面會出現錯誤，因為 props 是唯讀的，不能被修改"
+    answer: 0
+    hints: ["DevTools 的修改只存在目前開著的頁面裡", "它是用來快速試試「收到這個值畫面會長怎樣」，不用回頭改程式碼"]
+    ref: chapter4/14_react_devtools.md

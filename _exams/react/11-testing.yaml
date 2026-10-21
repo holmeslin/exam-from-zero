@@ -1,0 +1,202 @@
+lang: react
+chapter: "11"
+title: 測試
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter11, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch11-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      規格是「**滿** 3000 元打九折」，同事寫了：
+
+          export function applyDiscount(total: number): number {
+            return total > 3000 ? total * 0.9 : total;
+          }
+
+      他手動試了 5000 和 1000，結果都對。只能再加一個測試時，用哪一個金額最能抓到這個 bug？
+    choices:
+      - "10000"
+      - "3000"
+      - "2000"
+      - "0"
+    answer: 1
+    hints: ["bug 藏在 > 和 >= 的差別裡", "剛好卡在邊界上的值最容易出錯：剛好 3000 元應該是 2700"]
+    ref: chapter11/01_why_test.md
+  - id: react-ch11-q02
+    difficulty: 1
+    type: short
+    prompt: |
+      `npm test` 執行的是 `vitest`，預設是監看模式：測試跑完不會結束，會一直等你存檔再重跑。
+      如果只想把所有測試跑**一次**然後結束，要在終端機輸入哪一行指令？
+    hints: ["還是用 npx 執行 vitest，只是多一個子指令", "子指令是英文的「執行」：npx vitest ___"]
+    ref: chapter11/02_install_vitest.md
+    answers:
+      - '^(npx )?vitest (run|--run)$'
+  - id: react-ch11-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `price.ts` 裡有 `formatPrice`，它會把 `1200` 變成 `"NT$ 1,200"`。
+      這一題換你寫測試：在 `checkPrice.ts` 完成 `checkFormatPrice(formatPrice)`，
+      用 `expect(...).toBe(...)` 檢查 `formatPrice(1200)` 的結果是 `"NT$ 1,200"`。
+      評分時會把正確的、以及故意寫錯的 `formatPrice` 傳進來：正確的版本要通過，寫錯的版本要讓你的 `expect` 失敗。
+    hints: ["把 TODO 那行的 throw 刪掉，換成一行 expect", "expect(formatPrice(1200)).toBe(\"NT$ 1,200\")"]
+    ref: chapter11/03_first_test.md
+  - id: react-ch11-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `cart.ts` 裡的 `applyDiscount` 規格是「滿 3000 元打九折」。
+      在 `checkDiscount.ts` 完成 `checkApplyDiscount(applyDiscount)`，用 `expect` 檢查邊界的兩側：
+      - `applyDiscount(3000)` 是 `2700`
+      - `applyDiscount(2999)` 是 `2999`
+
+      評分時會傳入正確的版本，以及把 `>=` 寫成 `>`、門檻寫錯、折扣寫錯的版本。
+      正確的版本要通過，其他版本都要讓你的檢查失敗。
+    hints: ["一個邊界值要測兩側：剛好到（3000）和差一點（2999）", "寫兩行：expect(applyDiscount(3000)).toBe(2700) 和 expect(applyDiscount(2999)).toBe(2999)"]
+    ref: chapter11/04_describe_test_expect.md
+  - id: react-ch11-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `quantity.ts` 裡的 `parseQuantity(text)` 把字串轉成數量；不是正整數就丟出錯誤「數量必須是正整數」。
+      在 `checkQuantity.ts` 完成 `checkParseQuantity(parseQuantity)`，檢查三件事：
+      1. `parseQuantity("3")` 得到**數字** `3`
+      2. `parseQuantity("0")` 會丟出錯誤，訊息是「數量必須是正整數」
+      3. `parseQuantity("abc")` 會丟出錯誤
+
+      評分時也會傳入幾個寫錯的版本，你的檢查都要能抓到。
+    hints: ["測「會丟出錯誤」時，要把呼叫包成一個函式交給 expect，不然錯誤會在 expect 檢查之前就丟出來", "expect(() => parseQuantity(\"0\")).toThrow(\"數量必須是正整數\")；數字的部分用 toBe(3)"]
+    ref: chapter11/04_describe_test_expect.md
+  - id: react-ch11-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `CategoryBar.tsx` 會顯示標題 `<h1>商品</h1>` 和 all、keyboard、mouse 三個按鈕，目前分類（`current`）的那個按鈕不能按。
+      在 `checkCategoryBar.tsx` 完成 `checkCategoryBar(CategoryBar)`（已經幫你 `render(<CategoryBar current="mouse" />)`），用 `screen.getByRole` 檢查：
+      1. 有一個名稱是「商品」的**標題**（role 是 `heading`）
+      2. 名稱是 `mouse` 的按鈕是停用的
+      3. 名稱是 `all` 的按鈕可以按
+
+      注意：這個練習環境沒有安裝 jest-dom，所以不能用 `toBeInTheDocument()`、`toBeDisabled()`。
+      `getBy…` 找不到時本來就會丟出錯誤，「找得到」就等於檢查通過；按鈕能不能按，請讀它的 `disabled` 屬性，例如：
+
+          const button = screen.getByRole("button", { name: "mouse" }) as HTMLButtonElement;
+          expect(button.disabled).toBe(true);
+    hints: ["標題用 screen.getByRole(\"heading\", { name: \"商品\" })；只用 getByText 抓不到「標題被寫成 <p>」的錯", "mouse 的 disabled 要是 true，all 的 disabled 要是 false"]
+    ref: chapter11/06_get_by_role.md
+  - id: react-ch11-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Counter.tsx` 顯示「目前數字：0」和一個「加一」按鈕。
+      在 `checkCounter.tsx` 完成 `checkCounter(Counter)`：
+      1. 確認一開始畫面上有「目前數字：0」
+      2. 用 `user-event` 按「加一」按鈕**三下**
+      3. 確認畫面上變成「目前數字：3」
+
+      找文字用 `screen.getByText(...)`：找不到就會丟出錯誤，不需要 jest-dom 的 `toBeInTheDocument()`（這個練習環境沒有安裝）。
+      評分時會傳入一次加二、只會變成 1 等寫錯的版本，你的檢查都要能抓到。
+    hints: ["先 const user = userEvent.setup()，按鈕用 screen.getByRole(\"button\", { name: \"加一\" }) 找", "每一次 user.click(...) 前面都要加 await，不然畫面還沒更新就檢查了"]
+    ref: chapter11/07_user_event.md
+  - id: react-ch11-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `UserList.tsx` 從 props 接收 `loadUsers`（回傳 Promise 的函式）：載入時顯示「載入中…」，成功顯示名單，失敗顯示「載入失敗」。
+      在 `checkUserList.tsx` 完成兩個檢查函式：
+
+      `checkLoaded(UserList)`：
+      1. 傳入一個馬上成功、結果是 `["小明", "小華"]` 的 `loadUsers` 並渲染
+      2. 一開始畫面上有「載入中…」
+      3. 等「小明」出現之後，畫面上剛好有 2 個 `listitem`，而且「載入中…」已經不見了
+
+      `checkFailed(UserList)`：傳入一個馬上失敗的 `loadUsers`，等「載入失敗」出現。
+
+      這個練習環境沒有 jest-dom：確認「不在畫面上」請用 `expect(screen.queryByText(...)).toBeNull()`。
+    hints: ["假的非同步結果用 Promise.resolve([...]) 和 Promise.reject(new Error(...)) 做；非同步才出現的東西要 await screen.findByText(...)", "數量用 expect(screen.getAllByRole(\"listitem\")).toHaveLength(2)；「載入中…」要先 getByText 確認在，最後用 queryByText 確認不在"]
+    ref: chapter11/08_async_tests.md
+  - id: react-ch11-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `SearchBox.tsx` 有一個標籤是「搜尋」的輸入框和「送出」按鈕，送出時會用輸入的關鍵字呼叫 `onSearch`。
+      在 `checkSearchBox.tsx` 完成 `checkSearchBox(SearchBox)`：
+      1. 用 `vi.fn()` 做一個假的 `onSearch`，傳給 `SearchBox` 並渲染
+      2. 在「搜尋」輸入框打「滑鼠」，這時 `onSearch` 還**不能**被呼叫過
+      3. 按「送出」之後，`onSearch` 剛好被呼叫 **1 次**，參數是 `"滑鼠"`
+
+      評分時會傳入「打字時就呼叫」「用空字串呼叫」「呼叫兩次」「沒有呼叫」等寫錯的版本，你的檢查都要能抓到。
+    hints: ["輸入框用 screen.getByRole(\"textbox\", { name: \"搜尋\" }) 找，await user.type(輸入框, \"滑鼠\")", "依序檢查 not.toHaveBeenCalled()、toHaveBeenCalledTimes(1)、toHaveBeenCalledWith(\"滑鼠\")"]
+    ref: chapter11/09_mock.md
+  - id: react-ch11-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      測試檔用 `vi.mock("../api/products.ts", () => ({ fetchProducts: vi.fn() }))` 把模組換成假的，
+      檔案裡有兩個測試，每個都渲染一次 `ProductPage`，最後都檢查：
+
+          expect(fetchProducts).toHaveBeenCalledTimes(1);
+
+      單獨跑任何一個都會通過，但兩個一起跑時，第二個測試失敗，說 `fetchProducts` 被呼叫了 2 次。最可能少了什麼？
+    choices:
+      - "少了 beforeEach(() => { vi.clearAllMocks(); })，前一個測試的呼叫紀錄留了下來"
+      - "vi.mock 要寫在所有 import 的上面，否則不會生效"
+      - "第二個測試要再呼叫一次 vi.mock，把模組重新換成假的"
+      - "要改用 vi.spyOn(globalThis, \"fetch\")，vi.mock 不會記錄呼叫次數"
+    answer: 0
+    hints: ["vi.fn() 做出的假函式會記住每一次被呼叫，跨測試也會一直累積", "每個測試開始前清掉呼叫紀錄：beforeEach 搭配 vi.clearAllMocks()"]
+    ref: chapter11/09_mock.md
+  - id: react-ch11-q12
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `useCounter.ts` 是一個自訂 Hook，回傳 `{ count, increment, reset }`，`initial` 預設是 0，`reset` 會回到 `initial`。
+      Hook 不能在元件外面直接呼叫，請用 `renderHook` 測它。在 `checkUseCounter.ts` 完成 `checkUseCounter(useCounter)`：
+      1. `useCounter()` 不給參數時，`count` 一開始是 `0`
+      2. `useCounter(10)` 呼叫 `increment` 之後，`count` 是 `11`
+      3. 接著呼叫 `reset`，`count` 回到 `10`
+
+      評分時會傳入預設值錯、`reset` 錯、一次加二、忽略初始值等寫錯的版本，你的檢查都要能抓到。
+    hints: ["const { result } = renderHook(() => useCounter(10))，每次檢查都從 result.current 讀最新的值，不要先存進變數", "會改 state 的呼叫要包在 act 裡：act(() => { result.current.increment(); })"]
+    ref: chapter11/10_render_hook.md
+  - id: react-ch11-q13
+    difficulty: 2
+    type: choice
+    prompt: |
+      同一個測試檔裡有兩個測試，都是先 `render(<Counter />)` 再 `screen.getByText("目前數字：0")`。
+      第一個通過，第二個卻出現：
+
+          TestingLibraryElementError: Found multiple elements with the text: 目前數字：0
+
+      最可能的原因是？
+    choices:
+      - "Counter 元件裡寫了兩個 <p>，要刪掉一個"
+      - "第一個測試渲染的元件沒有被清掉，要在每個測試後執行 cleanup()（setup 檔裡的 afterEach）"
+      - "getByText 只能在一個測試檔裡用一次，第二次要改用 getAllByText"
+      - "jsdom 只支援一個測試，要改用真的瀏覽器"
+    answer: 1
+    hints: ["第一個測試自己跑是通過的，所以元件本身沒問題", "每個測試跑完要把畫面清乾淨，這是 setup.ts 裡 afterEach(() => cleanup()) 在做的事"]
+    ref: chapter11/05_render_components.md
+  - id: react-ch11-q14
+    difficulty: 1
+    type: short
+    prompt: |
+      你想確認「機械鍵盤」這個連結**不在**畫面上，寫成
+      `expect(screen.getByRole("link", { name: "機械鍵盤" })).toBeNull()`，
+      結果找不到時測試直接丟出錯誤，`expect` 根本沒機會檢查。
+      要改用哪一種開頭的查詢函式？（回答開頭，例如 `getBy`）
+    hints: ["三種開頭是 getBy、queryBy、findBy，差別在找不到時怎麼做", "找不到時回傳 null、不丟錯誤的是 q____By"]
+    ref: chapter11/06_get_by_role.md
+    answers:
+      - '^query ?by[a-z]*(…|\.\.\.)?$'
+      - '^query$'

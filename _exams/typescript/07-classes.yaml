@@ -1,0 +1,249 @@
+lang: typescript
+chapter: "7"
+title: 類別
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter7, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  - id: ts-ch07-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      book.ts 的 `Book` 類別已經宣告了 `title`、`price` 和 `stock` 三個屬性，
+      但建構子沒有把收到的參數存起來。
+
+      修好建構子，讓 `new Book("TypeScript 入門", 450)` 建立的物件
+      `title` 是 `"TypeScript 入門"`、`price` 是 `450`，`stock` 一開始是 `0`。
+    hints:
+      - "在建構子裡用 `this.屬性 = 參數` 把值存進正在建立的物件"
+      - "this.title = title; this.price = price;"
+    ref: chapter7/01_properties_and_constructor.md
+  - id: ts-ch07-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      在 account.ts 完成 `Account` 類別的三個方法：
+
+      - `deposit(amount)`：把金額加進 `balance`。
+      - `withdraw(amount)`：餘額夠就扣款並回傳 `true`；不夠就不扣款，回傳 `false`。
+      - `describe()`：回傳「小明 的餘額：800 元」這種格式的字串（戶名後面有一個空格）。
+    hints:
+      - "方法裡用 `this.balance`、`this.owner` 讀寫物件自己的屬性"
+      - "describe 可以寫成 return `${this.owner} 的餘額：${this.balance} 元`;"
+    ref: chapter7/02_methods.md
+  - id: ts-ch07-q03
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      counter.ts 的 `Counter` 用一般方法寫 `increase`。下面這種用法會在執行時出錯：
+
+          const counter = new Counter();
+          [1, 2, 3].forEach(counter.increase);
+
+      修改 `Counter`，讓 `increase` 就算被單獨拿出來呼叫、或當成 callback 傳出去，
+      也能正確累加同一個 `counter` 的 `count`。
+    hints:
+      - "方法被單獨拿出來呼叫時，前面沒有物件，`this` 就不見了；箭頭函式會記住建立時的 `this`"
+      - "把方法改成箭頭函式的屬性：increase = (): void => { this.count++; };"
+    ref: chapter7/02_methods.md
+  - id: ts-ch07-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的程式碼，用 `npx tsc` 檢查和用 `node` 執行，各會發生什麼事？
+
+          class Account {
+            private balance = 0;
+
+            deposit(amount: number): void {
+              this.balance += amount;
+            }
+
+            getBalance(): number {
+              return this.balance;
+            }
+          }
+
+          const account = new Account();
+          account.deposit(500);
+          account.balance = 1000000;
+          console.log(account.getBalance());
+    choices:
+      - "`tsc` 報錯；`node` 執行仍然印出 1000000"
+      - "`tsc` 報錯；`node` 執行也會丟出錯誤"
+      - "`tsc` 不報錯；`node` 印出 500"
+      - "`tsc` 報錯；`node` 印出 500"
+    answer: 0
+    hints:
+      - "`private` 是 TypeScript 的語法，想想型別在執行時會怎樣"
+      - "`private` 只在 `tsc` 檢查時有效，執行時會被拿掉，`balance` 仍是普通屬性"
+    ref: chapter7/03_access_modifiers.md
+  - id: ts-ch07-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      wallet.ts 的 `Wallet` 把餘額放在公開的 `balance` 屬性，誰都能直接改。請修改它：
+
+      - 把餘額改成 **執行時也拿不到** 的私有欄位，`Object.keys(wallet)` 只能看到 `owner`。
+      - `deposit(amount)` 遇到小於等於 0 的金額時直接忽略，不改變餘額。
+      - `getBalance()` 照樣回傳目前的餘額。
+    hints:
+      - "`private` 執行時會被拿掉；JavaScript 自己的私有寫法是在名稱前面加 `#`"
+      - "宣告 #balance = 0，使用時寫 this.#balance；deposit 開頭加 if (amount <= 0) return;"
+    ref: chapter7/04_private_fields.md
+  - id: ts-ch07-q06
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的程式碼用 `npx tsc` 檢查，標了 A、B、C 的哪幾行會報錯？
+
+          class Order {
+            readonly id: number;
+            readonly items: string[] = [];
+
+            constructor(id: number) {
+              this.id = id;                       // A
+            }
+
+            add(item: string): void {
+              this.items.push(item);              // B
+            }
+
+            reset(): void {
+              this.items = [];                    // C
+            }
+          }
+    choices:
+      - "只有 A"
+      - "只有 C"
+      - "B 和 C"
+      - "A、B、C 都會報錯"
+    answer: 1
+    hints:
+      - "`readonly` 屬性可以在建構子裡給值；它擋的是「換成別的值」"
+      - "`push` 只改陣列內容，`items` 還是同一個陣列；`this.items = []` 才是換掉它"
+    ref: chapter7/05_readonly.md
+  - id: ts-ch07-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      savings.ts 裡 `SavingsAccount` 繼承了 `Account`。請完成它：
+
+      - `addInterest()`：把「餘額 × 利率」加進餘額。
+      - 改寫 `describe()`：沿用父類別的結果，後面加上「（年利率 2%）」這種格式。
+
+      例如利率 0.02、存 1000 元、加一次利息後，`describe()` 回傳
+      `小明：1020 元（年利率 2%）`。
+    hints:
+      - "`balance` 是 `protected`，子類別裡可以用 `this.balance`；父類別原本的方法用 `super.describe()` 呼叫"
+      - "override describe(): string { return `${super.describe()}（年利率 ${this.rate * 100}%）`; }"
+    ref: chapter7/06_inheritance.md
+  - id: ts-ch07-q08
+    difficulty: 1
+    type: short
+    prompt: |
+      子類別想改寫父類別的 `describe`，卻不小心打成 `describ`，結果 TypeScript 不會報錯，
+      只當成新增了一個方法。
+
+      在子類別的方法名稱前面加上哪個關鍵字，TypeScript 就會確認父類別真的有這個方法？
+      （只要寫關鍵字）
+    answers: ["^`?override`?$"]
+    hints:
+      - "這個關鍵字的英文意思就是「改寫」"
+      - "override describe(): string { ... }"
+    ref: chapter7/07_override.md
+  - id: ts-ch07-q09
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 是咖啡店購物車，`interface Discount` 規定折扣要有 `name` 和 `apply(price)`。
+      完成裡面的 TODO（檔案最後的測試程式碼不要改）：
+
+      - `PercentOff`：`new PercentOff(0.9)` 的 `name` 是 `打 9 折`，
+        `apply` 回傳原價乘以折數後四捨五入成整數。
+      - `FixedOff`：`new FixedOff(100)` 的 `name` 是 `折 100 元`，
+        `apply` 回傳原價減掉折抵金額，最低是 0。
+      - `Cart`：用 `#` 私有欄位存放商品（`name` 和 `price`），`add(name, price)` 加入商品，
+        `total(discount)` 回傳總金額；有傳 `discount` 就回傳套用折扣後的金額。
+
+      執行 `node main.ts` 的輸出要是：
+
+          原價：949 元
+          打 9 折：854 元
+          打 8.5 折：807 元
+          折 100 元：849 元
+          折 1000 元：0 元
+    expected_stdout: "原價：949 元\n打 9 折：854 元\n打 8.5 折：807 元\n折 100 元：849 元\n折 1000 元：0 元\n"
+    hints:
+      - "`name` 在建構子裡用樣板字面值組出來（`rate * 10`）；四捨五入用 `Math.round`，最低是 0 用 `Math.max`"
+      - "Cart 宣告 #items: { name: string; price: number }[] = []；total 先用 for...of 加總，再 if (discount) return discount.apply(sum);"
+    ref: chapter7/12_practice.md
+  - id: ts-ch07-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      shape.ts 有抽象類別 `Shape`（抽象方法 `area()`）和已經寫好的子類別 `Circle`。請完成：
+
+      - `Shape` 的 `describe()`：回傳「圓形的面積是 12.6」這種格式，
+        面積用各子類別自己的 `area()` 算，取到小數點後一位。
+      - `Rectangle`：名稱是「長方形」，建構子收 `width`、`height`，`area()` 回傳寬乘高。
+
+      `new Rectangle(3, 4).describe()` 要回傳 `長方形的面積是 12.0`。
+    hints:
+      - "`describe` 寫在 `Shape` 裡，呼叫 `this.area()` 時會執行子類別的版本；`toFixed(1)` 取到小數點後一位"
+      - "describe() 回傳 `${this.name}的面積是 ${this.area().toFixed(1)}`；Rectangle 宣告 width、height 並在 super(\"長方形\") 之後設定"
+    ref: chapter7/09_abstract_classes.md
+  - id: ts-ch07-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 ticket.ts 完成號碼牌類別 `Ticket`，所有東西都屬於類別本身，不需要 `new`：
+
+      - `Ticket.MAX`：共用、不能改的上限，值是 `3`。
+      - 用 `#` 私有欄位記錄目前發到幾號，外面看不到。
+      - `Ticket.issue()`：還沒發完就回傳下一個號碼（從 1 開始），發完了回傳 `null`。
+
+      連續呼叫 5 次 `Ticket.issue()` 會得到 `1`、`2`、`3`、`null`、`null`。
+    hints:
+      - "屬於類別本身的屬性和方法前面加 `static`，使用時寫 `Ticket.成員`，不是 `this`"
+      - "static readonly MAX = 3; static #count = 0; static issue() 裡先檢查 Ticket.#count >= Ticket.MAX"
+    ref: chapter7/10_static.md
+  - id: ts-ch07-q12
+    difficulty: 3
+    type: choice
+    prompt: |
+      下面的程式碼用 `npx tsc` 檢查、再用 `node` 執行，結果是什麼？
+
+          class Point {
+            x: number;
+            y: number;
+
+            constructor(x: number, y: number) {
+              this.x = x;
+              this.y = y;
+            }
+          }
+
+          function check(point: Point) {
+            console.log(point instanceof Point);
+          }
+
+          check(new Point(1, 2));
+          check({ x: 3, y: 4 });
+    choices:
+      - "`tsc` 報錯：`{ x: 3, y: 4 }` 不是 `Point` 的實例"
+      - "`tsc` 不報錯；印出 true、true"
+      - "`tsc` 不報錯；印出 true、false"
+      - "`tsc` 不報錯；第二次呼叫在執行時丟出錯誤"
+    answer: 2
+    hints:
+      - "類別的型別也是結構型別，只比對形狀；但 `instanceof` 檢查的是另一件事"
+      - "形狀對得上就通過型別檢查；`instanceof` 只看是不是用 `Point` 建立的"
+    ref: chapter7/11_class_as_type.md

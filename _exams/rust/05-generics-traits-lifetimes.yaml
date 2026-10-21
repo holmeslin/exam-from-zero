@@ -1,0 +1,283 @@
+lang: rust
+chapter: "5"
+title: 泛型、Trait Bound 與生命週期
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter5, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 10
+questions:
+  - id: rust-ch05-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      泛型 struct `Pair<T>` 目前只幫 `Pair<i32>` 實作了 `new`、`first`、`swap` 三個方法，
+      所以 `Pair::new("左", "右")` 或 `Pair<String>` 都沒辦法用。
+      請改寫這個 `impl` 區塊，讓**任何型別** `T` 的 `Pair<T>` 都有這三個方法（行為不變）。
+    hints: ["impl 後面要先宣告型別參數，再把它傳給 Pair", "寫成 impl<T> Pair<T> { ... }，方法裡的 i32 全部換成 T"]
+    ref: chapter5/07_generic_impl.md
+  - id: rust-ch05-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      已經定義好泛型 enum `Either<L, R> { Left(L), Right(R) }`。請完成三個方法：
+      - `is_left(&self) -> bool`：是 `Left` 就回傳 true
+      - `left(self) -> Option<L>`：`Left(v)` 回傳 `Some(v)`，`Right` 回傳 `None`
+      - `flip(self) -> Either<R, L>`：把 `Left(v)` 變成 `Right(v)`，`Right(v)` 變成 `Left(v)`
+    hints: ["三個方法都用 match self 分成 Either::Left 和 Either::Right 兩種情況", "flip 的回傳型別是 Either<R, L>，所以 Left(v) => Either::Right(v)"]
+    ref: chapter5/03_generic_enum.md
+  - id: rust-ch05-q03
+    difficulty: 1
+    type: short
+    prompt: |
+      把字串轉成 f64 時可以這樣寫：
+
+          let x = "3.5".parse::<f64>().expect("不是數字");
+
+      其中 `::<f64>` 這種「手動填入泛型型別參數」的語法叫什麼名字？（請寫英文）
+    answers: ["^turbo ?fish$", "^turbo ?fish ?語法$"]
+    hints: ["因為 ::<> 看起來像一條魚", "turbo + fish"]
+    ref: chapter5/04_turbofish.md
+  - id: rust-ch05-q04
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 `find_index(items: &[i32], target: i32) -> Option<usize>`：
+      回傳 `target` 在切片中**第一次**出現的索引，包在 `Some` 裡；找不到就回傳 `None`。
+      例如 `find_index(&[4, 8, 15, 16], 15)` 回傳 `Some(2)`。
+    hints: ["用 for i in 0..items.len() 走訪，比對 items[i] == target", "找到就 return Some(i)；迴圈跑完都沒找到，最後回傳 None"]
+    ref: chapter5/08_option.md
+  - id: rust-ch05-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      程式裡已經有 `parse_num(s: &str) -> Result<i32, String>`。請用 `?` 運算子完成：
+      - `add_all(a, b, c) -> Result<i32, String>`：三個字串都轉成整數後相加；任何一個失敗，就回傳**第一個**失敗的錯誤
+      - `first_doubled(numbers: &[i32]) -> Option<i32>`：回傳第一個元素的兩倍；切片是空的就回傳 `None`
+    hints: ["let x = parse_num(a)?; 成功就拿到值，失敗就直接把 Err 回傳出去", "切片的 .first() 回傳 Option<&i32>，對它用 ? 就能在空切片時直接回傳 None"]
+    ref: chapter5/11_question_mark.md
+  - id: rust-ch05-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `trait Shape` 有必須實作的 `area(&self) -> f64`，以及有預設實作的 `describe(&self) -> String`。請完成：
+      - `describe` 的預設實作：回傳「面積 X」，X 是面積取到小數點後一位（例如 `面積 7.5`）
+      - `Rect`（寬 `w`、高 `h`）和 `Square`（邊長 `side`）的 `area`
+      - `Rect` 直接使用預設的 `describe`；`Square` 要覆寫成「正方形，邊長 X」，X 一樣取到小數點後一位（例如 `正方形，邊長 2.0`）
+    hints: ["預設實作裡可以呼叫同一個 trait 的其他方法：self.area()", "format!(\"面積 {:.1}\", self.area())；Square 的 impl 裡再寫一次 fn describe 就是覆寫"]
+    ref: chapter5/12_trait_default_impl.md
+  - id: rust-ch05-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Pair<T>` 想提供兩個方法，但它們只有在 `T` 具備某些能力時才寫得出來：
+      - `to_tuple(&self) -> (T, T)`：回傳兩個欄位各自的 clone
+      - `larger(&self) -> T`：回傳兩者中較大的那個（一樣大就回傳 `first`）
+
+      請用條件式 `impl`（在 `impl` 上加 `trait` bound）完成它們，讓 `Pair<String>` 能呼叫 `to_tuple`，
+      `Pair<i32>`、`Pair<f64>`、`Pair<char>` 能呼叫 `larger`。可以拆成兩個 `impl` 區塊。
+    hints: ["to_tuple 需要 T: Clone；larger 要比大小又要直接回傳欄位的值，需要 T: PartialOrd + Copy", "impl<T: Clone> Pair<T> { ... } 和 impl<T: PartialOrd + Copy> Pair<T> { ... }"]
+    ref: chapter5/13_trait_bound.md
+  - id: rust-ch05-q08
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      幫 `Point { x: i32, y: i32 }` 實作 `Display`，讓 `println!("{}", p)` 印出 `(x, y)` 的格式，
+      例如 `Point { x: 3, y: -1 }` 印成 `(3, -1)`。實作完之後 `.to_string()` 也要能用。
+    hints: ["在 fmt 方法裡用 write! 巨集，第一個參數是 f", "write!(f, \"({}, {})\", self.x, self.y)"]
+    ref: chapter5/15_display.md
+  - id: rust-ch05-q09
+    difficulty: 1
+    type: choice
+    prompt: |
+      有這兩個函式：
+
+          use std::fmt::Display;
+
+          fn show_two(a: &impl Display, b: &impl Display) {
+              println!("{} {}", a, b);
+          }
+
+          fn show_same<T: Display>(a: &T, b: &T) {
+              println!("{} {}", a, b);
+          }
+
+      下面哪一個呼叫會**編譯失敗**？
+    choices: ["show_two(&1, &2)", "show_two(&1, &\"hi\")", "show_same(&1, &2)", "show_same(&1, &\"hi\")"]
+    answer: 3
+    hints: ["參數位置的每個 impl Display 都是各自獨立的型別", "show_same 的 a 和 b 都是 &T，必須是同一個型別；1 是 i32、\"hi\" 是 &str"]
+    ref: chapter5/17_impl_trait.md
+  - id: rust-ch05-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成兩個轉換：
+      - `impl From<Celsius> for Fahrenheit`：華氏 = 攝氏 × 1.8 + 32。實作好之後，`let f: Fahrenheit = c.into();` 也要能用
+      - `impl TryFrom<i32> for Percent`：0 到 100（含）轉換成功；超出範圍回傳錯誤字串「超出範圍：<數字>」，例如 `超出範圍：150`
+    hints: ["只要實作 From，Into 就會自動獲得；TryFrom 的 try_from 回傳 Result<Percent, String>", "if n >= 0 && n <= 100 { Ok(Percent { value: n as u8 }) } else { Err(format!(\"超出範圍：{}\", n)) }"]
+    ref: chapter5/19_from_into.md
+  - id: rust-ch05-q11
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      `main` 已經寫好了，不要修改。請幫 `Guard` 實作 `Drop`，在它被丟棄時印出 `釋放 <name>`
+      （例如 `釋放 A`）。完成後程式的輸出順序，會顯示每個值是在什麼時候被丟棄的。
+    expected_stdout: "內層結束\n釋放 C\n釋放 B\nmain 結束\n釋放 D\n釋放 A\n"
+    hints: ["impl Drop for Guard { fn drop(&mut self) { ... } }", "在 drop 方法裡 println!(\"釋放 {}\", self.name);"]
+    ref: chapter5/20_drop.md
+  - id: rust-ch05-q12
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      用 `Box` 定義的連結串列：`enum List { Node(i32, Box<List>), Empty }`。請完成三個函式：
+      - `from_slice(values: &[i32]) -> List`：依照切片順序建立串列，`&[1, 2, 3]` 變成 `1 -> 2 -> 3 -> Empty`
+      - `sum(list: &List) -> i32`：所有數字的總和
+      - `len(list: &List) -> usize`：有幾個 `Node`
+    hints: ["sum 和 len 用 match 加遞迴：Node(value, next) => value + sum(next)，Empty => 0", "from_slice 從切片最後一個元素往前建：list = List::Node(values[i], Box::new(list))"]
+    ref: chapter5/21_box.md
+  - id: rust-ch05-q13
+    difficulty: 2
+    type: short
+    prompt: |
+      下面這段程式最後印出的數字是多少？
+
+          use std::rc::Rc;
+
+          fn main() {
+              let a = Rc::new(String::from("hi"));
+              let b = a.clone();
+              let c = (*a).clone();
+              {
+                  let d = b.clone();
+              }
+              println!("{}", Rc::strong_count(&a));
+          }
+    answers: ["^2$"]
+    hints: ["(*a).clone() 呼叫的是內層 String 的 clone，得到的是一個新的 String，不是 Rc", "a、b 兩個 Rc；d 在內層作用域結束時被丟棄，計數會減回來"]
+    ref: chapter5/23_deref.md
+  - id: rust-ch05-q14
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Visits` 用來記錄被造訪幾次，但 `visit(&self)` 只拿得到共享參考，不能改成 `&mut self`。
+      請修改 `Visits` 的欄位和方法，讓透過好幾個 `&Visits` 呼叫 `visit()` 都能讓計數加一，
+      `count()` 回傳目前次數。
+    hints: ["Cell<T> 讓你只有 &self 也能替換裡面的值（u32 是 Copy，可以用 .get()）", "欄位改成 count: Cell<u32>；visit 裡寫 self.count.set(self.count.get() + 1)"]
+    ref: chapter5/24_cell.md
+  - id: rust-ch05-q15
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `Logger` 要支援「好幾個 Logger 共用同一份紀錄」：
+      - `share(&self) -> Logger`：回傳另一個 Logger，和 self 共用同一份紀錄
+      - `log(&self, msg)`：只有 `&self` 也要能新增一行
+      - `lines(&self) -> Vec<String>`：回傳目前所有紀錄的複本
+
+      不管透過哪一個 Logger 寫入，其他共用的 Logger 都要看得到；其中一個被丟棄後，紀錄也要還在。
+      請修改欄位型別並完成方法。
+    hints: ["共享要靠 Rc，只有 &self 卻要修改 Vec 要靠 RefCell：欄位改成 Rc<RefCell<Vec<String>>>", "share 回傳 Logger { lines: self.lines.clone() }；log 用 self.lines.borrow_mut().push(...)；lines 用 self.lines.borrow().clone()"]
+    ref: chapter5/25_refcell.md
+  - id: rust-ch05-q16
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式會發生什麼事？
+
+          use std::cell::RefCell;
+
+          fn main() {
+              let x = RefCell::new(42);
+              let a = x.borrow();
+              let b = x.borrow_mut();
+              println!("{} {}", a, b);
+          }
+    choices: ["編譯錯誤：同時有不可變借用和可變借用", "可以編譯，但執行到 borrow_mut() 時 panic", "正常執行，印出 42 42", "正常執行，但 a 讀到的值會被 b 改掉"]
+    answer: 1
+    hints: ["RefCell 不是繞過借用規則，而是把檢查從編譯時期延到執行時期", "a 還活著時又要 borrow_mut，違反「一個可變或多個不可變」規則，結果是 panic 而不是編譯錯誤"]
+    ref: chapter5/25_refcell.md
+  - id: rust-ch05-q17
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式能不能編譯？
+
+          #[derive(Debug, Copy)]
+          struct Point {
+              x: i32,
+              y: i32,
+          }
+    choices: ["不能：Copy 的 supertrait 是 Clone，而 Point 沒有實作 Clone", "可以：derive(Copy) 會順便自動實作 Clone", "可以，但之後 let p2 = p; 會把 p move 走", "不能：struct 不能實作 Copy，只有 i32 這類基本型別可以"]
+    answer: 0
+    hints: ["trait Copy: Clone { } 表示要實作 Copy 必須先實作 Clone", "實作 subtrait 不會自動幫你實作 supertrait，要寫成 #[derive(Debug, Clone, Copy)]"]
+    ref: chapter5/30_supertrait.md
+  - id: rust-ch05-q18
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      起始程式碼**目前無法編譯**：兩個回傳 `&str` 的函式都缺少生命週期標注。請補上標注讓它編譯：
+      - `longer(a, b)`：回傳比較長的那個，一樣長就回傳 `a`
+      - `first_of(a, b)`：永遠回傳 `a`
+
+      注意：隱藏測試會在 `b` 指向的字串已經被釋放之後，繼續使用 `first_of` 的回傳值，
+      所以 `first_of` 的回傳值只能和 `a` 綁在一起。
+    hints: ["longer 的回傳值可能來自 a 或 b，兩個參數和回傳值要共用同一個 'a", "first_of<'a>(a: &'a str, _b: &str) -> &'a str：b 不標 'a，回傳值就不會受 b 的壽命限制"]
+    ref: chapter5/26_lifetime_basics.md
+  - id: rust-ch05-q19
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      起始程式碼**目前無法編譯**：`struct Words` 存了一個 `&str`，卻沒有生命週期參數。請：
+      1. 幫 `Words` 和它的 `impl` 加上生命週期參數，讓它編譯
+      2. 完成 `first`：回傳第一個空白之前的那段文字；沒有空白就回傳整段
+
+      隱藏測試會在 `Words` 值被丟棄之後，繼續使用 `first()` 取出的字（原本的字串還活著）。
+      如果只照省略規則寫 `-> &str`，回傳值會被綁在 `&self` 上，測試就無法編譯。
+    hints: ["struct Words<'a> { text: &'a str }，impl<'a> Words<'a> { ... }，new 也要寫成 fn new(text: &'a str) -> Words<'a>", "first 寫成 fn first(&self) -> &'a str；可以用 self.text.find(' ') 找空白位置，再切出 &self.text[..i]"]
+    ref: chapter5/28_lifetime_types.md
+  - id: rust-ch05-q20
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `Version` 有 `major`、`minor`、`patch` 三個欄位。請只用 `derive`（不要手寫 `impl`）讓它：
+      - 可以用 `==` 比較，也能用 `{:?}` 印出
+      - 可以用 `<`、`>` 比較，`Vec<Version>` 也能 `.sort()`；比較時**先比 major，再比 minor，最後比 patch**
+      - 有 `Version::default()`，得到 0.0.0
+
+      提示：目前的欄位順序也可能需要調整。
+    hints: ["需要 Debug、PartialEq、Eq、PartialOrd、Ord、Default；sort 需要 Ord", "derive 的 Ord 依欄位宣告順序逐一比較，所以要把 major 移到第一個、patch 移到最後"]
+    ref: chapter5/31_common_derive_traits.md
+  - id: rust-ch05-q21
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `trait Container` 用 associated type `Item` 表示元素型別。請完成：
+      - `first` 的預設實作：回傳第一個元素（用 `get`）
+      - `Scores`（裡面是 `Vec<i32>`）的 `get` 和 `size`
+      - 泛型函式 `total(c: &C) -> i32`：幫 `C` 加上 `trait` bound，讓它接受**任何 `Item` 是 `i32`** 的 `Container`，回傳所有元素的總和
+
+      隱藏測試會用另一個自己定義的 `Container` 呼叫 `total`。
+    hints: ["Vec 的 .get(index) 本來就回傳 Option<&i32>；first 的預設實作就是 self.get(0)", "fn total<C: Container<Item = i32>>(c: &C) -> i32，用 for i in 0..c.size() 搭配 if let Some(n) = c.get(i) 加總"]
+    ref: chapter5/32_associated_type.md
+  - id: rust-ch05-q22
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 `normalize_tabs(s: &str) -> Cow<'_, str>`：把字串裡每個 tab（`'\t'`）換成一個空白。
+      - 字串裡有 tab：回傳 `Cow::Owned`，內容是換好的新字串
+      - 沒有 tab：不要建立新字串，回傳 `Cow::Borrowed(s)`
+    hints: ["先用 s.contains('\\t') 判斷要不要修改", "有 tab 時 Cow::Owned(s.replace('\\t', \" \"))，否則 Cow::Borrowed(s)"]
+    ref: chapter5/33_cow.md

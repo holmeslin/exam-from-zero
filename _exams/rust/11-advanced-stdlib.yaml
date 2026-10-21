@@ -1,0 +1,213 @@
+# 第 11 章：EXERCISES.md 只收第 1、2 章的固定題，這一章的題目都是依課文新出的
+lang: rust
+chapter: "11"
+title: 進階標準庫
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/chapter11, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 5
+questions:
+  - id: rust-ch11-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 `total_chars`：回傳切片裡所有字串的**字元數**總和（中文一個字算 1，不是 byte 數）。
+      函式簽名已經寫好，要能同時接受 `&[&str]` 和 `&[String]`：
+
+          pub fn total_chars<S: AsRef<str>>(items: &[S]) -> usize
+    hints: ["`S: AsRef<str>` 代表每個元素都能用 `.as_ref()` 借用成 `&str`", "走訪 items，把 `item.as_ref().chars().count()` 加總起來"]
+    ref: chapter11/01_as_ref.md
+
+  - id: rust-ch11-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這行印出什麼？
+
+          use std::cmp::Reverse;
+          println!("{:?}", Reverse(5).cmp(&Reverse(3)));
+    choices:
+      - "Less"
+      - "Greater"
+      - "Equal"
+      - "編譯錯誤：Reverse 沒有實作 Ord"
+    answer: 0
+    hints: ["`Reverse` 的 `cmp` 是拿 `other.0` 去跟 `self.0` 比", "`Reverse(5).cmp(&Reverse(3))` 內部做的是 `3.cmp(&5)`"]
+    ref: chapter11/02_ordering_sort.md
+
+  - id: rust-ch11-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `rank(players: &mut Vec<(String, u32)>)`，原地排序每位玩家的 (名字, 分數)：
+      分數**由高到低**；分數相同時，名字由小到大（字典順序）。
+      例如 Zoe 80、Amy 60、Cat 95、Bob 80 排完是 Cat 95、Bob 80、Zoe 80、Amy 60。
+    hints: ["tuple 也實作了 `Ord`：先比第一個元素，相同再比第二個；`sort_by_key` 的 key 可以回傳 tuple", "`players.sort_by_key(|(name, score)| (Reverse(*score), name.clone()))`"]
+    ref: chapter11/02_ordering_sort.md
+
+  - id: rust-ch11-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `word_counts(text: &str) -> HashMap<String, usize>`：
+      用空白（含多個空白、換行）分隔單字，每個單字先轉成小寫，再統計出現次數。
+      例如 "the cat The" 會得到 the → 2、cat → 1。
+    hints: ["`split_whitespace()` 分割單字，`to_lowercase()` 轉小寫", "`*counts.entry(word.to_lowercase()).or_insert(0) += 1;`"]
+    ref: chapter11/03_hash_map.md
+
+  - id: rust-ch11-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `compare(a: &[i32], b: &[i32]) -> (Vec<i32>, Vec<i32>)`，回傳兩個 Vec：
+      1. 兩邊都有的數字
+      2. 只在 a 出現、b 沒有的數字
+      輸入可能有重複，但回傳的 Vec 不能有重複，而且要由小到大排序。
+      例如 a = [5, 1, 2, 2, 3]、b = [4, 3, 2, 3] → ([2, 3], [1, 5])。
+    hints: ["先把兩個切片 `collect` 成 `HashSet<i32>`，重複就自動去掉了", "交集用 `&a & &b`、差集用 `&a - &b`，轉成 Vec 後記得 `sort()`（HashSet 走訪順序不固定）"]
+    ref: chapter11/04_hash_set.md
+
+  - id: rust-ch11-q06
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      程式會從 stdin 逐行讀入「名字 分數」（空格分隔），直到輸入結束；格式不對的行（例如空行）直接略過。
+      請累加每個人的總分，最後**依名字的字典順序**每行印出「名字: 總分」。
+      起始程式已經幫你讀好每一行，請完成兩個 TODO。
+      （判定時輸入：bob 70、alice 90、carol 85、bob 20、一個空行、alice 5，每項一行）
+    stdin: "bob 70\nalice 90\ncarol 85\nbob 20\n\nalice 5\n"
+    expected_stdout: "alice: 95\nbob: 90\ncarol: 85\n"
+    hints: ["`BTreeMap` 走訪時會依 key 排序，所以直接 `for (name, total) in &totals` 印出來就是字典順序", "`let score: u32 = parts[1].parse().unwrap();` 再用 `*totals.entry(parts[0].to_string()).or_insert(0) += score;` 累加"]
+    ref: chapter11/05_other_collections.md
+
+  - id: rust-ch11-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 `elimination_order(n: usize, k: usize) -> Vec<usize>`：
+      1 到 n 號圍成一圈，從 1 號開始報數，報到第 k 個人就淘汰他，接著從下一個人重新報數，直到全部淘汰。
+      回傳淘汰的順序（k 至少是 1；n 為 0 時回傳空的 Vec）。
+      例如 n = 7、k = 3 → [3, 6, 2, 7, 5, 1, 4]。
+      請用 `VecDeque` 模擬這個圈。
+    hints: ["把 1..=n 放進 `VecDeque`；「報數但沒被淘汰」就是從前面 `pop_front` 再 `push_back` 到後面", "每一輪先把前面 k - 1 個人移到隊尾，再 `pop_front()` 的那個人就是被淘汰的"]
+    ref: chapter11/05_other_collections.md
+
+  - id: rust-ch11-q08
+    difficulty: 1
+    type: short
+    prompt: |
+      `println!` 會輸出到 stdout（標準輸出）。那 `eprintln!` 會輸出到哪裡？
+      請用英文縮寫回答（6 個英文字母）。
+    answers: ['^stderr$', '^standard error$', '^標準錯誤(輸出)?$']
+    hints: ["錯誤訊息應該和正常輸出分開，才能分別導向不同地方", "stdout 的「out」換成「err」"]
+    ref: chapter11/06_env_process.md
+
+  - id: rust-ch11-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作兩個處理路徑的函式：
+
+          pub fn backup_path(path: &Path) -> Option<PathBuf>
+          pub fn ext_lower(path: &Path) -> Option<String>
+
+      - `backup_path`：回傳同一個資料夾底下 backup 子資料夾裡的同名檔案。
+        /home/user/notes.txt → /home/user/backup/notes.txt；notes.txt → backup/notes.txt；路徑沒有檔名（例如 "/"）時回傳 None。
+      - `ext_lower`：回傳轉成小寫的副檔名。photo.JPG → Some("jpg")；README → None。
+    hints: ["`file_name()`、`parent()`、`extension()` 都回傳 `Option`，在回傳 `Option` 的函式裡可以直接用 `?`", "`parent.join(\"backup\").join(name)` 組出新路徑；`OsStr` 先 `.to_str()` 再 `.to_lowercase()`"]
+    ref: chapter11/07_path.md
+
+  - id: rust-ch11-q10
+    difficulty: 1
+    type: short
+    prompt: |
+      下面這個運算式的值是多少？請填一個數字。
+
+          "你好世界".len()
+    answers: ['^12$']
+    hints: ["`len()` 回傳的是 byte 數，不是字元數", "在 UTF-8 裡，一個中文字通常佔 3 個 byte"]
+    ref: chapter11/08_string_methods.md
+
+  - id: rust-ch11-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作：
+
+          pub fn number_lines(input: impl BufRead, mut out: impl Write) -> io::Result<usize>
+
+      逐行讀取 input，略過只有空白的行；其餘每行去掉頭尾空白後，用「編號: 內容」的格式寫進 out（編號從 1 開始，每行結尾換行），最後回傳寫了幾行。
+      例如輸入 "alpha\n\n  beta  " 會寫出 "1: alpha\n2: beta\n" 並回傳 2。
+      判定時 input 會傳 `&[u8]`、out 會傳 `&mut Vec<u8>`，兩者分別實作了 `BufRead` 和 `Write`。
+    hints: ["`input.lines()` 逐行讀，每行是 `io::Result<String>`，用 `?` 取出", "用 `writeln!(out, \"{}: {}\", count, text)?;` 寫入，需要已經 `use std::io::Write`"]
+    ref: chapter11/09_io.md
+
+  - id: rust-ch11-q12
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      起始程式定義了錯誤型別 `PortError { Empty, NotNumber(ParseIntError), Reserved(u16) }`，請完成：
+      1. `Display`：Empty →「埠號不能是空的」；NotNumber →「埠號不是有效的數字」；Reserved(n) →「埠號 n 是保留埠」（例如「埠號 80 是保留埠」）。
+      2. `Error`：`source()` 對 NotNumber 回傳內部的 `ParseIntError`，其他回傳 None。
+      3. `From<ParseIntError>`：轉成 NotNumber。
+      4. `parse_port(s: &str) -> Result<u16, PortError>`：先去掉頭尾空白；空字串回傳 Empty；解析成 `u16` 失敗回傳 NotNumber（請用 `?`）；小於 1024 回傳 Reserved；否則回傳埠號。
+    hints: ["`Display` 用 `match self` 搭配 `write!(f, ...)`；`source` 的回傳型別是 `Option<&(dyn Error + 'static)>`，`PortError::NotNumber(e) => Some(e)`", "有了 `From<ParseIntError>`，`let port: u16 = s.parse()?;` 就會自動把錯誤轉成 `PortError::NotNumber`"]
+    ref: chapter11/10_error_trait.md
+
+  - id: rust-ch11-q13
+    difficulty: 3
+    type: choice
+    prompt: |
+      假設 `AppError` 已經實作 `Display` 和 `Error`，而且 `source()` 會回傳內部的 `io::Error`：
+
+          #[derive(Debug)]
+          enum AppError {
+              Io(std::io::Error),
+          }
+
+          let err: Box<dyn Error> = Box::new(AppError::Io(io_err));
+          let r = err.downcast_ref::<std::io::Error>();
+
+      `r` 是什麼？
+    choices:
+      - "None，因為直接裝在 Box 裡的型別是 AppError"
+      - "Some(&io::Error)，因為 downcast_ref 會自動往內層的 source 找"
+      - "編譯錯誤，Box<dyn Error> 不能 downcast"
+      - "執行時 panic，因為型別不符"
+    answer: 0
+    hints: ["`downcast_ref::<T>()` 只檢查 Box 裡「直接裝的」那個值是不是 T", "想拿到內層的 io::Error，要先呼叫 `.source()`，再對它 `downcast_ref`"]
+    ref: chapter11/10_error_trait.md
+
+  - id: rust-ch11-q14
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      用 `thiserror` 完成 `AgeError`（`Cargo.toml` 已經加好 `thiserror = "2"`）：
+      1. 把三個 `#[error("TODO")]` 改成正確訊息：Empty →「年齡不能是空的」；NotNumber →「年齡不是數字」；TooOld(n) →「年齡 n 太大了」（例如「年齡 151 太大了」）。
+      2. 讓 `ParseIntError` 能用 `?` 自動轉成 NotNumber，而且 NotNumber 的 `source()` 要回傳那個 `ParseIntError`。
+      3. 實作 `parse_age(s: &str) -> Result<u32, AgeError>`：先去掉頭尾空白；空字串回傳 Empty；解析失敗回傳 NotNumber；大於 150 回傳 TooOld。
+    hints: ["`#[error(\"年齡 {0} 太大了\")]` 的 `{0}` 代表 tuple 的第一個欄位", "在欄位前加 `#[from]`：`NotNumber(#[from] ParseIntError)`，同時產生 `From` 並標記成 source"]
+    ref: chapter11/11_thiserror_anyhow.md
+
+  - id: rust-ch11-q15
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作：
+
+          pub fn try_update<F: FnOnce(&mut Vec<i32>)>(data: &mut Vec<i32>, f: F) -> bool
+
+      對 data 執行 f。f 正常結束就保留修改並回傳 true；
+      f 如果 panic，不能讓 panic 傳出去，要把 data 恢復成呼叫前的內容並回傳 false。
+      （判定時 panic 訊息仍會印在終端機上，這是正常的。）
+    hints: ["先 `data.clone()` 備份，再用 `catch_unwind` 執行 f；閉包借用了 `&mut`，所以要包一層 `AssertUnwindSafe`", "`catch_unwind(AssertUnwindSafe(|| f(data)))` 回傳 `Err` 時，`*data = backup;` 再回傳 false"]
+    ref: chapter11/12_catch_unwind.md

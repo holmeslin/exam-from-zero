@@ -1,0 +1,168 @@
+lang: vue
+chapter: "14"
+title: Server API
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter14, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch14-q01
+    difficulty: 1
+    type: short
+    prompt: |
+      在 Nuxt 專案根目錄新增 `server/api/books/list.ts`，裡面 `export default defineEventHandler(...)`。
+      啟動 `npm run dev` 後，要用哪個網址路徑呼叫這支 API？（只寫路徑，例如 `/xxx/yyy`）
+    hints: ["`server/api/` 和 `app/pages/` 一樣用檔名決定網址", "網址前面一定有 `/api`，後面接資料夾和檔名（不含 `.ts`）"]
+    answers: ['^/?api/books/list/?$', '^(https?://)?localhost:3000/api/books/list/?$']
+    ref: chapter14/01_first_api.md
+  - id: vue-ch14-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      想讓網址 `/api/messages` **只接受 `POST`** 請求（用來新增留言），檔案應該叫什麼？
+    choices:
+      - "`server/api/messages/index.post.ts`"
+      - "`server/api/messages/post.ts`"
+      - "`app/pages/messages.post.vue`"
+      - "`server/api/post/messages.ts`"
+    answer: 0
+    hints: ["檔名中間加上方法名稱，這支 API 就只接受那個方法", "`index` 代表「資料夾本身」，所以網址還是 `/api/messages`"]
+    ref: chapter14/02_read_body_and_params.md
+  - id: vue-ch14-q03
+    difficulty: 2
+    type: short
+    prompt: |
+      `server/api/greet/[name].get.ts` 這樣寫：
+
+          export default defineEventHandler((event) => {
+            const name = getRouterParam(event, "name");
+            return { type: typeof name };
+          });
+
+      用 `curl localhost:3000/api/greet/123` 呼叫，回應裡 `type` 的值是什麼？
+    hints: ["網址裡的東西是什麼型別？", "就算網址是 `/api/greet/123`，`getRouterParam` 拿到的也不是數字"]
+    answers: ['^"?string"?$', '^字串$']
+    ref: chapter14/02_read_body_and_params.md
+  - id: vue-ch14-q04
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `messages.ts` 模擬 `server/utils/messages.ts` 的共用讀寫函式。`storage` 參數代替 `useStorage("data")`（定義在 `storage.ts`，不用改），有 `getItem(key)` 和 `setItem(key, value)` 兩個方法，都回傳 Promise；還沒存過的 key，`getItem` 會回傳 `null`。
+
+      請完成兩個函式，資料一律存在 key `"messages"`：
+      - `getMessages(storage)`：讀出留言陣列；還沒存過時回傳空陣列 `[]`。
+      - `removeMessage(storage, id)`：照「讀出全部、改一改、存回去」的模式，把 `id` 相同的留言拿掉後存回去。
+    hints: ["`getItem` 和 `setItem` 都要 `await`；`null` 可以用 `?? []` 換成空陣列", "刪除用 `filter` 留下 `message.id !== id` 的留言，再 `setItem(\"messages\", ...)` 存回去"]
+    ref: chapter14/03_use_storage.md
+  - id: vue-ch14-q05
+    difficulty: 3
+    type: choice
+    prompt: |
+      留言板頁面這樣寫：
+
+          const { data: messages, refresh } = await useFetch("/api/messages");
+
+          async function submit() {
+            $fetch("/api/messages", {
+              method: "POST",
+              body: { name: name.value, text: text.value },
+            });
+            text.value = "";
+            await refresh();
+          }
+
+      `$fetch` 前面少了 `await`。送出留言後最可能發生什麼事？
+    choices:
+      - "`refresh()` 可能在伺服器存好之前就去抓列表，畫面有時看不到剛送出的留言"
+      - "留言根本不會送到伺服器，因為 `$fetch` 一定要 `await` 才會發出請求"
+      - "完全沒差，`refresh()` 會自動等前面所有的 `$fetch` 完成"
+      - "`useFetch` 會自己偵測到伺服器資料變了，不需要 `refresh()`"
+    answer: 0
+    hints: ["`useFetch` 只在載入時抓一次；`refresh()` 是「再去抓一次」", "第 1 步要等伺服器真的存好，才去抓列表，不然可能抓到舊的"]
+    ref: chapter14/04_refresh.md
+  - id: vue-ch14-q06
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      在頁面上用 `try` / `catch` 接住 `$fetch` 丟出的錯誤後，要把伺服器 `createError` 寫的訊息顯示給使用者。
+      請在 `errorMessage.ts` 完成 `getErrorMessage(err: unknown): string`：
+      - 錯誤物件的 `data` 裡就是伺服器回傳的 JSON，有 `data.message` 就回傳它。
+      - 沒有 `data`（例如網路斷了）或 `data` 裡沒有 `message` 時，回傳 `發生錯誤，請稍後再試`。
+    hints: ["`err` 是 `unknown`，用 `as` 告訴 TypeScript 它可能有 `data?: { message?: string }`", "`data?.message ?? \"發生錯誤，請稍後再試\"`"]
+    ref: chapter14/05_create_error.md
+  - id: vue-ch14-q07
+    difficulty: 2
+    type: choice
+    prompt: |
+      某支 API 裡寫了 `throw new Error("資料庫密碼錯誤");`。建置後正式執行時（不是 `npm run dev`），呼叫這支 API 會得到什麼？
+    choices:
+      - "狀態碼 500，`message` 是 `Server Error`，原本的訊息被藏起來"
+      - "狀態碼 500，`message` 是「資料庫密碼錯誤」"
+      - "狀態碼 400，`message` 是「資料庫密碼錯誤」"
+      - "狀態碼 200，回應內容是空的"
+    answer: 0
+    hints: ["普通的 `Error` 可能是程式出了意外，訊息裡也許有不該讓外人看到的東西", "要給使用者看的錯誤要用 `createError`；普通 `Error` 在正式環境一律回 500、只說伺服器出錯了"]
+    ref: chapter14/05_create_error.md
+  - id: vue-ch14-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `validate.ts` 的 `validateMessage(rawName, rawText)` 現在只用 `if (!rawName || !rawText)` 檢查，擋不住數字、只有空白、太長的資料。請改寫成真正的伺服器驗證（`createError` 已在 `errors.ts` 準備好）：
+      - 參數是 `unknown`：是字串才用 `trim()` 去頭尾空白，不是字串一律當成空字串。
+      - 依序檢查，不通過就 `throw createError({ status: 400, message })`，`message` 分別是：
+        `請輸入名字`、`名字最多 20 個字`、`請輸入留言內容`、`留言最多 200 個字`
+      - 都通過才回傳 `{ name, text }`（去掉空白後的值）。
+    hints: ["`const name = typeof rawName === \"string\" ? rawName.trim() : \"\";`", "先檢查名字是否為空、名字長度，再檢查留言是否為空、留言長度；訊息可用樣板字面值接上 `maxNameLength`、`maxTextLength`"]
+    ref: chapter14/06_validation_and_security.md
+  - id: vue-ch14-q09
+    difficulty: 1
+    type: choice
+    prompt: |
+      有人留言 `<img src=x onerror="document.title=1234">`。下面哪一種顯示留言的寫法，會讓其他人打開頁面時執行 `onerror` 裡的程式？
+    choices:
+      - "`<li v-html=\"message.text\" />`"
+      - "`<li>{{ message.text }}</li>`"
+      - "`<li :title=\"message.text\">留言</li>`"
+      - "另外三種寫法都不會，Vue 一律會跳脫 HTML"
+    answer: 0
+    hints: ["`{{ }}` 一律把內容當成文字，會把 `<`、`>` 跳脫", "哪個指令是「把字串當成 HTML 放進頁面」？"]
+    ref: chapter14/06_validation_and_security.md
+  - id: vue-ch14-q10
+    difficulty: 2
+    type: choice
+    prompt: |
+      管理頁 `/admin` 用 `definePageMeta({ middleware: "admin" })` 套用了 route middleware：沒有 `admin_token` cookie 就 `navigateTo("/login")`。
+      有人用 `curl -X DELETE localhost:3000/api/messages/某個id` 直接呼叫刪除 API（沒有帶 cookie），而 API 本身沒有檢查權限。結果會怎樣？
+    choices:
+      - "留言被刪掉了：`curl` 不經過任何頁面，middleware 完全管不到"
+      - "被 middleware 導到 `/login`，留言不會被刪"
+      - "middleware 會在伺服器上執行，回傳 401"
+      - "`curl` 不能送 `DELETE` 請求，所以什麼事都不會發生"
+    answer: 0
+    hints: ["route middleware 是「換頁之前」執行的函式，只決定要不要顯示這一頁", "真正的防線要放在 API 裡，一開始就檢查身分"]
+    ref: chapter14/07_route_middleware.md
+  - id: vue-ch14-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `deleteMessage.ts` 的 `handleDelete(event, storage)` 模擬 `server/api/messages/[id].delete.ts`：
+      `event.cookies` 是這次請求帶來的 cookie（代替 `getCookie(event, "admin_token")`），`event.params.id` 是路由參數（代替 `getRouterParam`）。
+      現在任何人都能刪留言。請加上權限檢查：
+      - `admin_token` cookie 不等於 `adminToken` 時，`throw createError({ status: 401, message: "需要管理者權限" })`。
+      - 權限必須**最先**檢查：不通過就立刻停下來，不讀資料、不存檔，也不會因為 id 不存在而回 404。
+      - 通過之後維持原本的行為：找不到留言回 404，找到就刪除並回傳 `{ ok: true }`。
+    hints: ["在函式第一行比對 `event.cookies.admin_token !== adminToken`", "把 401 檢查放在 `storage.getItem` 之前，後面的 404 和刪除邏輯不用改"]
+    ref: chapter14/07_route_middleware.md
+  - id: vue-ch14-q12
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      替留言板加上「按讚」。`like.ts` 的 `likeMessage(storage, id)` 模擬 `server/api/messages/[id]/like.post.ts`（`storage` 用法同 `useStorage("data")`，留言存在 key `"messages"`）：
+      - 舊留言沒有 `likes` 欄位，要當成 0 個讚，不能出錯。
+      - 找到 `id` 相同的留言就把 `likes` 加一、存回整個陣列，回傳 `{ likes: 新的讚數 }`。
+      - 找不到時 `throw createError({ status: 404, message: "找不到這則留言" })`，而且不存檔。
+    hints: ["讀出來後先用 `map` 和展開語法補預設值：`{ ...message, likes: message.likes ?? 0 }`", "`find` 拿到的是陣列裡的物件本身，直接 `likes += 1` 再存整個陣列；找不到（`undefined`）就先 throw"]
+    ref: chapter14/08_practice.md

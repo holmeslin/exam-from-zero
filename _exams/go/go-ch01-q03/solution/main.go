@@ -1,14 +1,8 @@
 package main
 
-func Grade(score int) string {
-	switch {
-	case score >= 90:
-		return "A"
-	case score >= 80:
-		return "B"
-	default:
-		return "C"
-	}
-}
+import "fmt"
 
-func main() {}
+func main() {
+	minutes := 135
+	fmt.Println(minutes/60, "小時", minutes%60, "分鐘")
+}

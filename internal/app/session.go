@@ -12,8 +12,9 @@ type Run struct {
 	Wrong   []string `json:"wrong,omitempty"` // answered wrong at least once in the main pass; redone at the end
 	Redo    bool     `json:"redo,omitzero"`   // in the redo pass; Pos indexes Wrong
 	Pos     int      `json:"pos"`
-	Cleared bool     `json:"cleared,omitzero"` // current question passed, waiting for "next"
-	Hinted  []string `json:"hinted,omitempty"` // questions whose hints were opened in this run
+	Cleared bool     `json:"cleared,omitzero"`  // current question passed, waiting for "next"
+	Hinted  []string `json:"hinted,omitempty"`  // questions whose hints were opened in this run
+	Chapter string   `json:"chapter,omitempty"` // hash of the chapter file the run was sampled from
 }
 
 // newRun samples c.Sample questions not rejected by skip and orders them by difficulty.

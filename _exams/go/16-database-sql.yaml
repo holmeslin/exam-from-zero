@@ -1,0 +1,137 @@
+# 第 15 章：database/sql。題庫只能用標準函式庫、沒有 SQLite driver，
+# 所以程式題集中在不必真的連資料庫的部分（錯誤判斷、NULL 型別、組 SQL）。
+lang: go
+chapter: "15"
+title: 實戰：`database/sql`
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter15, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch15-q01
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      示範「忘了 blank import driver」會發生什麼事。程式裡不要 import 任何 driver：
+
+      1. 用 sql.Open 開啟 driver 名稱 "sqlite"、資料來源 ":memory:" 的資料庫，用 fmt.Println 印出它回傳的 err。
+      2. 再用 fmt.Println 印出 sql.Drivers() 的長度（目前註冊了幾個 driver）。
+    expected_stdout: "sql: unknown driver \"sqlite\" (forgotten import?)\n0\n"
+    hints: ["sql.Open 回傳兩個值，這題不需要 db，可以用 _ 接", "_, err := sql.Open(\"sqlite\", \":memory:\")；fmt.Println(len(sql.Drivers()))"]
+    ref: chapter15/01_open_sqlite.md
+  - id: go-ch15-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 InsertSQL(table string, cols []string) string，組出一段 INSERT 指令，
+      值一律用 ? 佔位，欄位與 ? 之間都用「逗號加一個空格」分隔。例如：
+
+          InsertSQL("books", []string{"title", "price"})
+          // "INSERT INTO books (title, price) VALUES (?, ?)"
+
+      cols 至少有一個欄位。
+    hints: ["有幾個欄位就要有幾個 ?；strings.Join 很適合把切片用 \", \" 接起來", "先做出 n 個 \"?\" 的切片再 strings.Join，或用 strings.Repeat(\"?, \", n) 再去掉最後的 \", \""]
+    ref: chapter15/02_exec.md
+  - id: go-ch15-q03
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 LookupErr(id int, err error) error，整理 db.QueryRow(...).Scan(...) 回傳的錯誤：
+
+      - err 是 nil：回傳 nil
+      - err 是 sql.ErrNoRows（包括被 %w 包過的）：回傳套件自己的 ErrNotFound
+      - 其他錯誤：用 %w 包起來，訊息是「查詢第 <id> 本書：<原錯誤>」，例如「查詢第 7 本書：連線中斷」
+    hints: ["判斷哨兵錯誤要用 errors.Is，才認得出被包過的 sql.ErrNoRows", "先判斷 errors.Is(err, sql.ErrNoRows)，再判斷 err != nil，用 fmt.Errorf(\"查詢第 %d 本書：%w\", id, err)"]
+    ref: chapter15/03_query_row.md
+  - id: go-ch15-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      listBooks 用 db.Query 查詢，並照固定寫法 for rows.Next() 把結果 append 進 books 切片，
+      最後 return books, rows.Err()。如果 WHERE 條件一列都沒有符合，會得到什麼？
+    choices:
+      - "books 是 nil 切片，錯誤是 nil"
+      - "錯誤是 sql.ErrNoRows"
+      - "db.Query 回傳錯誤，rows 是 nil"
+      - "rows.Next() 會 panic"
+    answer: 0
+    hints: ["sql.ErrNoRows 是哪個方法才會回傳的？", "只有 QueryRow 的 Scan 會回傳 sql.ErrNoRows；Query 查不到只是迴圈一次都不執行"]
+    ref: chapter15/04_query_rows.md
+  - id: go-ch15-q05
+    difficulty: 1
+    type: short
+    prompt: |
+      rows.Next() 回傳 false 可能是資料讀完了，也可能是讀到一半出錯。
+      for rows.Next() 迴圈結束後，要呼叫 rows 的哪個方法才分得出來？（寫出方法呼叫，例如 rows.Xxx()）
+    answers: ["^(rows\\.)?err(\\(\\))?$"]
+    hints: ["這個方法回傳 error，是 nil 才代表全部讀完", "rows.Err()"]
+    ref: chapter15/04_query_rows.md
+  - id: go-ch15-q06
+    difficulty: 1
+    type: short
+    prompt: |
+      stmt, err := db.Prepare("INSERT INTO books (title, price) VALUES (?, ?)")
+      這裡的 stmt 是什麼型別？
+    answers: ["^\\*\\s?sql\\.stmt$", "^\\*?stmt$", "^sql\\.stmt$"]
+    hints: ["prepared statement 的英文是 statement，型別名稱是它的縮寫", "*sql.Stmt"]
+    ref: chapter15/05_prepared_statement.md
+  - id: go-ch15-q07
+    difficulty: 3
+    type: choice
+    prompt: |
+      下面的 transfer 全部成功時，會先執行 tx.Commit()，函式返回時 defer 的 tx.Rollback() 也會執行。結果是什麼？
+
+          tx, err := db.BeginTx(ctx, nil)
+          if err != nil {
+              return err
+          }
+          defer tx.Rollback()
+          // ... tx.Exec 扣款、入帳 ...
+          return tx.Commit()
+    choices:
+      - "已提交的資料不受影響；Rollback 只回傳 sql.ErrTxDone，不做任何事"
+      - "Rollback 會把剛剛 Commit 的資料取消，所以不能這樣寫"
+      - "Commit 之後再 Rollback 會 panic"
+      - "Rollback 會開一個新的交易再立刻取消它"
+    answer: 0
+    hints: ["交易一旦 Commit 或 Rollback 過，就已經結束了", "之後再呼叫只會回傳 sql.ErrTxDone，所以開始交易後立刻 defer tx.Rollback() 是安全的慣例"]
+    ref: chapter15/06_transaction.md
+  - id: go-ch15-q08
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      phone 欄位可能是 NULL，所以用 sql.NullString 讀出來。實作 Describe(name string, phone sql.NullString) string：
+
+      - phone 是 NULL：回傳「小美：沒填」這種格式
+      - 有值（包括空字串）：用 %q 印電話，例如「小明："0912-345-678"」、「阿華：""」
+    hints: ["sql.NullString 的 Valid 是 false 就代表 NULL", "if !phone.Valid { return name + \"：沒填\" }，否則 fmt.Sprintf(\"%s：%q\", name, phone.String)"]
+    ref: chapter15/07_null.md
+  - id: go-ch15-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      score 欄位用 NULL 代表缺考，讀出來是 []sql.Null[int64]。實作
+      Stats(scores []sql.Null[int64]) (avg float64, absent int)：
+
+      - absent：缺考（NULL）人數
+      - avg：有到考者的平均分數；考 0 分也算到考。沒有人到考時 avg 為 0
+
+      例如 {80 分, 0 分, 缺考} 的結果是 (40, 1)。
+    hints: ["sql.Null[T] 的欄位叫 V 和 Valid，0 分和缺考的 V 都是 0，要靠 Valid 分辨", "走訪時 Valid 為 false 就 absent++，否則把 V 加進總和；到考人數是 len(scores) - absent，大於 0 才相除"]
+    ref: chapter15/07_null.md
+  - id: go-ch15-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 Classify(err error) string，依 db.QueryRowContext(...).Scan(...) 回傳的錯誤分類：
+
+      - nil → "成功"
+      - 逾時（context.DeadlineExceeded，包括被 %w 包過的）→ "逾時"
+      - 取消（context.Canceled，包括被 %w 包過的）→ "取消"
+      - 其他 → "錯誤"
+    hints: ["被中斷的錯誤要用 errors.Is 和 context 套件裡的兩個哨兵錯誤比對", "switch { case err == nil: ...; case errors.Is(err, context.DeadlineExceeded): ...; case errors.Is(err, context.Canceled): ... }"]
+    ref: chapter15/08_context_pool.md

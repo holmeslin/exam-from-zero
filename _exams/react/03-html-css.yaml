@@ -1,0 +1,174 @@
+lang: react
+chapter: "3"
+title: HTML 與 CSS
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter3, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch03-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面哪一段 HTML 的巢狀寫法是**正確**的？
+    choices:
+      - "`<p>這是<strong>重點</p></strong>`"
+      - "`<p>這是<strong>重點</strong>文字</p>`"
+      - "`<strong><p>這是重點</strong></p>`"
+      - "`<ul><li>蘋果</ul></li>`"
+    answer: 1
+    hints: ["巢狀的規則是「先開的後關」，標籤不能交錯", "看哪一個選項裡，最後開的標籤最先關"]
+    ref: chapter3/01_html_structure.md
+
+  - id: react-ch03-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      `page.ts` 匯出一段 HTML 字串 `html`（只寫 `<body>` 裡面的內容）。目前它全用錯了標籤，請改成：
+      - 「蘋果」、「香蕉」用**沒有順序的清單**列出。
+      - 圖片 `apple.jpg` 要有文字說明（`alt`）。
+      - 「維基百科」這幾個字是連到 `https://www.wikipedia.org/` 的連結。
+    hints: ["清單用 `<ul>` 包 `<li>`；連結用 `<a href=\"...\">`", "`<img src=\"apple.jpg\" alt=\"一顆紅色的蘋果\" />`"]
+    ref: chapter3/02_common_tags.md
+
+  - id: react-ch03-q03
+    difficulty: 2
+    type: short
+    prompt: |
+      有一個段落同時屬於 `note` 和 `important` 兩個 class。請寫出它的**開始標籤**（例如 `<p ...>`）。
+    answers:
+      - '^<p class\s?=\s?["'']?(note important|important note)["'']?\s?/?>$'
+    hints: ["一個元素可以有好幾個 class", "多個 class 寫在同一個 `class` 屬性裡，用空格隔開"]
+    ref: chapter3/03_attributes.md
+
+  - id: react-ch03-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `form.ts` 匯出一段報名表的 HTML 字串 `html`，但有幾個問題：
+      - 點「名字：」、「信箱：」這幾個字，選不到對應的輸入框。
+      - 信箱輸入框應該是信箱類型。
+      - 「蘋果」、「香蕉」兩個單選按鈕可以同時被選取，應該同一組只能選一個。
+      請修好這些問題，城市下拉選單保持原樣。
+    hints: ["`<label>` 的 `for` 要和輸入框的 `id` 一樣；信箱用 `type=\"email\"`", "同一組單選按鈕的 `name` 要一樣，例如都寫 `name=\"fruit\"`"]
+    ref: chapter3/04_form_elements.md
+
+  - id: react-ch03-q05
+    difficulty: 3
+    type: choice
+    prompt: |
+      有這些 CSS 規則：
+
+          p { color: gray; }
+          .note { color: blue; }
+          .warning { color: red; }
+          p { color: green; }
+
+      `<p class="warning note">注意</p>` 的文字最後是什麼顏色？
+    choices:
+      - gray
+      - blue
+      - red
+      - green
+    answer: 2
+    hints: ["先比具體程度：class 選擇器比標籤選擇器具體，兩條 `p` 規則都輸", "`.note` 和 `.warning` 一樣具體，就看誰寫在後面；HTML 裡 class 的順序不影響"]
+    ref: chapter3/05_css_selectors.md
+
+  - id: react-ch03-q06
+    difficulty: 2
+    type: short
+    prompt: |
+      寫出一個 CSS 選擇器，只選到「`<nav>` 裡面的所有 `<a>`」，不在 `<nav>` 裡的連結不受影響。（只寫選擇器，不用寫大括號）
+    answers:
+      - '^nav a$'
+      - '^nav > a$'
+    hints: ["兩個選擇器中間放一個空格，表示「在前者裡面的後者」", "答案是兩個標籤名，中間一個空格"]
+    ref: chapter3/05_css_selectors.md
+
+  - id: react-ch03-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 `box.ts` 的 `boxWidth`：依照盒模型，回傳盒子在畫面上**實際的寬度**（含 padding 和 border，不含 margin）。
+      - `padding` 是簡寫字串，可能有一個、兩個或四個值，例如 `'20px'`、`'10px 30px'`、`'1px 2px 3px 4px'`。
+      - `boxSizing` 是 `'content-box'`（預設：`width` 只是內容寬度）或 `'border-box'`（`width` 就是整個盒子）。
+      例如 `width: 200`、`padding: '20px'`、`border: 2`、`content-box` 要回傳 244。
+    hints: ["兩個值是「上下 左右」，四個值是「上 右 下 左」；`parseInt('20px')` 會得到 20", "content-box：width + 左 padding + 右 padding + border × 2；border-box 直接回傳 width"]
+    ref: chapter3/06_box_model.md
+
+  - id: react-ch03-q08
+    difficulty: 2
+    type: short
+    prompt: |
+      `.box` 已經設定 `width: 300px;`。要讓它在頁面上**水平置中**，上下外距為 0，請寫出那一行 CSS 宣告（例如 `color: red;` 的格式）。
+    answers:
+      - '^margin\s?:\s?0(px)? auto\s?;?$'
+    hints: ["用的是外距 `margin` 的兩個值簡寫：上下、左右", "左右外距設成 `auto`，兩邊就會一樣多"]
+    ref: chapter3/06_box_model.md
+
+  - id: react-ch03-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成 `flex.ts` 的 `flexWidths(containerWidth, gap, flexes)`：flex 容器寬 `containerWidth`，設定了 `gap`，第 i 個項目設定 `flex: flexes[i]`。回傳每個項目分到的寬度（項目本身沒有其他寬度）。
+      例如 `flexWidths(620, 10, [1, 2, 1])` 要回傳 `[150, 300, 150]`。
+    hints: ["n 個項目之間有 n - 1 個 gap，先從容器寬度扣掉", "剩下的空間按比例分：每個項目拿 剩餘空間 × flex ÷ 所有 flex 的總和"]
+    ref: chapter3/07_flexbox.md
+
+  - id: react-ch03-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `counter.ts` 的 `setupCounter(root)` 要讓 `root` 裡的計數器動起來：
+
+          <p>你按了 <span id="count">0</span> 次</p>
+          <button id="add">按我</button>
+          <button id="reset">歸零</button>
+
+      按「按我」數字加一，按「歸零」數字回到 0。目前按了畫面都不會變，請修好它並補上歸零。
+    hints: ["改了變數 `count` 之後，還要把 `countText.textContent` 改掉，畫面才會更新", "用 `root.querySelector('#reset')` 找到歸零按鈕，再 `addEventListener('click', ...)`"]
+    ref: chapter3/08_dom_and_why_react.md
+
+  - id: react-ch03-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `todo.ts` 是一個只用 JavaScript 操作 DOM 的待辦清單。這次換個做法：`addTodo` 和 `removeTodo` 只改 `todos` 陣列，然後呼叫 `render()`。
+      請完成 `render()`，讓它每次都**依照 `todos` 重新算出整個畫面**：
+      - `#list` 裡每一項待辦是一個 `<li>`。
+      - `#summary` 顯示「共 N 項」。
+      - 有待辦事項時隱藏 `#empty`，沒有時顯示它（用 `hidden`）。
+    hints: ["先用 `list.innerHTML = ''` 清空清單，再對每一項 `document.createElement('li')` 並 `appendChild`", "`emptyMessage.hidden = todos.length > 0`"]
+    ref: chapter3/08_dom_and_why_react.md
+
+  - id: react-ch03-q12
+    difficulty: 1
+    type: choice
+    prompt: |
+      關於 React 解決「資料一變就要手動同步畫面」的方式，哪個說法正確？
+    choices:
+      - React 幫你把 `querySelector` 和 `textContent` 寫得更短，但還是要一步一步改 DOM
+      - 你描述「資料長這樣時畫面該長怎樣」，React 自己算出哪裡要改並更新 DOM
+      - React 把資料和畫面分成兩份，各自保存，需要時再手動對齊
+      - 用了 React 之後，瀏覽器就不需要 DOM 了
+    answer: 1
+    hints: ["想想這一集的公式：畫面 = 函式(資料)", "React 的重點是「描述畫面」，而不是「操作畫面」"]
+    ref: chapter3/08_dom_and_why_react.md
+
+  - id: react-ch03-q13
+    difficulty: 1
+    type: choice
+    prompt: |
+      `.container` 高 300px，裡面只有一個子元素。要讓這個子元素**水平、垂直都置中**，`.container` 該加上哪一組設定？
+    choices:
+      - "`display: flex; justify-content: center; align-items: center;`"
+      - "`display: flex; flex-direction: column;`"
+      - "`display: flex; justify-content: space-between;`"
+      - "`display: flex; gap: 16px;`"
+    answer: 0
+    hints: ["`justify-content` 管沿主軸（橫向）的對齊，`align-items` 管垂直於主軸的對齊", "兩個方向都要設成 `center`"]
+    ref: chapter3/07_flexbox.md

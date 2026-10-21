@@ -1,0 +1,144 @@
+lang: typescript
+chapter: "4"
+title: 函式的型別
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter4, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  - id: ts-ch04-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這段程式碼執行 `npx tsc`，會發生什麼事？
+
+          function rectangleArea(width: number, height: number): number {
+            return width * height;
+          }
+          console.log(rectangleArea(3, 4, 5));
+    choices:
+      - "報錯 TS2554：預期 2 個引數，結果拿到 3 個"
+      - "沒有錯誤，多傳的 5 會被丟掉，印出 12"
+      - "沒有錯誤，印出 60"
+      - "沒有錯誤，但執行時印出 NaN"
+    answer: 0
+    hints: ["在 TypeScript 裡，宣告了幾個參數，就要傳幾個引數", "少傳或多傳引數都會出現同一個錯誤代碼"]
+    ref: chapter4/01_parameters_and_return.md
+  - id: ts-ch04-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      label.ts 的 `getLabel(score)` 在分數低於 60 時忘了 `return`，會回傳 `undefined`。
+      幫它加上回傳型別 `: string`，並補上低於 60 分的情況，回傳「不及格」。
+      （90 分以上「優秀」，60 到 89 分「及格」。）
+    hints: ["寫了 `: string` 之後，每一條路線都必須回傳字串", "在函式最後補一行 return \"不及格\";"]
+    ref: chapter4/02_return_type.md
+  - id: ts-ch04-q03
+    difficulty: 1
+    type: short
+    prompt: |
+      下面的函式沒有寫回傳型別，裡面也沒有 `return`。TypeScript 會把它的回傳型別推論成什麼？請只填型別名稱。
+
+          function printReceipt(total: number) {
+            console.log(`總計 ${total} 元`);
+          }
+    answers: ["^void$", "^:\\s*void;?$"]
+    hints: ["它的意思是「這個函式不回傳任何有用的東西」", "四個英文字母，開頭是 v"]
+    ref: chapter4/03_void.md
+  - id: ts-ch04-q04
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      greet.ts 的 `greet(name, title)` 現在一定要傳兩個引數，只傳名字時會變成「王undefined您好」。
+      把 `title` 改成**可選參數**，沒傳的時候回傳「王您好」，有傳的時候回傳「王經理您好」。
+    hints: ["在參數名稱後面加 `?`，例如 `title?: string`", "可選參數可能是 undefined，先用 if (title) 檢查有值再組字串"]
+    ref: chapter4/04_optional_and_default.md
+  - id: ts-ch04-q05
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 的 `report` 把第二個參數寫成一般的陣列參數，所以 `report("小考", 60, 70)` 執行時會當掉。
+      把 `scores` 改成**其餘參數**，不要改下面的兩行呼叫，讓程式印出：
+
+          期中考：共 3 筆，最高 95 分
+          小考：共 2 筆，最高 70 分
+    expected_stdout: "期中考：共 3 筆，最高 95 分\n小考：共 2 筆，最高 70 分\n"
+    hints: ["其餘參數前面要加 `...`，型別仍然寫成陣列型別", "function report(title: string, ...scores: number[])"]
+    ref: chapter4/05_rest_parameters.md
+  - id: ts-ch04-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      product.ts 的 `describeProduct` 想用解構取出 `title`、`price`、`stock`，執行時卻出現 `title is not defined`。
+      修正參數的寫法，讓它使用 `Product` 型別；`stock` 沒給的時候當成 0。
+      例如 `describeProduct({ title: "橡皮擦", price: 15 })` 回傳「橡皮擦：15 元，庫存 0 個」。
+    hints: ["`{ title: string }` 在解構裡是重新命名成叫 string 的變數，不是型別標註", "寫成 `{ title, price, stock = 0 }: Product`，型別放在整個大括號後面"]
+    ref: chapter4/06_object_parameters.md
+  - id: ts-ch04-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      calc.ts 定義了函式型別 `Calculator`（收兩個數字、回傳數字）。
+      修正 `add`，讓它回傳兩數相加的數字（現在它回傳的是接起來的字串），並完成 `multiply`，回傳兩數相乘的結果。
+      兩個函式的參數都不用再寫型別。
+    hints: ["樣板字面值算出來的是字串，不符合 Calculator 要的回傳型別", "const add: Calculator = (a, b) => a + b;"]
+    ref: chapter4/07_function_types.md
+  - id: ts-ch04-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 repeat.ts：
+      - `repeat(times, action)`：呼叫 `action` 共 `times` 次，依序傳入 1、2、…、`times`。
+      - `collectRounds(times)`：用 `repeat` 把每一輪的編號收進陣列後回傳，例如 `collectRounds(3)` 回傳 `[1, 2, 3]`。
+    hints: ["用 for 迴圈從 1 數到 times，每次呼叫 action(i)", "傳給 repeat 的 callback 可以寫成 (round) => rounds.push(round)，參數不用標型別"]
+    ref: chapter4/08_callbacks.md
+  - id: ts-ch04-q09
+    difficulty: 3
+    type: choice
+    prompt: |
+      `repeat` 的 callback 型別回傳 `void`，但傳進去的箭頭函式 `rounds.push(round)` 會回傳陣列新長度（數字）。執行 `npx tsc` 會怎樣？
+
+          function repeat(times: number, action: (round: number) => void) {
+            for (let i = 1; i <= times; i++) {
+              action(i);
+            }
+          }
+          const rounds: number[] = [];
+          repeat(3, (round) => rounds.push(round));
+    choices:
+      - "沒有錯誤：callback 型別回傳 void，代表 repeat 不會使用回傳值，回傳什麼都可以"
+      - "報錯 TS2322：Type 'number' is not assignable to type 'void'"
+      - "報錯 TS7006：round 沒有標型別，被當成 any"
+      - "報錯 TS2345：要把箭頭函式改成 { rounds.push(round); return; } 才能通過"
+    answer: 0
+    hints: ["void 的意思是「別管我回傳什麼，不要用它」", "「寫了 : void 就不能 return 值」只適用於自己宣告函式並直接寫上回傳型別的時候"]
+    ref: chapter4/08_callbacks.md
+  - id: ts-ch04-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      在 convert.ts 用**函式多載**實作 `convert`：傳字串就回傳數字（`convert("42")` 回傳 `42`），傳數字就回傳字串（`convert(42)` 回傳 `"42"`）。
+      先寫兩行多載簽章，再寫一個參數為 `string | number` 的實作，並保留 `export`。
+    hints: ["多載簽章只有型別、以分號結尾，例如 export function convert(value: string): number;", "實作裡用 typeof value === \"string\" 判斷，分別回傳 Number(value) 和 String(value)"]
+    ref: chapter4/09_overloads.md
+  - id: ts-ch04-q11
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 是第 10 集「訂單折扣」的半成品，型別已經定義好，但三個地方還沒完成：
+      - `applyDiscounts(price, ...rates)`：改成其餘參數，把價格依序乘上每個折扣，最後用 `Math.round` 四捨五入。
+      - `formatPrice(amount, currency)`：`currency` 沒傳時用 `"NT$"`。
+      - `processOrder`：先打 9 折；有 `coupon` 時再乘上 `coupon`。
+      完成後執行應該印出：
+
+          耳機：NT$ 1800
+          喇叭：NT$ 2520
+    expected_stdout: "耳機：NT$ 1800\n喇叭：NT$ 2520\n"
+    hints: ["預設參數不用寫型別：currency = \"NT$\"；coupon 是可選屬性，先用 if (coupon) 檢查", "有 coupon 時呼叫 applyDiscounts(price, 0.9, coupon)，把結果存進 let final"]
+    ref: chapter4/10_practice.md

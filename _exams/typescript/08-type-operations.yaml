@@ -1,0 +1,159 @@
+lang: typescript
+chapter: "8"
+title: 型別運算
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter8, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  - id: ts-ch08-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      在 pluck.ts 完成 `pluck<T, K extends keyof T>(items, key)`：回傳 items 裡每個元素的 key 屬性值組成的新陣列。
+      例如 `pluck([{ name: "原子筆", price: 15 }, { name: "筆記本", price: 45 }], "price")` 回傳 `[15, 45]`。
+      `K extends keyof T` 讓 key 只能是元素真的有的屬性名稱。
+    hints: ["陣列的 map 可以把每個元素換成另一個值", "return items.map((item) => item[key])"]
+    ref: chapter8/02_keyof.md
+  - id: ts-ch08-q02
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 用 `as const` 物件 `OrderStatus` 取代 enum。請完成 `lookup(key)`：
+      key 是 `OrderStatus` 的**屬性名稱**（例如 `Shipped`）時回傳對應的值（`shipped`），否則回傳 `undefined`。
+      程式會從標準輸入一行讀一個名稱，印出查詢結果，例如：
+          Shipped → shipped
+          Refunded → 未知狀態
+      注意 `keyof typeof OrderStatus` 只存在於型別檢查，執行時要自己用物件的屬性名稱來判斷。
+    stdin: "Shipped\nRefunded\nPending\nshipped\nCancelled\n"
+    expected_stdout: "Shipped → shipped\nRefunded → 未知狀態\nPending → pending\nshipped → 未知狀態\nCancelled → cancelled\n"
+    hints: ["Object.keys(OrderStatus) 會得到所有屬性名稱的陣列，可以用 includes 檢查", "if (Object.keys(OrderStatus).includes(key)) return OrderStatus[key as OrderStatusKey]"]
+    ref: chapter8/04_as_const.md
+  - id: ts-ch08-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      user.ts 有兩個函式寫錯了，請修正：
+      - `updateUser(user, changes: Partial<User>)`：回傳套用 changes 之後的**新**物件，不可以修改原本的 user。
+      - `toPublicUser(user): Omit<User, "password">`：回傳不含 password 的使用者。
+      `Omit` 只會改變型別，執行時物件裡的 password 還在，必須真的把它拿掉。
+    hints: ["展開運算子 { ...a, ...b } 會產生新物件；解構時可以用 ...rest 收集剩下的屬性", "const { password, ...rest } = user; return rest"]
+    ref: chapter8/06_utility_types_1.md
+  - id: ts-ch08-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      count.ts 的 `countByStatus(orders)` 回傳型別是 `Record<Status, number>`，意思是 `STATUSES` 裡的**每一種**狀態都要有值。
+      目前的寫法只會出現有訂單的狀態，沒有訂單的狀態整個不見。請修正：沒有訂單的狀態值是 0。
+      例如只有兩張 pending 訂單時，要回傳 `{ pending: 2, shipped: 0, cancelled: 0 }`。
+    hints: ["先用 for...of 走過 STATUSES，把每種狀態設成 0，再開始數", "for (const status of STATUSES) result[status] = 0"]
+    ref: chapter8/07_utility_types_2.md
+  - id: ts-ch08-q05
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      flags.ts 定義了映射型別 `Flags<T> = { [K in keyof T]: boolean }`。請完成泛型函式 `diffFlags(current, defaults)`：
+      對 current 的每一個屬性，值和 defaults 的同名屬性不同就是 `true`，相同就是 `false`。
+          diffFlags({ darkMode: true, fontSize: 16 }, { darkMode: false, fontSize: 16 })
+          // { darkMode: true, fontSize: false }
+      函式要適用任何物件，不能把屬性名稱寫死。
+    hints: ["Object.keys(current) 可以在執行時走過每一個屬性名稱，就像型別裡的 [K in keyof T]", "for (const key of Object.keys(current) as (keyof T)[]) result[key] = current[key] !== defaults[key]"]
+    ref: chapter8/09_mapped_types.md
+  - id: ts-ch08-q06
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      綜合練習：飲料店點單。main.ts 已經寫好 `DRINKS`、`SIZES`、價格對照表和 `Order` 型別，請完成三個函式：
+      - `createOrder(input: Omit<Order, "id">)`：用 `nextId` 自動編號（從 1 開始），回傳完整的 Order。
+      - `updateOrder(order, changes: Partial<Omit<Order, "id">>)`：回傳套用修改後的新訂單，id 不變。
+      - `priceOf(item: Pick<Order, "drink" | "size">)`：基本價格加上尺寸加價。
+      執行後要印出和書上一樣的結果（大杯奶茶是 55 元）。
+    expected_stdout: "{ id: 1, drink: '奶茶', size: '中', note: '少冰' } 45\n{ id: 1, drink: '奶茶', size: '大', note: '少冰' } 55\n紅茶（大）：40 元\n綠茶（大）：40 元\n奶茶（大）：55 元\n"
+    hints: ["createOrder 用 { id: nextId++, ...input }；updateOrder 用展開運算子合併", "priceOf 回傳 basePrices[item.drink] + sizeExtra[item.size]"]
+    ref: chapter8/13_practice.md
+  - id: ts-ch08-q07
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面的程式碼用 node 執行，會印出什麼？
+          const defaultSettings = { theme: "light", fontSize: 16 };
+          type Settings = typeof defaultSettings;
+          console.log(typeof defaultSettings);
+    choices:
+      - "object"
+      - "{ theme: string; fontSize: number; }"
+      - "Settings"
+      - "undefined"
+    answer: 0
+    hints: ["兩個 typeof 長得一樣，要看它寫在型別的位置還是程式碼裡", "程式碼裡的 typeof 是執行時的 JavaScript，物件會得到字串 \"object\"；type 那一行執行時會被拿掉"]
+    ref: chapter8/01_typeof.md
+  - id: ts-ch08-q08
+    difficulty: 2
+    type: choice
+    prompt: |
+      有下面兩種寫法，用 `npx tsc` 檢查 `a.contact` 和 `b.contact`，結果是？
+          type Route = { path: string; title: string };
+          const a: Record<string, Route> = { home: { path: "/", title: "首頁" } };
+          const b = { home: { path: "/", title: "首頁" } } satisfies Record<string, Route>;
+    choices:
+      - "a.contact 和 b.contact 都會被擋下"
+      - "a.contact 不會被擋下，b.contact 會被擋下"
+      - "a.contact 會被擋下，b.contact 不會被擋下"
+      - "兩個都不會被擋下，satisfies 只在執行時檢查"
+    answer: 1
+    hints: ["型別標註會用標註的型別取代推論出來的型別", "Record<string, Route> 表示任何字串都能當屬性名稱；satisfies 只檢查，保留推論出來的 { home: ... }"]
+    ref: chapter8/05_satisfies.md
+  - id: ts-ch08-q09
+    difficulty: 2
+    type: short
+    prompt: |
+      下面的 `T` 是什麼型別？（用 `|` 寫出聯集）
+          type Product = { name: string; price: number; stock: number };
+          type T = Product["name" | "price"];
+    answers:
+      - "^(string ?\\| ?number|number ?\\| ?string)$"
+    hints: ["中括號裡放聯集，會得到那幾個屬性型別的聯集", "name 是 string、price 是 number，答案是 string | number"]
+    ref: chapter8/03_indexed_access.md
+  - id: ts-ch08-q10
+    difficulty: 3
+    type: choice
+    prompt: |
+      下面的 `A` 和 `B` 分別是什麼型別？
+          type MyExclude<T, U> = T extends U ? never : T;
+          type A = MyExclude<"a" | "b" | "c", "a" | "c">;
+          type ElementOf<T> = T extends (infer U)[] ? U : never;
+          type B = ElementOf<boolean[]>;
+    choices:
+      - "A 是 never，B 是 boolean"
+      - "A 是 \"a\" | \"c\"，B 是 boolean[]"
+      - "A 是 \"b\"，B 是 never"
+      - "A 是 \"b\"，B 是 boolean"
+    answer: 3
+    hints: ["T 是聯集時，條件型別會對每一個成員分開算；infer U 會推論出陣列裡放的東西", "\"a\"、\"c\" 變成 never 消失，只剩 \"b\"；boolean[] 是 boolean 的陣列，U 是 boolean"]
+    ref: chapter8/10_conditional_types.md
+  - id: ts-ch08-q11
+    difficulty: 1
+    type: short
+    prompt: |
+      `async function loadScore() { return 95; }` 的 `ReturnType<typeof loadScore>` 是 `Promise<number>`。
+      想得到 `await` 之後的型別 `number`，外面要再包哪一個內建工具型別？（只寫名稱）
+    answers:
+      - "^awaited(<.*>)?$"
+    hints: ["名字來自 await：「await 之後會拿到什麼型別」", "Awaited<ReturnType<typeof loadScore>>"]
+    ref: chapter8/08_utility_types_3.md
+  - id: ts-ch08-q12
+    difficulty: 2
+    type: short
+    prompt: |
+      下面的 `Order` 聯集裡一共有幾個成員？（寫數字）
+          type Temperature = "冰" | "溫" | "熱";
+          type Drink = "紅茶" | "綠茶";
+          type Order = `${Temperature}${Drink}`;
+    answers:
+      - "^(6|六) ?(個|種)?$"
+    hints: ["${} 裡放兩個聯集，會組出所有的組合", "3 種溫度乘上 2 種飲料，共 6 個"]
+    ref: chapter8/12_template_literal_types.md

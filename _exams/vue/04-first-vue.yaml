@@ -1,15 +1,188 @@
-# 格式樣本（#14）：#18 產生題庫時會從第 1 章補齊
 lang: vue
-chapter: 4
+chapter: "4"
 title: 第一個 Vue 程式
 source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter4, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
-sample: 1
+sample: 5
 questions:
   - id: vue-ch04-q01
     difficulty: 1
     type: code
     check: test
     prompt: |
-      讓 Greeting.vue 接收一個字串 prop「name」，並顯示「Hello, {name}!」。
-    hints: ["用 defineProps 宣告 props", "defineProps<{ name: string }>()，template 寫 Hello, {{ name }}!"]
+      OrderLine.vue 收到 `price`（單價）和 `quantity`（數量）兩個 props。
+      請讓 `.subtotal` 那一行顯示「小計：單價 × 數量 元」，例如單價 1200、數量 3 時顯示「小計：3600 元」。
+    hints: ["`{{ }}` 裡可以放算式，不只是變數", "寫成 `小計：{{ price * quantity }} 元`"]
+    ref: chapter4/04_template_interpolation.md
+
+  - id: vue-ch04-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      ProductLink.vue 的連結和按鈕都沒有真的用到資料，屬性的值變成了原封不動的文字。請修好它：
+      - `<a>` 的 `href` 是 `/products/` 接上 `id`，例如 `/products/7`
+      - `<a>` 的 `title` 是「查看 」接上商品名稱，例如「查看 機械鍵盤」
+      - `isSoldOut` 為 `true` 時按鈕要停用；為 `false` 時 `disabled` 屬性要整個消失
+    hints: ["屬性要用資料，得用 `v-bind`，簡寫是一個冒號 `:`", "`:href=\"'/products/' + id\"`、`:title` 用樣板字面值，`:disabled=\"isSoldOut\"`"]
+    ref: chapter4/05_v_bind.md
+
+  - id: vue-ch04-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      同一個資料夾裡已經有寫好的 AppHeader.vue 和 AppFooter.vue。
+      請在 App.vue 裡把它們組合起來：畫面由上到下是 AppHeader、原本的 `<main>`、AppFooter。
+      （這題的檔案都放在同一層，匯入路徑寫 `./AppHeader.vue` 這樣即可。）
+    hints: ["先在 `<script setup>` 裡 `import`，`<template>` 裡才能用", "`import AppHeader from './AppHeader.vue'`，模板裡寫 `<AppHeader />`"]
+    ref: chapter4/06_compose_and_split.md
+
+  - id: vue-ch04-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      ProductCard.vue 現在用陣列寫法 `defineProps(['name', 'price', 'isNew'])`，Vue 沒辦法幫你檢查。請改成物件寫法：
+      - `name`：字串，**必填**
+      - `price`：數字，沒傳時預設 `0`
+      - `isNew`：布林值，使用時只寫 `isNew` 就等於 `true`
+      模板不用改。
+    hints: ["物件寫法的值可以是型別（如 `Boolean`），也可以是 `{ type, required }`、`{ type, default }` 這種物件", "`name: { type: String, required: true }`、`price: { type: Number, default: 0 }`、`isNew: Boolean`"]
+    ref: chapter4/08_props_types.md
+
+  - id: vue-ch04-q05
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      NoticeBox.vue 是一個提示框，標題用 props 傳。請讓使用者寫在 `<NoticeBox>` 和 `</NoticeBox>` 中間的內容顯示在框裡（`<h3>` 的下面）；
+      如果使用者什麼都沒放，才顯示「目前沒有公告。」。
+    hints: ["元件裡用 `<slot>` 留一個位置給使用者填", "把預設內容寫在 `<slot>` 和 `</slot>` 中間：`<slot><p>目前沒有公告。</p></slot>`"]
+    ref: chapter4/09_default_slot.md
+
+  - id: vue-ch04-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      StockStatus.vue 收到數字 prop `stock`。請依照庫存只顯示**一個** `<p>`：
+      - `stock` 是 0：「已售完」
+      - `stock` 小於 5：「剩最後 N 件！」（N 是庫存數，例如「剩最後 3 件！」）
+      - 其他：「現貨供應中」
+    hints: ["三種以上的情況，用 `v-if`、`v-else-if`、`v-else`，而且要緊接在一起", "`<p v-if=\"stock === 0\">`、`<p v-else-if=\"stock < 5\">剩最後 {{ stock }} 件！</p>`、`<p v-else>`"]
+    ref: chapter4/10_v_if_v_show.md
+
+  - id: vue-ch04-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      MenuPanel.vue 的選單會被使用者頻繁地打開、關上。現在它用 `v-if`，關閉時整個 `<nav>` 會從 HTML 裡消失。
+      請改成關閉時 `.menu` 元素仍然在 HTML 裡，只是用 `display: none` 藏起來。
+    hints: ["有一個指令只會切換 CSS 的 `display`，不會把元素拿掉", "把 `v-if=\"open\"` 換成 `v-show=\"open\"`"]
+    ref: chapter4/10_v_if_v_show.md
+
+  - id: vue-ch04-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      StockList.vue 收到商品陣列 `products`，每項有 `id`、`name`、`inStock`。請完成：
+      - 在 `<script setup>` 裡先過濾出 `inStock` 為 `true` 的商品，存在 `available`
+      - 標題顯示「現貨商品（N 項）」
+      - 有現貨時，用 `<ul>` 和 `v-for` 依原本順序列出每項商品名稱（每項一個 `<li>`，記得加 `key`）
+      - 一項現貨都沒有時，改顯示 `<p>目前沒有現貨。</p>`，而且不要出現 `<ul>`
+      注意：不要把 `v-if` 和 `v-for` 寫在同一個元素上。
+    hints: ["`const available = props.products.filter((product) => product.inStock)`", "`<p v-if=\"available.length === 0\">` 搭配 `<ul v-else>`，`<li v-for=\"product in available\" :key=\"product.id\">`"]
+    ref: chapter4/11_v_for_and_key.md
+
+  - id: vue-ch04-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      ProgressBar.vue 收到數字 prop `progress`（0 到 100）。現在進度條的寬度沒有生效，也還沒有完成狀態。請修好：
+      - `.bar-fill` 的行內樣式寬度是 `progress` 加上 `%`，例如 70 → `70%`
+      - 外框 `<div class="bar">` 一直保有 `bar` class；`progress` 大於或等於 100 時再加上 `done` class
+    hints: ["`:style` 裡的數字要自己加單位；`class` 和 `:class` 可以同時寫", "`:style=\"{ width: progress + '%' }\"`，外框加上 `:class=\"{ done: progress >= 100 }\"`"]
+    ref: chapter4/12_class_and_style.md
+
+  - id: vue-ch04-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      TermList.vue 用 `<dl>` 列出名詞解釋，每一項要畫成相鄰的 `<dt>` 和 `<dd>`。
+      現在每一項外面多包了一層 `<div>`，請改成 `<dl>` 底下直接就是 `<dt>`、`<dd>`、`<dt>`、`<dd>`……，不多產生任何標籤。
+    hints: ["有一種標籤只用來分組，本身不會出現在畫面上", "把 `<div v-for=...>` 換成 `<template v-for=\"term in terms\" :key=\"term.id\">`，`key` 寫在 `<template>` 上"]
+    ref: chapter4/11_v_for_and_key.md
+
+  - id: vue-ch04-q11
+    difficulty: 1
+    type: choice
+    prompt: |
+      create-vue 產生的 `src/main.js` 最後一行是：
+
+          createApp(App).mount('#app')
+
+      其中 `'#app'` 指的是什麼？
+    choices:
+      - "`index.html` 裡 id 是 `app` 的那個 `<div>`，Vue 會把 `App` 元件畫進這個盒子"
+      - "`src/App.vue` 這個檔案的路徑"
+      - "開發伺服器的網址 http://localhost:5173/app"
+      - "`App` 元件裡 class 是 `app` 的最外層元素"
+    answer: 0
+    hints: ["`'#app'` 是 CSS 選擇器的寫法", "`index.html` 的 `<body>` 裡只有一個空的 `<div id=\"app\">`"]
+    ref: chapter4/02_project_structure.md
+
+  - id: vue-ch04-q12
+    difficulty: 1
+    type: short
+    prompt: |
+      用 create-vue 建好專案、也已經跑過 `npm install` 之後，要在終端機輸入哪一行指令，才能啟動開發伺服器、在 http://localhost:5173/ 看到畫面？
+    answers: ['^npm run dev$']
+    hints: ["`package.json` 的 `scripts` 裡有一個叫 `dev` 的指令別名", "`npm run` 加上指令別名"]
+    ref: chapter4/01_create_vue_project.md
+
+  - id: vue-ch04-q13
+    difficulty: 2
+    type: short
+    prompt: |
+      ProductCard 用 `defineProps(['name', 'price'])` 宣告 props。父元件這樣使用它：
+
+          <ProductCard name="機械鍵盤" price="1200" />
+
+      ProductCard 收到的 `price` 是什麼型別？（回答型別名稱，例如「數字」或 number）
+    answers: ['^(字串|string|文字|字串型別|字串型態)$']
+    hints: ["沒有冒號的屬性，引號裡就是文字", "要傳數字得寫 `:price=\"1200\"`"]
     ref: chapter4/07_props.md
+
+  - id: vue-ch04-q14
+    difficulty: 3
+    type: choice
+    prompt: |
+      SaleBanner.vue 的模板只有一行 `<p class="title">限時特價</p>`，它自己的 `<style scoped>` 把 `.title` 設成紅色。
+      App.vue 使用了 `<SaleBanner />`，而且 App.vue 的 `<style scoped>` 也寫了 `.title { color: blue; }`。
+      關於 App.vue 這條 `.title` 規則，下列哪個說法正確？
+    choices:
+      - "會套到 SaleBanner 的 `<p class=\"title\">`，因為它是子元件模板裡最外層的元素"
+      - "完全碰不到 SaleBanner，因為加了 `scoped` 的樣式只影響自己的模板，沒有例外"
+      - "會套到整個網站所有 class 是 `title` 的元素，因為 App 是最外層的元件"
+      - "會讓 Vue 在 Console 跳出警告，因為兩個元件用了同一個 class 名稱"
+    answer: 0
+    hints: ["scoped 樣式有一個小例外，和子元件的「外框」有關", "Vue 讓父元件可以調整子元件最外層元素的位置和間距"]
+    ref: chapter4/13_style_scoped.md
+
+  - id: vue-ch04-q15
+    difficulty: 1
+    type: choice
+    prompt: |
+      畫面上某張商品卡片的價格顯示怪怪的，你懷疑是父元件傳錯了資料。用 Vue DevTools 最直接的檢查方式是？
+    choices:
+      - "在 Components 頁的元件樹點那個 ProductCard，看右邊列出它收到的 props"
+      - "執行 `npm run build`，再看 `dist/` 裡產生的檔案"
+      - "在瀏覽器的 Console 輸入 `ProductCard.props`"
+      - "打開 `package.json`，檢查 `vite-plugin-vue-devtools` 的版本"
+    answer: 0
+    hints: ["DevTools 預設打開的就是 Components 頁", "點選樹上的元件，右邊會顯示它手上的資料"]
+    ref: chapter4/14_vue_devtools.md

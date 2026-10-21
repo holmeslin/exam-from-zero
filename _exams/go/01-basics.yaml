@@ -1,46 +1,429 @@
-# 格式樣本（#14）：#15 產生題庫時會補齊這一章
 lang: go
-chapter: 1
+chapter: "1"
 title: 基礎
 source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter1, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
-sample: 4
+sample: 10
 questions:
+  # 由 EXERCISES.md 第 1 章第 3 集「題 1」轉換
   - id: go-ch01-q01
     difficulty: 1
-    type: choice
+    type: code
+    check: stdout
     prompt: |
-      下面這段程式會印出什麼？
+      建立兩個變數：`drink` 存飲料名稱「珍珠奶茶」（文字），`price` 存價格 60（數字）。
+      用兩行 `fmt.Println` 分別印出飲料名稱和價格，執行結果要和下面一樣：
 
-          for i := 1; i <= 3; i++ {
-              fmt.Print(i)
-          }
-    choices: ["123", "012", "1234", "0123"]
-    answer: 0
-    hints: ["看清楚起點是 1，條件是 <=", "i 依序是 1、2、3，到 4 時條件不成立"]
-    ref: chapter1/20_for_three_part.md
+          飲料： 珍珠奶茶
+          價格： 60
+    expected_stdout: "飲料： 珍珠奶茶\n價格： 60\n"
+    hints: ["`drink := \"珍珠奶茶\"` 會建立一個存文字的變數；數字不用加引號", "fmt.Println(\"價格：\", price) 會先印出引號裡的文字，再印出變數的值，中間自動加一個空格"]
+    ref: chapter1/03_variables_and_output.md
+  # 由 EXERCISES.md 第 1 章第 4 集「題 1」轉換
   - id: go-ch01-q02
     difficulty: 1
-    type: short
-    prompt: 變數 n 的型別是 int，要把它轉成 float64，運算式怎麼寫？
-    answers: ["^float64\\(n\\)$"]
-    hints: ["Go 的型別轉換寫法是「型別(值)」", "float64(n)"]
-    ref: chapter1/27_type_conversion.md
-  - id: go-ch01-q03
-    difficulty: 2
     type: code
-    check: test
+    check: stdout
     prompt: |
-      實作 Grade(score int) string：
-      90 分以上回傳 "A"，80～89 回傳 "B"，其他回傳 "C"。請用 switch。
-    hints: ["switch 後面不寫值，每個 case 寫條件", "case score >= 90: return \"A\""]
-    ref: chapter1/30_switch.md
-  # 由 EXERCISES.md 第 1 章第 20 集「題 2」轉換
+      編輯器裡的程式會印出三行。請不要刪掉任何一行，只用 `//` 註解讓程式只印出第一行和第三行，
+      並在最上面加一行註解說明這支程式在做什麼。執行結果：
+
+          早安
+          晚安
+    expected_stdout: "早安\n晚安\n"
+    hints: ["一行開頭加上 `//`，那一行就不會被執行", "在 fmt.Println(\"午安\") 前面加 //；說明用的註解可以單獨放在 func main() { 的下一行"]
+    ref: chapter1/04_comments.md
+  # 由 EXERCISES.md 第 1 章第 5 集「題 2」轉換
+  - id: go-ch01-q03
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      一部影片長 135 分鐘。建立變數 `minutes`，用 `/` 和 `%` 算出它是幾小時又幾分鐘。執行結果：
+
+          2 小時 15 分鐘
+    expected_stdout: "2 小時 15 分鐘\n"
+    hints: ["1 小時是 60 分鐘，小時數就是整除 60 的結果，分鐘數是除完的餘數", "小時數是 minutes / 60，剩下的分鐘數是 minutes % 60"]
+    ref: chapter1/05_arithmetic_operators.md
+  # 由 EXERCISES.md 第 1 章第 6 集「題 1」轉換
   - id: go-ch01-q04
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      編輯器裡的程式想算出三次小考的平均分數，正確答案應該是 80，但它印出了 193。
+      請找出原因並修正，讓執行結果變成：
+
+          平均： 80
+    expected_stdout: "平均： 80\n"
+    hints: ["先照「先乘除後加減」在紙上算一次 70 + 100 + 70 / 3", "/ 比 + 先算，所以只有 quiz3 被除以 3；用小括號 (quiz1 + quiz2 + quiz3) / 3 讓加法先算"]
+    ref: chapter1/06_operator_precedence.md
+  # 由 EXERCISES.md 第 1 章第 7 集「題 1」轉換
+  - id: go-ch01-q05
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      建立變數 `height`（身高，公分）存 125。遊樂設施規定身高至少 120 公分才能搭。
+      把「能不能搭」的比較結果存進變數 `canRide` 再印出來；接著印出 `height` 是不是剛好等於 120。執行結果：
+
+          可以搭乘： true
+          剛好 120 公分： false
+    expected_stdout: "可以搭乘： true\n剛好 120 公分： false\n"
+    hints: ["height >= 120 本身就是一個值，算出來是 true 或 false；比較相等要用兩個等號 ==", "canRide := height >= 120，再 fmt.Println(\"可以搭乘：\", canRide)"]
+    ref: chapter1/07_comparison_operators.md
+  # 由 EXERCISES.md 第 1 章第 8 集「題 1」轉換
+  - id: go-ch01-q06
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      建立變數 `battery` 代表手機剩餘電量，設為 15。電量低於 20 時印出「電量不足，請充電」；
+      不管電量多少，最後都要印出「目前電量：」加上電量。執行結果：
+
+          電量不足，請充電
+          目前電量： 15
+
+      （可以把 battery 改成 80 試試看，這時只會印出第二行；繳交前改回 15。）
+    expected_stdout: "電量不足，請充電\n目前電量： 15\n"
+    hints: ["只在某些情況才要做的事放進 if 的大括號裡，每次都要做的事放在 if 結束之後", "if battery < 20 { fmt.Println(\"電量不足，請充電\") }，接著在大括號外面印出目前電量"]
+    ref: chapter1/08_if.md
+  # 由 EXERCISES.md 第 1 章第 9 集「題 1」轉換
+  - id: go-ch01-q07
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式無法編譯，錯誤訊息是 `undefined: message`。原因是什麼？
+
+          score := 75
+          if score >= 60 {
+              message := "恭喜及格"
+          }
+          fmt.Println(message)
+    choices: ["if 的條件要用小括號包起來，寫成 if (score >= 60)", "message 必須用 var 建立，不能用 :=", "message 是在 if 的大括號裡建立的，出了大括號就不能用", "fmt.Println 只能印出寫死的文字，不能印變數"]
+    answer: 2
+    hints: ["錯誤訊息的意思是「這裡找不到 message」；看看 message 是在哪一對大括號裡建立的", "message 在 if 的大括號裡建立，出了大括號就不存在；把 fmt.Println(message) 移進 if 裡就能編譯"]
+    ref: chapter1/09_scope.md
+  # 由 EXERCISES.md 第 1 章第 10 集「題 1」轉換
+  - id: go-ch01-q08
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      建立變數 `number` 存 13，判斷它是偶數還是奇數，印出 number 加上「是偶數」或「是奇數」。執行結果：
+
+          13 是奇數
+
+      （改成 8 應該印出「8 是偶數」；繳交前改回 13。）
+    expected_stdout: "13 是奇數\n"
+    hints: ["偶數除以 2 的餘數是 0；不是偶數的情況就交給 else", "if number%2 == 0 { ... } else { ... }，else 要寫在右大括號同一行"]
+    ref: chapter1/10_else.md
+  # 由 EXERCISES.md 第 1 章第 11 集「題 1」轉換
+  - id: go-ch01-q09
     difficulty: 2
     type: code
     check: stdout
     prompt: |
-      用三段式 for 印出倒數 10、8、6、4、2（每行一個），最後印出「發射！」。
-    expected_stdout: "10\n8\n6\n4\n2\n發射！\n"
-    hints: ["先想清楚：從幾開始？到幾結束？每次怎麼變？", "for i := 10; i > 0; i -= 2，迴圈結束後再印「發射！」"]
+      建立變數 `speed` 代表車速，設為 105。依照車速印出：
+
+      - 超過 110：超速，罰款！
+      - 100 到 110（含）：接近速限，請放慢
+      - 其他：速度正常
+
+      執行結果：
+
+          接近速限，請放慢
+
+      （也可以改成 120、90 試試看；繳交前改回 105。）
+    expected_stdout: "接近速限，請放慢\n"
+    hints: ["先檢查最快的情況：超過 110 放最前面，其他情況交給 else", "if speed > 110 {...} else if speed >= 100 {...} else {...}；走到第二個條件時車速一定沒超過 110"]
+    ref: chapter1/11_else_if.md
+  # 由 EXERCISES.md 第 1 章第 12 集「題 1」轉換
+  - id: go-ch01-q10
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      博物館門票規則：未滿 12 歲或 65 歲以上買優待票，其他人買全票。
+      建立變數 `age` 存 70，印出「優待票」或「全票」。執行結果：
+
+          優待票
+    expected_stdout: "優待票\n"
+    hints: ["「或」用 ||，「而且」用 &&", "if age < 12 || age >= 65 { 優待票 } else { 全票 }；注意 12 歲是全票、65 歲是優待票"]
+    ref: chapter1/12_logical_operators.md
+  # 由 EXERCISES.md 第 1 章第 13 集「題 1」轉換
+  - id: go-ch01-q11
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      用 `var balance int` 建立存款變數。依序存入 500 元、領出 120 元、再存入 300 元，
+      每做一次就用 `=` 更新，並印出目前的存款。執行結果：
+
+          存款： 500
+          存款： 380
+          存款： 680
+    expected_stdout: "存款： 500\n存款： 380\n存款： 680\n"
+    hints: ["var balance int 建立後一開始是 0；之後修改用 =，不能再用 :=", "存入 500 就是 balance = balance + 500：先算右邊，再放回左邊"]
+    ref: chapter1/13_reassignment_var.md
+  # 由 EXERCISES.md 第 1 章第 14 集「題 2」轉換
+  - id: go-ch01-q12
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      一筆存款 `money := 1000`，每年變成兩倍，連續 3 年。用 `*=` 更新，每年印出一次金額。執行結果：
+
+          第 1 年： 2000
+          第 2 年： 4000
+          第 3 年： 8000
+    expected_stdout: "第 1 年： 2000\n第 2 年： 4000\n第 3 年： 8000\n"
+    hints: ["money *= 2 等於 money = money * 2", "這集還沒教迴圈，連寫三次 money *= 2，每次後面接一行 fmt.Println(\"第 1 年：\", money) 這樣的輸出"]
+    ref: chapter1/14_compound_assignment.md
+  # 由 EXERCISES.md 第 1 章第 15 集「題 1」轉換
+  - id: go-ch01-q13
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      先請使用者輸入名字，再請他輸入喜歡的食物，最後印出一句話把兩個答案組合起來。
+      批改時會依序輸入「小美」「牛肉麵」（輸入的內容不會出現在輸出裡），執行結果：
+
+          你叫什麼名字？
+          你最喜歡吃什麼？
+          小美 最喜歡吃 牛肉麵
+    stdin: "小美\n牛肉麵\n"
+    expected_stdout: "你叫什麼名字？\n你最喜歡吃什麼？\n小美 最喜歡吃 牛肉麵\n"
+    hints: ["先把書上讀一行的句型照抄：bufio.NewScanner(os.Stdin)、scanner.Scan()、scanner.Text()", "scanner 只建立一次；要讀第二行時再寫一次 scanner.Scan() 和 food := scanner.Text()"]
+    ref: chapter1/15_stdin.md
+  # 由 EXERCISES.md 第 1 章第 16 集「題 1」轉換
+  - id: go-ch01-q14
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      請使用者輸入今年幾歲，印出他 10 年後幾歲；輸入的不是整數時，印出「請輸入整數」並結束。
+      批改時會輸入 25，執行結果：
+
+          請輸入你的年齡：
+          10 年後你 35 歲
+
+      （輸入 abc 時應該印出「請輸入你的年齡：」和「請輸入整數」。）
+    stdin: "25\n"
+    expected_stdout: "請輸入你的年齡：\n10 年後你 35 歲\n"
+    hints: ["scanner.Text() 拿到的是文字，要先用 strconv.Atoi 變成整數才能計算", "age, err := strconv.Atoi(line)；if err != nil { 印出提示; return }，最後印出 age+10"]
+    ref: chapter1/16_atoi.md
+  # 由 EXERCISES.md 第 1 章第 17 集「題 1」轉換
+  - id: go-ch01-q15
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      停車費計算：先印出「請輸入停車時數：」，再讀一行整數時數。
+
+      - 輸入不是整數：印出 請輸入整數
+      - 小於等於 0：印出 時數要大於 0
+      - 2 小時以內（含）：每小時 30 元
+      - 超過 2 小時：前 2 小時共 60 元，之後每小時 50 元
+
+      印出應付金額。輸入 5 時的執行結果：
+
+          請輸入停車時數：
+          停車費： 210 元
+
+      批改時會試好幾種輸入，包含 abc、0、2、3 這些邊界值。
+    hints: ["先擋掉不合理的情況：err 不是 nil、時數小於等於 0，最後才算錢", "超過 2 小時是 60 + (hours-2)*50；檢查邊界：2 小時 60 元、3 小時 110 元"]
+    ref: chapter1/17_practice.md
+  # 由 EXERCISES.md 第 1 章第 18 集「題 2」轉換
+  - id: go-ch01-q16
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      請使用者輸入密碼，輸入錯誤就印出「密碼錯誤，請再試一次」並重新要求輸入，直到輸入 gopher 為止，
+      最後印出「登入成功」。用 `for` 無限迴圈加 `break`。
+      批改時會依序輸入 1234、gopher，執行結果：
+
+          請輸入密碼：
+          密碼錯誤，請再試一次
+          請輸入密碼：
+          登入成功
+    stdin: "1234\ngopher\n"
+    expected_stdout: "請輸入密碼：\n密碼錯誤，請再試一次\n請輸入密碼：\n登入成功\n"
+    hints: ["scanner 放在迴圈外建立一次；for { ... } 裡每一圈先印提示、再讀一行", "讀到的內容 == \"gopher\" 就 break，否則印出「密碼錯誤，請再試一次」；迴圈結束後印出「登入成功」"]
+    ref: chapter1/18_for_break.md
+  # 由 EXERCISES.md 第 1 章第 19 集「題 1」轉換
+  - id: go-ch01-q17
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      每週存 150 元，存款從 0 開始。用 `for 條件` 迴圈算出要存幾週，存款才會達到 1000 元以上，
+      印出週數和最後的存款。執行結果：
+
+          存了 7 週，共 1050 元
+    expected_stdout: "存了 7 週，共 1050 元\n"
+    hints: ["什麼情況下還要繼續存？把它寫在 for 後面；每一圈要同時更新存款和週數", "for savings < 1000 { savings += 150; weeks++ }，迴圈結束後再印出結果"]
+    ref: chapter1/19_for_condition.md
+  # 由 EXERCISES.md 第 1 章第 20 集「題 1」轉換
+  - id: go-ch01-q18
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      用三段式 `for` 印出 7 的乘法表，每行一個。執行結果：
+
+          7 x 1 = 7
+          7 x 2 = 14
+          7 x 3 = 21
+          7 x 4 = 28
+          7 x 5 = 35
+          7 x 6 = 42
+          7 x 7 = 49
+          7 x 8 = 56
+          7 x 9 = 63
+    expected_stdout: "7 x 1 = 7\n7 x 2 = 14\n7 x 3 = 21\n7 x 4 = 28\n7 x 5 = 35\n7 x 6 = 42\n7 x 7 = 49\n7 x 8 = 56\n7 x 9 = 63\n"
+    hints: ["先想清楚：從幾開始？到幾結束？每次怎麼變？依序填進 for 的三段", "for i := 1; i <= 9; i++ { fmt.Println(7, \"x\", i, \"=\", 7*i) }"]
     ref: chapter1/20_for_three_part.md
+  # 由 EXERCISES.md 第 1 章第 21 集「題 1」轉換
+  - id: go-ch01-q19
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      用 `for range` 算出 1 加到 100 的總和。執行結果：
+
+          總和： 5050
+    expected_stdout: "總和： 5050\n"
+    hints: ["for i := range 100 的 i 是從 0 跑到 99，先印出 i 看看", "sum 在迴圈外建立，迴圈裡 sum += i + 1"]
+    ref: chapter1/21_for_range_int.md
+  # 由 EXERCISES.md 第 1 章第 22 集「題 1」轉換
+  - id: go-ch01-q20
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      擲兩顆骰子（點數各是 1～6），用巢狀迴圈列出所有點數加起來等於 7 的組合，最後印出共有幾種。執行結果：
+
+          1 + 6
+          2 + 5
+          3 + 4
+          4 + 3
+          5 + 2
+          6 + 1
+          共有 6 種
+    expected_stdout: "1 + 6\n2 + 5\n3 + 4\n4 + 3\n5 + 2\n6 + 1\n共有 6 種\n"
+    hints: ["外層跑第一顆骰子、內層跑第二顆，先寫出印出全部 36 種組合的巢狀迴圈", "內層加上 if a+b == 7，印出組合的同時 count++；count 要在兩層迴圈外面建立"]
+    ref: chapter1/22_nested_loops.md
+  # 由 EXERCISES.md 第 1 章第 23 集「題 1」轉換
+  - id: go-ch01-q21
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      印出 1 到 20 之中，不是 3 的倍數、也不是 5 的倍數的數字，每行一個。用 `continue` 跳過不要的數字。執行結果：
+
+          1
+          2
+          4
+          7
+          8
+          11
+          13
+          14
+          16
+          17
+          19
+    expected_stdout: "1\n2\n4\n7\n8\n11\n13\n14\n16\n17\n19\n"
+    hints: ["哪些數字是「不要的」？先把它們的條件寫出來", "if i%3 == 0 || i%5 == 0 { continue }，後面再 fmt.Println(i)"]
+    ref: chapter1/23_continue.md
+  - id: go-ch01-q22
+    difficulty: 1
+    type: short
+    prompt: |
+      寫 `x := 2.0` 時，變數 x 的型別是什麼？（只要寫型別名稱）
+    answers: ["^float64( ?型別)?$"]
+    hints: ["`:=` 會看右邊的值自動決定型別；有小數點的數字和整數是不同的型別", "2 是 int，2.0 是 float64"]
+    ref: chapter1/24_basic_types.md
+  - id: go-ch01-q23
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式會印出什麼？
+
+          var small int8 = 127
+          small++
+          fmt.Println(small)
+    choices: ["128", "-128", "127", "編譯錯誤：overflows"]
+    answer: 1
+    hints: ["int8 的範圍是 -128 ～ 127；這裡的超出範圍是執行時才算出來的，不是寫死的數字", "執行時的溢位會繞回另一端：最大值再加 1 變成最小值"]
+    ref: chapter1/25_number_types.md
+  - id: go-ch01-q24
+    difficulty: 1
+    type: short
+    prompt: |
+      下面這段程式會印出什麼？
+
+          var done bool
+          fmt.Println(done)
+    answers: ["^false$"]
+    hints: ["用 var 建立卻沒給值時，變數會自動得到該型別的零值", "bool 的零值是 false"]
+    ref: chapter1/26_zero_values.md
+  # 由 EXERCISES.md 第 1 章第 27 集「題 1」轉換
+  - id: go-ch01-q25
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      一份披薩有 `pieces := 9` 片，`people := 2` 個人平分。印出每人分到幾片（要有小數）。執行結果：
+
+          每人 4.5 片
+    expected_stdout: "每人 4.5 片\n"
+    hints: ["9 / 2 為什麼是 4？想得到 4.5，兩邊要先變成什麼型別？", "先轉換再相除：float64(pieces) / float64(people)；寫成 float64(pieces / people) 會得到 4"]
+    ref: chapter1/27_type_conversion.md
+  - id: go-ch01-q26
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式會印出什麼？
+
+          fmt.Println('A')
+    choices: ["A", "65", "'A'", "編譯錯誤：單引號不能用在 fmt.Println"]
+    answer: 1
+    hints: ["單引號包起來的一個字，代表的不是字串，而是這個字的什麼？", "'A' 是 A 的號碼（rune 型別），印出來是數字 65；想印成字要用 string('A')"]
+    ref: chapter1/28_byte_rune.md
+  # 由 EXERCISES.md 第 1 章第 29 集「題 1」轉換
+  - id: go-ch01-q27
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      用**一個** `fmt.Println` 和雙引號字串（不要用反引號）印出下面兩行，第二行裡有雙引號和反斜線：
+
+          檔案位置：
+          "C:\Users\gopher\notes.txt"
+    expected_stdout: "檔案位置：\n\"C:\\Users\\gopher\\notes.txt\"\n"
+    hints: ["換行用 \\n、雙引號用 \\\"；雙引號字串裡的 \\U 會被當成跳脫字元的開頭，所以反斜線本身也要跳脫", "每個反斜線都要寫成 \\\\，例如 \"檔案位置：\\n\\\"C:\\\\Users\\\\...\\\"\""]
+    ref: chapter1/29_escape_and_raw_strings.md
+  # 由 EXERCISES.md 第 1 章第 30 集「題 2」轉換
+  - id: go-ch01-q28
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      先印出「請輸入月份：」，再讀一行整數月份，用 `switch` 印出它是哪個季節：
+
+      - 3～5 月：春天
+      - 6～8 月：夏天
+      - 9～11 月：秋天
+      - 12、1、2 月：冬天
+      - 其他數字：沒有這個月份
+      - 輸入不是整數：請輸入整數
+
+      輸入 12 時的執行結果：
+
+          請輸入月份：
+          冬天
+
+      批改時會試 1 到 12 月和幾種錯誤輸入。
+    hints: ["switch month { 後面每個 case 寫要比對的值；好幾個值做同一件事，就用逗號放在同一個 case", "case 3, 4, 5: 印出春天 …… case 12, 1, 2: 印出冬天，其他交給 default；switch 之前先檢查 err"]
+    ref: chapter1/30_switch.md

@@ -1,0 +1,178 @@
+lang: react
+chapter: "10"
+title: TypeScript
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter10, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch10-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下列關於 TypeScript 型別的敘述，哪一個正確？
+    choices:
+      - "瀏覽器執行時會依照型別檢查從網路拿到的資料，形狀不對就丟出錯誤"
+      - "建置時型別會被整個拿掉，執行時不存在，所以它無法保證網路來的資料真的長得像你宣告的樣子"
+      - "型別會留在送給瀏覽器的 JavaScript 裡，所以檔案會變大、網頁會變慢"
+      - "瀏覽器可以直接執行 .ts 和 .tsx 檔案，不需要任何轉換"
+    answer: 1
+    hints: ["型別是「寫程式時的檢查」，還是「執行時的保護」？", "瀏覽器看不懂 TypeScript，建置時型別會被拿掉，變成普通的 JavaScript"]
+    ref: chapter10/01_why_typescript.md
+  - id: react-ch10-q02
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 從標準輸入讀進多行，每行是「單價 數量 運費」三個數字，用空白隔開，
+      每行要印出「總共 X 元」，X = 單價 × 數量 + 運費。
+
+      現在輸入 `120 3 60` 卻印出 `總共 36060 元`。`total` 的參數雖然標了 `number`，
+      但型別在執行時不存在，`split` 拿到的其實是字串。請在呼叫 `total` 之前把它們轉成數字。
+    hints: ["字串遇到 + 會變成接字串：360 + \"60\" 是 \"36060\"", "line.split(' ').map(Number) 可以一次把三個字串都轉成數字"]
+    ref: chapter10/02_basic_types.md
+    stdin: "120 3 60\n45 2 0\n7 4 15\n"
+    expected_stdout: "總共 420 元\n總共 90 元\n總共 43 元\n"
+  - id: react-ch10-q03
+    difficulty: 2
+    type: choice
+    prompt: |
+      在 VS Code 裡把游標移到下面兩個變數上，TypeScript 推論出的型別分別是什麼？
+
+          const name = "小明";
+          let city = "台北";
+    choices:
+      - "name 是 string，city 是 string"
+      - "name 是 \"小明\"，city 是 string"
+      - "name 是 string，city 是 \"台北\""
+      - "name 是 \"小明\"，city 是 \"台北\""
+    answer: 1
+    hints: ["哪一個之後還可能被換成別的字串？", "const 永遠不會變，推論成字面型別；let 可能被重新指定，只能推成寬鬆的 string"]
+    ref: chapter10/03_type_inference.md
+  - id: react-ch10-q04
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      customer.ts 定義了 `Customer` 型別，其中 `email?: string` 是選填屬性。
+      完成 `describeCustomer`：
+
+      - 沒有 email：回傳 `小明（台北 100）`
+      - 有 email：在後面加一個空白和 `<email>`，例如 `小華（台中 400） <hua@example.com>`
+    hints: ["選填屬性用的時候型別是 string | undefined，要先檢查", "if (customer.email === undefined) { return base; } 再回傳 `${base} <${customer.email}>`"]
+    ref: chapter10/04_object_types.md
+  - id: react-ch10-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      union.ts 有兩個函式，參數都是聯集型別，目前執行時會出錯。請用型別縮小修好它們：
+
+      - `show(value: string | number)`：數字回傳 `toFixed(2)` 的結果，字串回傳轉大寫的結果
+      - `greet(user: User | null)`：有使用者回傳 `你好，小明`，`null` 時回傳 `請先登入`
+    hints: ["toFixed 只有數字有，name 只有物件有，用之前要先確定是哪一種", "用 typeof value === \"number\" 和 user === null 先檢查，再處理剩下的情況"]
+    ref: chapter10/05_union_types.md
+  - id: react-ch10-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `ProductList` 的 props 型別是：
+
+          type ProductListProps = {
+            products: Product[];
+            onSelect: (id: number) => void;
+            emptyText?: string;
+          };
+
+      請照著這個型別修好元件：
+
+      - 點商品按鈕時，呼叫 `onSelect` 並傳入該商品的 **id**（數字）
+      - `products` 是空陣列時，不顯示清單，改顯示 `<p>{emptyText}</p>`；沒傳 `emptyText` 時預設是 `沒有商品`
+    hints: ["(id: number) => void 表示 onSelect 要收一個數字，目前傳的是名稱", "解構時可以給預設值：{ products, onSelect, emptyText = \"沒有商品\" }，再用 products.length === 0 提早 return"]
+    ref: chapter10/06_props_types.md
+  - id: react-ch10-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `TodoForm` 的兩個處理函式是獨立寫的，型別已經標好
+      （`ChangeEvent<HTMLInputElement>`、`FormEvent<HTMLFormElement>`），請完成內容：
+
+      - `handleChange`：把輸入框的內容存進 `text`
+      - `handleSubmit`：把 `text` 去掉頭尾空白；不是空字串才加進 `todos`（`useState<Todo[]>([])`）。
+        不論有沒有新增，都要清空輸入框，並用 `inputRef` 讓輸入框重新取得焦點
+    hints: ["event.target.value 是輸入框目前的內容；新增時用 setTodos([...todos, 新物件])", "inputRef.current 一開始可能是 null，用 inputRef.current?.focus()"]
+    ref: chapter10/07_state_and_event_types.md
+  - id: react-ch10-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      generic.ts 有一個泛型型別 `ApiResult<T>`（`data: T | null; error: string | null`），請完成兩個泛型函式：
+
+      - `first<T>(items: T[]): T | undefined`：回傳第一個元素，空陣列回傳 `undefined`
+      - `toResult<T>(value: T | undefined, error: string): ApiResult<T>`：`value` 是 `undefined` 時回傳
+        `{ data: null, error }`，否則回傳 `{ data: value, error: null }`
+
+      注意 `0`、空字串也是資料，不能當成沒有值。
+    hints: ["items[0] 在空陣列時本來就是 undefined", "用 value === undefined 判斷，不要用 if (!value)，不然 0 和 '' 會被當成沒有值"]
+    ref: chapter10/08_generics_intro.md
+  - id: react-ch10-q09
+    difficulty: 1
+    type: short
+    prompt: |
+      `const names: Array<string> = ["小明", "小華"];` 裡的 `Array<string>`，
+      可以換成哪一種更常見的寫法，意思完全一樣？
+    answers: ['^string ?\[ ?\]$']
+    hints: ["Array<T> 的 T 是陣列裡東西的型別", "第 2 集的陣列寫法：型別後面加上 []"]
+    ref: chapter10/08_generics_intro.md
+  - id: react-ch10-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      reducer.ts 的 `Action` 是可辨識聯集，用 `type` 欄位區分三種動作：
+
+          type Action =
+            | { type: "add"; id: number; text: string }
+            | { type: "toggle"; id: number }
+            | { type: "remove"; id: number };
+
+      `add` 已經寫好了，請在 `switch` 裡補上：
+
+      - `toggle`：把指定 `id` 的事項 `done` 反過來
+      - `remove`：刪掉指定 `id` 的事項
+
+      不能直接修改原本的陣列或物件，要回傳新的。
+    hints: ["在 case \"toggle\" 裡，TypeScript 知道 action 一定有 id", "toggle 用 todos.map 搭配 { ...todo, done: !todo.done }，remove 用 todos.filter"]
+    ref: chapter10/09_hooks_and_context_types.md
+  - id: react-ch10-q11
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      theme.tsx 用 `createContext<ThemeContextValue | null>(null)` 建立主題的 Context，請完成：
+
+      - `toggleTheme`：在 `light` 和 `dark` 之間切換
+      - `useTheme`：`useContext` 拿到 `null` 時（代表忘了包 `ThemeProvider`），丟出錯誤，
+        訊息是 `useTheme 必須在 ThemeProvider 裡面使用`；否則回傳拿到的值
+
+      目前 `useTheme` 用 `value!` 硬保證不是 `null`，保證錯了就會在別的地方出錯，訊息也看不懂。
+    hints: ["setTheme(theme === \"light\" ? \"dark\" : \"light\")", "if (value === null) { throw new Error(\"useTheme 必須在 ThemeProvider 裡面使用\"); } 之後 return value"]
+    ref: chapter10/09_hooks_and_context_types.md
+  - id: react-ch10-q12
+    difficulty: 2
+    type: choice
+    prompt: |
+      把專案改成 TypeScript 後，`main.tsx` 寫成：
+
+          createRoot(document.getElementById("root")!).render(<App />);
+
+      `getElementById("root")` 後面的 `!` 是什麼意思？
+    choices:
+      - "執行時如果找不到元素，會自動略過，不會出錯"
+      - "告訴 TypeScript「這裡不會是 null，我保證」；保證錯了的話，執行時一樣會出錯"
+      - "把結果轉成布林值，找得到是 true，找不到是 false"
+      - "要求 TypeScript 在執行時檢查這個值是不是 null"
+    answer: 1
+    hints: ["型別在執行時不存在，! 也一樣", "這叫非空斷言，用你的保證換掉 TypeScript 的檢查，只用在確定存在的地方"]
+    ref: chapter10/10_convert_vite_project.md

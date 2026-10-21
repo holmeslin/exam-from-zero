@@ -1,0 +1,145 @@
+lang: react
+chapter: "6"
+title: Ref 與 Effect
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter6, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch06-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面的元件，先連按三次「ref +1」，再按一次「state +1」。按完「ref +1」三次的當下，以及按完「state +1」之後，畫面上分別顯示什麼？
+
+          const countRef = useRef(0);
+          const [count, setCount] = useState(0);
+          // 畫面：<p>ref：{countRef.current}，state：{count}</p>
+          // 按鈕一：onClick={() => { countRef.current += 1; }}  文字「ref +1」
+          // 按鈕二：onClick={() => setCount(count + 1)}        文字「state +1」
+    choices:
+      - "先是「ref：3，state：0」，之後是「ref：3，state：1」"
+      - "先是「ref：0，state：0」，之後是「ref：3，state：1」"
+      - "先是「ref：0，state：0」，之後是「ref：0，state：1」"
+      - "先是「ref：3，state：0」，之後是「ref：0，state：1」"
+    answer: 1
+    hints: ["改 `ref.current` 會不會讓 React 重新渲染？", "`countRef.current` 一直在變，只是畫面要等到 state 觸發重新渲染時才讀到最新的值"]
+    ref: chapter6/01_use_ref_value.md
+
+  - id: react-ch06-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      完成 `SearchBox.tsx`：按下「聚焦輸入框」按鈕時，讓 placeholder 為「搜尋」的輸入框取得游標。
+      元件裡已經有 `inputRef`，請把它掛到 `<input>` 上，並在按鈕的事件處理函式裡呼叫 DOM 元素的 `focus()`。
+    hints: ["把 ref 物件傳給元素的 `ref` 屬性：`<input ref={inputRef} ... />`", "`onClick={() => inputRef.current?.focus()}`；`current` 就是真正的 `<input>` 元素"]
+    ref: chapter6/02_ref_dom.md
+
+  - id: react-ch06-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      完成 `Counter.tsx`：讓瀏覽器分頁的標題 `document.title` 永遠反映目前的 `count`，格式是「你點了 N 次」。
+      一開始就要是「你點了 0 次」，不管 `count` 是怎麼被改的都要跟著變。請用 `useEffect`，不要寫在 `onClick` 裡。
+    hints: ["和外部系統（分頁標題）同步的程式碼放進 `useEffect`，它會在畫面更新之後執行", "useEffect(() => { document.title = `你點了 ${count} 次` })"]
+    ref: chapter6/03_use_effect.md
+
+  - id: react-ch06-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Greeting.tsx` 會把分頁標題設成「{name} 點了 {count} 次」，但只改 `name` 時標題沒有更新，要等 `count` 變了才一起更新。
+      找出原因並修好，讓 `name` 或 `count` 任一個改變時標題都會更新。
+    hints: ["Effect 裡用到的所有 props 和 state，都要寫進依賴陣列", "把 `[count]` 改成 `[name, count]`"]
+    ref: chapter6/04_dependencies.md
+
+  - id: react-ch06-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `WindowWidth.tsx` 會監聽視窗的 `resize` 事件並顯示「視窗寬度：N px」，但元件消失之後監聽還留在 `window` 上。
+      請補上清除函式，讓元件從畫面上消失時，用 `removeEventListener` 移除同一個 `handleResize`。
+    hints: ["Effect 可以回傳一個函式，React 會在元件消失時呼叫它", "return () => window.removeEventListener('resize', handleResize)"]
+    ref: chapter6/05_cleanup.md
+
+  - id: react-ch06-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Timer.tsx` 應該每秒加 1，但在開發模式的 `<StrictMode>` 下，畫面上的數字卻是每秒加 2。
+      請找出原因並修正：在 StrictMode 下也要每秒加 1，元件消失後也不能留下還在跑的計時器。不要拿掉 StrictMode，也不要用 ref 記「已經跑過了」。
+    hints: ["StrictMode 會讓 Effect 多跑一輪「設定 → 清除 → 設定」；沒有清除函式，第一個計時器就沒被關掉", "const id = setInterval(...); return () => clearInterval(id)"]
+    ref: chapter6/06_strict_mode.md
+
+  - id: react-ch06-q07
+    difficulty: 1
+    type: short
+    prompt: |
+      想在 `userId` 這個 prop 改變時，把 `<Profile>` 裡的所有 state 都重設。不用 Effect，要在下面這行再加上哪個屬性（只要寫屬性名稱）？
+
+          <Profile userId={userId} />
+    answers: ['^`?key`?$', '^`?key ?= ?\{ ?userid ?\}`?$', '^`?key`? ?屬性$']
+    hints: ["第 5 章學過：這個屬性換了值，React 就把元件當成全新的", "<Profile key={userId} userId={userId} />"]
+    ref: chapter6/07_you_might_not_need_an_effect.md
+
+  - id: react-ch06-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `UserProfile.tsx` 用 Effect 呼叫 `api.ts` 的 `fetchUser(id)` 抓使用者，但有競態：先發出的 1 號請求比較慢，晚回來時會蓋掉 2 號的結果。請修正成：
+      - 用清除函式把舊請求標記成過期（`ignore` 旗標），過期的結果直接丟掉。
+      - 把結果連同它的 `id` 一起存；手上的結果不是目前 `id` 的（或還沒有結果）時，顯示「載入中……」。
+      - 成功時顯示「使用者：{name}」；請求失敗時顯示「出錯了：{錯誤訊息}」（用 `error.message`）。
+      不要改 `api.ts`。
+    hints: ["Effect 裡先 `let ignore = false`，清除函式設成 `true`；`then` 和 `catch` 裡都先檢查 `if (!ignore)` 再更新 state", "state 存 `{ id, user }` 或 `{ id, error }`；渲染時 `result === null || result.id !== id` 就顯示「載入中……」"]
+    ref: chapter6/08_fetch_in_effect.md
+
+  - id: react-ch06-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `ChatRoom.tsx` 連上房間會印「連線到 {roomId}」，0.5 秒後如果沒有靜音就印「🔔 已連上 {roomId}」，清除時印「離開 {roomId}」。
+      問題是只切換 `muted` 也會整個重新連線。請用 `useEffectEvent` 把「通知」切出來，讓：
+      - 只有 `roomId` 變了才重新連線，切換 `muted` 不會印出「離開／連線到」。
+      - 通知觸發時讀到最新的 `muted`：連線中途改成靜音，就不印通知。
+      所有 `console.log` 的文字請維持原樣。
+    hints: ["`const onConnected = useEffectEvent(() => { if (!muted) console.log(...) })`，在計時器裡呼叫 `onConnected()`", "依賴陣列只留 `[roomId]`；Effect Event 不用（也不要）放進依賴陣列"]
+    ref: chapter6/09_use_effect_event.md
+
+  - id: react-ch06-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成自訂 Hook `useOnlineStatus`（在 `useOnlineStatus.ts`）：回傳目前是否連上網路。
+      一開始用 `navigator.onLine`；`window` 發出 `offline` 事件時變成 `false`，發出 `online` 事件時變成 `true`；使用它的元件消失時，要移除這兩個監聽。
+    hints: ["在 `useEffect` 裡對 `window` 加上 `online` 與 `offline` 兩個監聽，依賴陣列用 `[]`", "清除函式裡用 `removeEventListener` 移除同樣的兩個函式"]
+    ref: chapter6/10_custom_hook.md
+
+  - id: react-ch06-q11
+    difficulty: 1
+    type: short
+    prompt: |
+      自訂 Hook 的名稱一定要以哪個字開頭（後面接大寫字母），React 和 ESLint 才會把它當成 Hook？
+    answers: ['^`?use`?$', '^`?use`? ?開頭$', '^以 ?`?use`? ?開頭$']
+    hints: ["想想 `useState`、`useEffect`、`useOnlineStatus` 的共同點", "三個英文字母，例如 useCounter 的前三個字"]
+    ref: chapter6/10_custom_hook.md
+
+  - id: react-ch06-q12
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面哪一種寫法**符合** Hook 的規則？
+    choices:
+      - "在元件裡寫 `if (loggedIn) { const [nickname] = useState('小明') }`"
+      - "在元件最上層寫 `const [nickname] = useState('小明')`，再用 `if (loggedIn) console.log(nickname)`"
+      - "在事件處理函式 `function handleClick() { const [count, setCount] = useState(0) }` 裡呼叫"
+      - "在 `for` 迴圈裡對每個項目各呼叫一次 `useState`"
+    answer: 1
+    hints: ["React 靠呼叫順序記住每個 Hook，每次渲染的呼叫次數與順序都必須一樣", "Hook 只在元件或自訂 Hook 的最上層呼叫，條件判斷放在 Hook 的下面"]
+    ref: chapter6/11_rules_of_hooks.md

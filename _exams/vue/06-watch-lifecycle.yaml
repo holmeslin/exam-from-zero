@@ -1,0 +1,145 @@
+lang: vue
+chapter: "6"
+title: 監聽與生命週期
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter6, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch06-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      TitleSync.vue 用 `watch` 把輸入框的內容同步到分頁標題（`document.title`）。
+      現在打字時標題會跟著變，但元件剛建立時標題不是「我的筆記」。
+      修改 `watch`，讓它**一開始就先執行一次**。
+    hints: ["watch 的第三個引數是選項物件", "加上 { immediate: true }"]
+    ref: chapter6/01_watch.md
+
+  - id: vue-ch06-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這段程式碼，頁面一載入時 `showName` 是 `false`：
+
+          const showName = ref(false)
+          const name = ref('小明')
+          watchEffect(() => {
+            if (showName.value) {
+              console.log(`名字是 ${name.value}`)
+            } else {
+              console.log('不顯示名字')
+            }
+          })
+
+      在**還沒勾選** `showName` 的情況下，把 `name` 改成「小華」，會發生什麼事？
+    choices:
+      - "印出「名字是 小華」"
+      - "什麼都不印，因為這次執行沒有讀到 name.value，所以沒追蹤它"
+      - "再印一次「不顯示名字」，因為 watchEffect 追蹤函式裡出現的所有 ref"
+      - "Console 出現警告，因為 watchEffect 不能有 if 判斷"
+    answer: 1
+    hints: ["watchEffect 只記得「這一次執行時真的讀到」的值", "showName 是 false 時，走不到讀 name.value 那一行"]
+    ref: chapter6/02_watch_effect.md
+
+  - id: vue-ch06-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      SearchBox.vue 想在使用者停止打字 500 毫秒後才搜尋，但現在快速打 `vue` 會搜尋三次。
+      用 `onWatcherCleanup` 在 `watch` 下一次執行前取消上一個計時器，讓連續打字只搜尋最後一次。
+      `searched` 要是最後的關鍵字，`count` 是實際搜尋的次數。
+    hints: ["setTimeout 會回傳一個號碼，交給 clearTimeout 就能取消", "const timer = setTimeout(...); onWatcherCleanup(() => clearTimeout(timer))"]
+    ref: chapter6/03_on_watcher_cleanup.md
+
+  - id: vue-ch06-q04
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      完成 Ticker.vue：元件掛載後，每 1000 毫秒讓 `seconds` 加 1；
+      元件卸載時要把計時器停掉，不然它會在背景一直跑下去。
+    hints: ["在 onMounted 裡用 setInterval，把回傳的號碼存在 let timer", "用 onUnmounted(() => clearInterval(timer)) 收拾"]
+    ref: chapter6/04_lifecycle_hooks.md
+
+  - id: vue-ch06-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 MessageBox.vue：
+      1. 元件一掛載，游標就在輸入框裡（呼叫輸入框的 `focus()`）。
+      2. 按「清除」時，清空文字，並讓游標回到輸入框。
+      用 `useTemplateRef` 拿到 `<input>` 元素。
+    hints: ["在 <input> 加上 ref=\"message-input\"，再用 useTemplateRef('message-input') 拿到它", "focus() 要放在 onMounted 和 clear 裡，可以寫 messageInput.value?.focus()"]
+    ref: chapter6/05_use_template_ref.md
+
+  - id: vue-ch06-q06
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      UserCard.vue 用 `watch` 監聽 `userId` 抓使用者資料。
+      問題是：先發出的 1 號請求如果比 2 號晚回來，會把畫面蓋成 1 號（競態）。
+      用 `onWatcherCleanup` 把上一次的請求標成過期，結果（包含錯誤）回來時如果已經過期就直接丟掉。
+    hints: ["每次執行開頭宣告 let stale = false，在第一個 await 之前用 onWatcherCleanup 把它設成 true", "拿到資料後、以及 catch 裡，先寫 if (stale) return"]
+    ref: chapter6/06_fetch_with_watch.md
+
+  - id: vue-ch06-q07
+    difficulty: 1
+    type: short
+    prompt: |
+      下面的 `fullName` 完全是從 `firstName` 和 `lastName` 算出來的：
+
+          const fullName = ref('')
+          watch([firstName, lastName], ([f, l]) => {
+            fullName.value = f + l
+          }, { immediate: true })
+
+      這種情況不該用 `watch`，應該改用 Vue 的哪一個函式？（只填函式名稱）
+    answers: ["^computed(\\(\\))?$", "^computed ?函式$"]
+    hints: ["能從其他值算出來的值，第 5 章學過的那個工具最適合", "const fullName = computed(() => firstName.value + lastName.value)"]
+    ref: chapter6/07_you_might_not_need_watch.md
+
+  - id: vue-ch06-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 useMouse.ts 裡的 composable `useMouse`：
+      呼叫它的元件掛載時，在 `window` 上監聽 `mousemove`，用 `event.pageX`、`event.pageY` 更新 `x`、`y`；
+      元件卸載時，移除同一個監聽函式。回傳 `{ x, y }`。
+    hints: ["把更新 x、y 的函式取名為 update，onMounted 加監聽、onUnmounted 移除", "onMounted(() => window.addEventListener('mousemove', update)) 配 onUnmounted(() => window.removeEventListener('mousemove', update))"]
+    ref: chapter6/08_composable.md
+
+  - id: vue-ch06-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      useFetch.ts 的 `useFetch(url)` 現在只能接受普通字串。
+      讓它也能接受 `ref` 或 getter（例如 `() => '/users/' + userId.value`），
+      而且 `ref` 或 getter 的值改變時，要用新網址重新抓資料。
+    hints: ["Vue 的 toValue 會把 ref、getter、普通值統一轉成值", "把 watch 的來源改成 () => toValue(url)"]
+    ref: chapter6/09_use_fetch.md
+
+  - id: vue-ch06-q10
+    difficulty: 2
+    type: choice
+    prompt: |
+      某個元件這樣寫：
+
+          const position = ref(null)
+          function start() {
+            position.value = useMouse()
+          }
+
+      按鈕 `@click="start"` 按下後移動滑鼠，數字永遠停在 `0, 0`。原因是什麼？
+    choices:
+      - "useMouse 回傳的是 reactive 物件，解構後就不會更新"
+      - "composable 只能在 .js 檔案裡呼叫，不能在 .vue 裡呼叫"
+      - "在事件處理函式裡呼叫時，Vue 已經不知道目前是哪個元件，useMouse 裡的 onMounted 掛不上去"
+      - "position 應該用 reactive 宣告，不能用 ref"
+    answer: 2
+    hints: ["composable 要在 <script setup> 頂層同步呼叫", "Vue 只在執行 <script setup> 的那段時間記得「現在是哪個元件」"]
+    ref: chapter6/10_composable_rules.md

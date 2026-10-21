@@ -1,0 +1,138 @@
+lang: typescript
+chapter: "11"
+title: 在瀏覽器用 TypeScript
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter11, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  - id: ts-ch11-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      在 Vite 專案裡，把 `setCounter(0)` 改成 `setCounter("0")`。VS Code 畫了紅線，下面哪一個指令會因為這個型別錯誤而**失敗**？
+    choices:
+      - "npm run dev"
+      - "npm run build"
+      - "npm install"
+      - "npm run preview"
+    answer: 1
+    hints: ["Vite 開發伺服器只負責把型別拿掉，不檢查型別", "看 package.json 的 scripts：哪一個指令會先跑 tsc？"]
+    ref: chapter11/01_create_vite_project.md
+  - id: ts-ch11-q02
+    difficulty: 1
+    type: short
+    prompt: |
+      Vite 產生的 `tsconfig.json` 比 `ts-practice` 多了一個設定，讓「宣告了卻沒用到的變數」被當成錯誤，害 `npm run build` 失敗。這個設定叫什麼名字？
+    answers: ['^"?nounusedlocals"?(\s*:\s*true)?$']
+    hints: ["名字以 noUnused 開頭", "另一個類似的設定是 noUnusedParameters，管的是函式參數"]
+    ref: chapter11/02_project_structure.md
+  - id: ts-ch11-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      在 title.ts 實作 `setTitle(text)`：用 `document.querySelector("#title")` 找到標題，把它的 `textContent` 換成 `text`。
+      `querySelector` 可能回傳 `null`：找不到的時候要丟出 `Error`，訊息裡要包含 `#title`（例如「找不到 #title」）。
+    hints: ["`?.` 不能放在等號左邊，要先排除 null", "if (!title) { throw new Error(\"找不到 #title\"); } 之後 title 就一定不是 null"]
+    ref: chapter11/03_query_selector_null.md
+  - id: ts-ch11-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      starter 的 getInput.ts 用 `as HTMLInputElement` 直接斷言，找不到元素或元素不是輸入框時都不會發現。
+      改寫 `getInput(selector)`：用 `instanceof` 在執行時檢查，確定是 `HTMLInputElement` 才回傳；
+      找不到或不是 `<input>`（例如 `<textarea>`）就丟出 `Error`，訊息要包含 `selector`。
+    hints: ["`null` 不會通過 instanceof，一次檢查就能排除 null 和錯的元素", "if (!(element instanceof HTMLInputElement)) { throw new Error(`找不到輸入框 ${selector}`); } 注意 ! 後面要加括號"]
+    ref: chapter11/04_element_types.md
+  - id: ts-ch11-q05
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面三種拿輸入框的寫法：
+
+          A: const a = document.querySelector("#name");  if (a instanceof HTMLInputElement) { ... }
+          B: const b = document.querySelector<HTMLInputElement>("#name");
+          C: const c = document.querySelector("#name") as HTMLInputElement;
+
+      關於它們，哪一個說法正確？
+    choices:
+      - "B 和 C 都會在執行時檢查 #name 是不是輸入框"
+      - "只有 A 會在執行時真的檢查；B 的型別還保留 | null，C 連 null 都拿掉了"
+      - "C 最安全，因為型別裡沒有 null，後面不用再檢查"
+      - "A 不能排除 null，還需要另外寫 if (a)"
+    answer: 1
+    hints: ["角括號和 as 都是斷言：TypeScript 只是相信你", "instanceof 是執行時的檢查，null 也過不了"]
+    ref: chapter11/04_element_types.md
+  - id: ts-ch11-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 listen.ts 實作 `listenInputs(root, log)`：在 `root` 上監聽 `"input"` 事件（一個監聽器處理裡面所有的輸入框）。
+      觸發事件的是 `<input>` 時，呼叫 `log` 並傳入「id：value」，例如 `name：小明`（全形冒號）；
+      其他元素（例如 `<textarea>`）觸發的事件不理會。
+    hints: ["`event.target` 的型別是 `EventTarget | null`，不能直接讀 value", "if (event.target instanceof HTMLInputElement) { log(`${event.target.id}：${event.target.value}`); }"]
+    ref: chapter11/05_event_types.md
+  - id: ts-ch11-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      bmi.ts 的 `setupBmi` 有兩個問題：表單送出時頁面會重新載入，而且欄位空白時被當成 0 算。修好它：
+      - 送出時呼叫 `event.preventDefault()`
+      - 身高（公分）和體重（公斤）改用 `valueAsNumber` 讀，任一個是 `NaN` 就在 `result` 顯示「請輸入身高和體重」
+      - 否則顯示「BMI：22.5」這種格式（`toFixed(1)`）
+    hints: ["`Number(\"\")` 是 0，`valueAsNumber` 在空白時是 NaN", "if (Number.isNaN(height) || Number.isNaN(weight)) { result.textContent = \"請輸入身高和體重\"; return; }"]
+    ref: chapter11/06_form_input.md
+  - id: ts-ch11-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `response.json()` 的結果要先當成 `unknown` 再驗證。在 products.ts 完成：
+      - 型別守衛 `isProduct(value: unknown): value is Product`：是物件、不是 null、有字串 `name` 和數字 `price` 才回傳 true
+      - `parseProducts(data: unknown)`：`data` 是陣列而且每一筆都是 `Product` 就回傳它，否則丟出 `Error("資料格式不對")`
+    hints: ["先 typeof value === \"object\" && value !== null，再用 \"name\" in value 確認有屬性", "if (!Array.isArray(data) || !data.every(isProduct)) { throw new Error(\"資料格式不對\"); }"]
+    ref: chapter11/07_fetch_and_render.md
+  - id: ts-ch11-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      在 show.ts 完成兩個非同步函式（`isProduct` 已經寫好）：
+      - `loadProducts(url)`：用 `fetch` 讀取。`response.ok` 不是 true 時丟出 `Error("讀取失敗：" + response.status)`（例如「讀取失敗：404」）；把 `response.json()` 當成 `unknown`，不是 `Product` 陣列就丟出 `Error("資料格式不對")`。
+      - `showProducts(list, url)`：每一筆商品用 `document.createElement("li")` 建一個 `<li>`，文字是「筆記本：45 元」，加到 `list` 裡；任何錯誤都用 `try...catch` 接住，把 `list.textContent` 改成「讀取失敗，請稍後再試」。
+    hints: ["fetch 碰到 404 不會丟出錯誤，要自己檢查 response.ok", "const data: unknown = await response.json(); 驗證後再回傳；showProducts 裡 await loadProducts(url) 要包在 try 裡"]
+    ref: chapter11/07_fetch_and_render.md
+  - id: ts-ch11-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      在 todo.ts 完成 `setupTodo(form, input, list, count)` 待辦清單：
+      - 表單送出時新增一筆：去掉前後空白，只有空白就什麼都不做；新增後清空輸入框
+      - 每一筆是一個 `<li>`，裡面依序是：勾選框（`<input type="checkbox">`）、放文字的 `<span>`、文字是「刪除」的 `<button>`
+      - 勾選框觸發 `"change"` 後，那一筆的 `<span>` 加上 `style.textDecoration = "line-through"`；取消勾選就拿掉
+      - 按「刪除」移除那一筆
+      - `count` 顯示「還有 N 件沒做完」（一開始就要顯示「還有 0 件沒做完」）
+    hints: ["資料只存在 todos 一份，每次改完就呼叫 render 重畫：list.replaceChildren(...todos.map(createItem))", "勾選用 todos.map 產生新陣列更新 done，刪除用 todos.filter；剩下件數是 todos.filter((t) => !t.done).length"]
+    ref: chapter11/08_practice.md
+  - id: ts-ch11-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      最上面已經寫了 `if (!count) { throw new Error("找不到 #todo-count"); }`，但下面這個函式裡還是出現 `'count' is possibly 'null'`：
+
+          function showCount(text: string) {
+            count.textContent = text;
+          }
+
+      為什麼？
+    choices:
+      - "因為 throw 不會讓 TypeScript 縮小型別"
+      - "因為 function 宣告在宣告之前就能呼叫，可能在檢查之前就執行，所以 TypeScript 不套用外面的縮小"
+      - "因為 textContent 是唯讀屬性，不能指定"
+      - "因為 count 是用 const 宣告的"
+    answer: 1
+    hints: ["改成 const showCount = (text: string) => { ... } 錯誤就消失了", "想想 function 宣告可以在哪裡被呼叫"]
+    ref: chapter11/08_practice.md

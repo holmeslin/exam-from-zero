@@ -1,0 +1,200 @@
+lang: go
+chapter: "12"
+title: 進階標準庫
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter12, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch12-q01
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 countingWriter 的 Write 方法，讓 *countingWriter 成為一個 io.Writer：
+      把收到的 p 原封不動寫進內層的 c.w，並把實際寫出的 byte 數累加到 c.n，
+      最後回傳寫出的 byte 數和錯誤。
+
+      寫好之後，fmt.Fprintln(cw, ...) 和 io.Copy(cw, r) 都能直接用它。
+    hints: ["只要有 Write(p []byte) (int, error) 方法就是 io.Writer；回傳值要代表收下了幾個 byte", "n, err := c.w.Write(p)，接著 c.n += n，再 return n, err"]
+    ref: chapter12/01_reader_writer.md
+  - id: go-ch12-q02
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      從標準輸入讀進一段文字，以「單字」為單位切開（連續的空白、換行都算分隔），
+      每個單字輸出一行「編號: 單字」，編號從 1 開始，最後輸出「共 N 個單字」。
+
+      輸出請透過 bufio.Writer 寫到 os.Stdout。例如輸入：
+
+          Go  is
+          really   fun
+
+      要輸出：
+
+          1: Go
+          2: is
+          3: really
+          4: fun
+          共 4 個單字
+    stdin: "Go  is\nreally   fun\nand  fast\n"
+    expected_stdout: "1: Go\n2: is\n3: really\n4: fun\n5: and\n6: fast\n共 6 個單字\n"
+    hints: ["Scanner 預設以行切開，要在第一次 Scan 之前用 Split 換成以單字切開；寫進 bufio.Writer 的內容要 Flush 才會真正輸出", "scanner.Split(bufio.ScanWords)，建好 w 之後立刻 defer w.Flush()，迴圈裡用 fmt.Fprintf(w, \"%d: %s\\n\", count, scanner.Text())"]
+    ref: chapter12/02_bufio.md
+  - id: go-ch12-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作兩個檔案操作函式：
+
+      - ReadOrDefault(path, def string) (string, error)：讀出整個檔案內容；
+        檔案不存在時回傳 def 和 nil，其他錯誤（例如 path 其實是目錄）照樣回傳。
+      - AppendLine(path, line string) error：把 line 加上換行附加到檔案最後面，
+        檔案不存在就建立（權限 0o644）。寫完要關檔，並回傳 Close 的錯誤。
+    hints: ["判斷「不存在」用 errors.Is(err, os.ErrNotExist)；附加寫入要用 os.OpenFile 搭配旗標", "os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)，用 fmt.Fprintln(f, line) 寫入，最後 return f.Close()"]
+    ref: chapter12/03_os_files.md
+  - id: go-ch12-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      SafeRead(dir, name string) 要讀出 dir 目錄裡名為 name 的檔案，name 來自使用者。
+      目前的寫法直接把路徑接起來，使用者傳入 "../secret.txt" 或絕對路徑時，
+      就能讀到 dir 以外的檔案（路徑穿越）。
+
+      請改用 os.Root 改寫：dir 裡面的檔案（包含子目錄、在裡面繞一圈的 "img/../cat.txt"）
+      都要讀得到，任何會逃出 dir 的路徑都要回傳錯誤。
+    hints: ["os.OpenRoot(dir) 回傳的 *os.Root，所有操作都不能離開 dir；用完記得 Close", "root, err := os.OpenRoot(dir)；檢查 err 後 defer root.Close()，再 return root.ReadFile(name)"]
+    ref: chapter12/04_os_root.md
+  - id: go-ch12-q05
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 CountByExt(fsys fs.FS) (map[string]int, error)：
+      走訪 fsys 底下所有「檔案」（目錄不算），依副檔名統計數量，
+      副檔名包含前面的點，例如 ".go"；沒有副檔名的檔案算在 "" 底下。
+
+      例如 README.md、src/main.go、src/util/math.go、Makefile
+      會得到 map[".md":1 ".go":2 "":1]。走訪過程出錯時回傳那個錯誤。
+    hints: ["用 fs.WalkDir(fsys, \".\", 函式) 走訪；回呼函式裡用 d.IsDir() 跳過目錄，fs.FS 的路徑一律用 /", "回呼函式先檢查 err，再 if !d.IsDir() { counts[path.Ext(p)]++ }，最後回傳 nil 繼續走訪（filepath.Ext 也可以）"]
+    ref: chapter12/05_filepath_fs.md
+  - id: go-ch12-q06
+    difficulty: 1
+    type: short
+    prompt: |
+      下面這行會印出什麼？
+
+          fmt.Println(filepath.Ext("photos/2026/cat.final.jpg"))
+    answers: ["^\\.jpg$", "^\"\\.jpg\"$"]
+    hints: ["Ext 回傳的是副檔名，從哪一個點開始算？", "從最後一個 . 開始算，而且包含那個點"]
+    ref: chapter12/05_filepath_fs.md
+  - id: go-ch12-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 ParsePairs(data []byte) map[string]string，解析像
+      "name=Andy;city=Taipei;lang=Go" 這樣的資料：
+
+      - 以 ';' 分成好幾段；
+      - 每段以「第一個」'=' 切成鍵和值（"expr=x=y+1" 的值是 "x=y+1"）；
+      - 沒有 '=' 的段落直接跳過，值可以是空字串。
+
+      請直接用 bytes 套件處理 []byte。
+    hints: ["bytes 套件有和 strings 同名的 Split 和 Cut，參數改成 []byte", "for _, part := range bytes.Split(data, []byte(\";\"))，裡面 key, value, found := bytes.Cut(part, []byte(\"=\"))，found 才存進 map（記得轉成 string）"]
+    ref: chapter12/06_builder_bytes.md
+  - id: go-ch12-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作兩個和時間有關的函式：
+
+      - ToTaipei(s string) (string, error)：s 是 "2006-01-02 15:04:05" 格式的 UTC 時間，
+        換成台北時間（UTC+8）後，格式化成 "2006/01/02 15:04"。
+        例如 "2026-12-31 20:30:59" → "2027/01/01 04:30"。格式不符時回傳錯誤。
+      - Overtime(start, end time.Time) time.Duration：工作時間（end - start）超過 8 小時的部分；
+        沒超過就回傳 0。例如 09:00 到 17:45 → 45m0s。
+    hints: ["解析用 time.Parse(time.DateTime, s)；換時區用 t.In(time.FixedZone(\"UTC+8\", 8*60*60))；時間差用 end.Sub(start)", "return t.In(taipei).Format(\"2006/01/02 15:04\"), nil；Overtime 裡 work := end.Sub(start)，work > 8*time.Hour 時回傳 work - 8*time.Hour"]
+    ref: chapter12/07_time.md
+  - id: go-ch12-q09
+    difficulty: 1
+    type: short
+    prompt: |
+      t 是 2026 年 3 月 14 日的 time.Time。要讓 t.Format(格式) 印出 2026-03-14，
+      格式字串（或 time 套件裡現成的常數）怎麼寫？
+    answers: ["^\"?2006-01-02\"?$", "^(time\\.)?dateonly$"]
+    hints: ["Go 用參考時間 2006 年 1 月 2 日 15:04:05 來描述格式", "年月日補零的寫法是 2006-01-02，也可以用 time.DateOnly"]
+    ref: chapter12/07_time.md
+  - id: go-ch12-q10
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      程式從標準輸入讀進好幾個 JSON 物件（一行一個），每個代表一筆訂單：
+      {"id": 1, "item": "筆記本", "price": 45}。物件可能多出其他欄位，忽略即可。
+
+      請補完 Order 的欄位與 json tag，用 json.NewDecoder 一筆一筆解碼直到讀完，
+      每筆輸出「#編號 品項 價格」，最後輸出「合計: 總價」。例如：
+
+          #1 筆記本 45
+          合計: 45
+    stdin: "{\"id\": 1, \"item\": \"筆記本\", \"price\": 45}\n{\"id\": 2, \"item\": \"原子筆\", \"price\": 15, \"color\": \"blue\"}\n{\"id\": 3, \"item\": \"便利貼\", \"price\": 30}\n"
+    expected_stdout: "#1 筆記本 45\n#2 原子筆 15\n#3 便利貼 30\n合計: 90\n"
+    hints: ["欄位要大寫開頭才會被解碼，用 `json:\"id\"` 這種 tag 對應 JSON 的鍵；Decode 讀完時回傳 io.EOF", "for 迴圈裡 var o Order; err := dec.Decode(&o)；err == io.EOF 就 break，否則 fmt.Printf(\"#%d %s %d\\n\", o.ID, o.Item, o.Price) 並累加 total"]
+    ref: chapter12/08_json.md
+  - id: go-ch12-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      Item 定義如下，nil 切片的 Tags、數量為 0 的 Count：
+
+          type Item struct {
+              Name  string   `json:"name"`
+              Tags  []string `json:"tags"`
+              Count int      `json:"count,omitempty"`
+          }
+
+      用 encoding/json/v2 的 json.Marshal(Item{Name: "盒子"}) 編碼，結果是什麼？
+    choices: ["{\"name\":\"盒子\",\"tags\":[],\"count\":0}", "{\"name\":\"盒子\",\"tags\":null}", "{\"name\":\"盒子\",\"tags\":[]}", "{\"name\":\"盒子\",\"tags\":null,\"count\":0}"]
+    answer: 0
+    hints: ["v2 編碼 nil 切片的結果和 v1 不同；v2 的 omitempty 只省略「空的 JSON 值」", "nil 切片在 v2 是 []；0 不是空的 JSON 值，所以 count 不會被省略（要省略 0 得用 omitzero）"]
+    ref: chapter12/09_json_v2.md
+  - id: go-ch12-q12
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 NewLogger(w io.Writer) *slog.Logger：回傳一個寫到 w、輸出 key=value 格式的 Logger，
+      Debug 層級也要輸出，而且不輸出時間欄位。測試會這樣使用它：
+
+          logger := NewLogger(&sb)
+          reqLog := logger.With("request_id", "r42")
+          reqLog.Debug("查詢資料庫", "table", "orders")
+          logger.Info("服務關閉")
+
+      應該得到：
+
+          level=DEBUG msg=查詢資料庫 request_id=r42 table=orders
+          level=INFO msg=服務關閉
+    hints: ["slog.HandlerOptions 的 Level 決定最低層級（預設只輸出 Info 以上），ReplaceAttr 可以移除屬性", "Level: slog.LevelDebug；ReplaceAttr 遇到 a.Key == slog.TimeKey 且 len(groups) == 0 時回傳 slog.Attr{}，其他照原樣回傳 a"]
+    ref: chapter12/10_slog.md
+  - id: go-ch12-q13
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 RollDice(r *rand.Rand, n int) []int：用傳進來的 r 擲 n 次六面骰，
+      回傳每次的點數（1～6）。每擲一次只呼叫 r 一次，
+      這樣用固定種子 rand.New(rand.NewPCG(1, 2)) 時，結果才會固定可以重現。
+    hints: ["r.IntN(n) 回傳 0 到 n-1 的整數，骰子要 1～6", "rolls := make([]int, n)，for i := range rolls { rolls[i] = r.IntN(6) + 1 }"]
+    ref: chapter12/11_rand_v2.md
+  - id: go-ch12-q14
+    difficulty: 1
+    type: choice
+    prompt: 關於 Go 1.27 標準庫的 uuid 套件，下面哪一個敘述正確？
+    choices: ["uuid.NewV7() 開頭含有產生當下的時間，越晚產生的排在越後面", "匯入路徑是 \"encoding/uuid\"", "uuid.New() 用的是 math/rand/v2 的亂數，所以不能當成不可預測的編號", "uuid.UUID 是切片，所以不能用 == 比較，要用 bytes.Equal"]
+    answer: 0
+    hints: ["想想版本 7 的前 48 個 bit 放的是什麼", "NewV7 前 48 bit 是毫秒時間；匯入路徑就是 \"uuid\"，底層是 [16]byte 陣列，可以用 == 比較"]
+    ref: chapter12/12_uuid.md

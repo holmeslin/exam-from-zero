@@ -1,0 +1,122 @@
+lang: react
+chapter: ""
+title: 附錄二
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/appendix2, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ap2-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      這是 Pages Router 的 `pages/messages.tsx`。完成 `getServerSideProps`：回傳 `{ props: { messages, renderedAt } }`，
+      其中 `messages` 是 `["你好", "哈囉"]`，`renderedAt` 是 `new Date().toISOString()`。頁面元件已經寫好，只接收 props。
+    hints: ["`getServerSideProps` 回傳的物件要有 `props`，裡面的東西會變成頁面元件的 props", "return { props: { messages: ['你好', '哈囉'], renderedAt: new Date().toISOString() } }"]
+    ref: appendix2/a_pages_router.md
+  - id: react-ap2-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      Pages Router 的資料讀取和元件是分開的：`getServerSideProps` 已經準備好 `products`。
+      完成 `ProductsPage`，在 `<ul>` 裡每個商品一個 `<li>`，文字格式是 `鉛筆：10 元`（全形冒號）。
+    hints: ["元件不用自己抓資料，直接用 props 裡的 `products`", "<ul>{products.map(p => <li key={p.name}>{p.name}：{p.price} 元</li>)}</ul>"]
+    ref: appendix2/a_pages_router.md
+  - id: react-ap2-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成 `pages/about.tsx` 的 `getStaticProps`：`props` 裡放 `builtAt`（`new Date().toISOString()`），
+      並讓這份靜態頁面最多 10 秒就可以換新一次。
+    hints: ["定時更新的設定 `revalidate` 和 `props` 放在同一層，不是放在 `props` 裡", "return { props: { builtAt: new Date().toISOString() }, revalidate: 10 }"]
+    ref: appendix2/a_pages_router.md
+  - id: react-ap2-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      這是 `pages/api/messages.ts` 的 API 路由。完成預設匯出的 `handler(req, res)`：
+      `req.method` 不是 `GET` 時，回 405 與 `{ error: "只支援 GET" }`；是 `GET` 時回 200 與 `["你好", "哈囉"]`。
+      `res.status(code)` 會回傳 `res`，所以可以接著呼叫 `.json(body)`。
+    hints: ["Pages Router 的 API 一個檔案只有一個函式，要自己檢查 `req.method`", "先 if (req.method !== 'GET') { res.status(405).json(...); return }，再 res.status(200).json([...])"]
+    ref: appendix2/a_pages_router.md
+  - id: react-ap2-q05
+    difficulty: 1
+    type: choice
+    prompt: Pages Router 的 `pages/about.tsx`，在 App Router 裡對應哪個檔案？
+    choices:
+      - "`app/about.tsx`"
+      - "`app/about/page.tsx`"
+      - "`app/about/layout.tsx`"
+      - "`app/pages/about.tsx`"
+    answer: 1
+    hints: ["App Router 是「一個資料夾加一個固定檔名的檔案」", "網址 `/about` 對應 `app/about/` 資料夾裡的 `page.tsx`"]
+    ref: appendix2/a_pages_router.md
+  - id: react-ap2-q06
+    difficulty: 1
+    type: short
+    prompt: 用 `create-next-app` 建立專案時，要加上哪個參數，才會建立 Pages Router（`pages/`）而不是 App Router 的專案？
+    answers: ["^--no-app$", "^npx create-next-app(@latest)? \\S+ --no-app( --yes)?$"]
+    hints: ["預設是 App Router，所以要「不要 app」", "參數是 `--no-app`"]
+    ref: appendix2/a_pages_router.md
+  - id: react-ap2-q07
+    difficulty: 2
+    type: choice
+    prompt: 關於 Pages Router，下列哪一個說法是**錯的**？
+    choices:
+      - "`pages/_app.tsx` 是所有頁面的外框，類似 App Router 的根 `layout.tsx`"
+      - "`getServerSideProps` 每次請求都會在伺服器上執行"
+      - "`pages/` 裡的頁面預設是 Server Component，可以直接在元件裡 `await` 資料"
+      - "Pages Router 和 App Router 可以放在同一個專案裡並存"
+    answer: 2
+    hints: ["想想 Pages Router 有沒有 Server Component", "Pages Router 的頁面都是一般的 React 元件（Client Component），資料要靠 `getServerSideProps` 或 `getStaticProps` 傳進來"]
+    ref: appendix2/a_pages_router.md
+  - id: react-ap2-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      React Router 框架模式的留言板。完成 `action({ request })`：
+      從 `request.formData()` 取出 `name` 與 `text`（沒有就當空字串），去掉前後空白；
+      任一個是空字串就回傳 `{ error: "請輸入名字與留言" }`，否則把 `{ name, text }` 加進 `messages` 陣列，回傳 `{ error: null }`。
+    hints: ["`await request.formData()` 之後用 `formData.get('name')` 取值，記得 `?? ''` 與 `.trim()`", "String(formData.get('name') ?? '').trim()；驗證失敗就提早 return，不要 push"]
+    ref: appendix2/b_react_router_framework_mode.md
+  - id: react-ap2-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      完成留言板的路由元件 `Guestbook`。它從 props 拿到 `loaderData` 和 `actionData`：
+      在 `<ul>` 裡列出 `loaderData.messages`，每則是 `<li><strong>名字</strong>：留言</li>`；
+      `actionData?.error` 有值時，在表單裡用 `<p role="alert">` 顯示錯誤。
+    hints: ["`loader` 的回傳值就是 `loaderData`，`action` 的回傳值就是 `actionData`（沒送出過表單時是 undefined）", "{actionData?.error && <p role=\"alert\">{actionData.error}</p>}，清單用 loaderData.messages.map(...)"]
+    ref: appendix2/b_react_router_framework_mode.md
+  - id: react-ap2-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `loader` 也會收到 `request`。完成 `loader({ request })`：讀網址上的查詢參數 `name`，
+      有值時只回傳那個人的留言 `{ messages: [...] }`；沒有或是空字串就回傳全部留言。
+    hints: ["`new URL(request.url).searchParams.get('name')` 可以拿到查詢參數", "if (!name) return { messages }；否則 return { messages: messages.filter(m => m.name === name) }"]
+    ref: appendix2/b_react_router_framework_mode.md
+  - id: react-ap2-q11
+    difficulty: 1
+    type: short
+    prompt: 第 9 章用 `<BrowserRouter>` 包住 `<App>` 的寫法，是 React Router 三種使用方式中的哪一種模式？
+    answers: ["^宣告式(模式)?$", "^declarative( mode)?$", "^宣告式(模式)? ?[(（]declarative( mode)?[)）]$"]
+    hints: ["三種是：宣告式、資料模式、框架模式", "只負責網址對應元件的那一種：宣告式模式（Declarative mode）"]
+    ref: appendix2/b_react_router_framework_mode.md
+  - id: react-ap2-q12
+    difficulty: 3
+    type: choice
+    prompt: 在 React Router 框架模式裡，使用者用 `<Form method="post">` 送出留言後，畫面上的列表是怎麼更新的？
+    choices:
+      - "React Router 自動呼叫這個路由的 `action`，完成後自動重新執行 `loader`，元件拿到新的 `loaderData`"
+      - "要在 `action` 裡呼叫 `revalidatePath`，才會重新執行 `loader`"
+      - "元件要用 `useEffect` 重新 `fetch` 一次列表"
+      - "`action` 回傳的資料會直接取代 `loaderData`，`loader` 不會再執行"
+    answer: 0
+    hints: ["`revalidatePath` 是 Next.js 的做法，框架模式不需要手動通知", "送出 → 執行 `action` → 自動重新執行 `loader`"]
+    ref: appendix2/b_react_router_framework_mode.md

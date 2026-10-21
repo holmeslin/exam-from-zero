@@ -1,0 +1,158 @@
+lang: vue
+chapter: "2"
+title: 函式與現代 JavaScript
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter2, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch02-q01
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      修改 main.ts 裡的 `greet`：它現在只會**印出**招呼語，呼叫端拿到的是 `undefined`。
+      請讓它改成**回傳**「你好，名字！」這段字串（函式裡不要自己 `console.log`），
+      而且呼叫時沒給名字的話，名字用「朋友」。下面三行 `console.log` 不用改。
+    expected_stdout: "你好，小明！\n你好，朋友！\n你好，小明！ / 你好，朋友！\n"
+    hints: ["印出（console.log）和回傳（return）是兩回事，要把值交出去得用 return", "參數可以設預設值：function greet(name = \"朋友\") { return `你好，${name}！`; }"]
+    ref: chapter2/02_parameters_and_return.md
+
+  - id: vue-ch02-q02
+    difficulty: 1
+    type: choice
+    prompt: |
+      執行下面的程式碼，會印出什麼？
+
+          const makeUser = (name) => { name: name };
+          console.log(makeUser("小明"));
+    choices:
+      - "{ name: '小明' }"
+      - "undefined"
+      - "小明"
+      - "程式出錯，丟出 TypeError"
+    answer: 1
+    hints: ["箭頭右邊如果是 `{`，JavaScript 會把它當成什麼？", "`{` 被當成函式內容的開頭，裡面沒有 return，所以回傳 undefined；要回傳物件得寫成 `({ name: name })`"]
+    ref: chapter2/03_arrow_functions.md
+
+  - id: vue-ch02-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 collect.js 完成 `collect(times, action)`：呼叫 callback `action` 共 `times` 次，
+      每次把目前的輪次（從 0 開始）當引數傳進去，並把每次 `action` 的**回傳值**依序收集成陣列回傳。
+      例如 `collect(3, (n) => n * 2)` 會得到 `[0, 2, 4]`；`times` 為 0 時不呼叫 `action`，回傳空陣列。
+    hints: ["先準備一個空陣列，用 for 迴圈跑 times 次", "每一輪寫 results.push(action(i))，最後 return results"]
+    ref: chapter2/04_functions_as_values.md
+
+  - id: vue-ch02-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 products.js 完成 `inStockLabels(products)`：從商品陣列中挑出 `inStock` 為 `true` 的商品，
+      再把每一個轉成「名稱：價格 元」的字串，例如 `鍵盤：1200 元`，回傳這個字串陣列。
+      不可以改動傳進來的 `products`。
+    hints: ["先篩選、再轉換：filter 接 map", "products.filter((product) => product.inStock).map((product) => `${product.name}：${product.price} 元`)"]
+    ref: chapter2/06_filter.md
+
+  - id: vue-ch02-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 cart.js 完成三個函式，購物車的每一項長得像 `{ id, name, price, quantity }`：
+      - `findById(items, id)`：回傳 `id` 符合的那一項本身，找不到回傳 `undefined`。
+      - `hasExpensive(items, limit)`：只要有任何一項的 `price` 大於 `limit` 就回傳 `true`，否則 `false`。
+      - `cartTotal(items)`：回傳每一項 `price * quantity` 的總和，空購物車是 0。
+    hints: ["分別對應 find、some、reduce 這三個陣列方法", "reduce 要給起始值 0：items.reduce((sum, item) => sum + item.price * item.quantity, 0)"]
+    ref: chapter2/07_other_array_methods.md
+
+  - id: vue-ch02-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 tools.js 完成三個函式：
+      - `introduce(user)`：回傳「名字，年齡 歲」，例如 `小明，20 歲`；物件沒有 `age` 時當作 18。
+      - `minMax(numbers)`：回傳 `[最小值, 最大值]`，呼叫端可以用 `const [min, max] = minMax(...)` 接住。
+      - `swap(a, b)`：回傳 `[b, a]`。
+      試著用這一章的解構、預設值和展開語法來寫。
+    hints: ["參數位置可以直接解構並給預設值：function introduce({ name, age = 18 })", "Math.min(...numbers) 會把陣列展開成一個一個引數；交換可以寫 [a, b] = [b, a]"]
+    ref: chapter2/08_object_destructuring.md
+
+  - id: vue-ch02-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      在 students.js 完成 `updateEnglish(students, id, score)`：回傳一份**新的**學生陣列，
+      其中 `id` 符合的學生，`scores.english` 改成 `score`。學生長得像
+      `{ id: 2, name: "小華", scores: { math: 55, english: 80 } }`。
+
+      要求：原本的 `students` 和裡面的物件都不能被改到；被修改的學生要是新物件，
+      它的 `scores` 也要是新物件；沒被修改的學生直接沿用原本的物件。
+    hints: ["用 map 走過每個學生：符合 id 的換成新物件，其他原樣回傳", "展開只複製一層，兩層都要展開：{ ...student, scores: { ...student.scores, english: score } }"]
+    ref: chapter2/11_references.md
+
+  - id: vue-ch02-q08
+    difficulty: 2
+    type: short
+    prompt: |
+      執行下面的程式碼，終端機會印出什麼？（照實輸入那一行）
+
+          const count = 0;
+          console.log(count || 10, count ?? 10);
+    answers: ['^10 0$', '^10\s*,\s*0$']
+    hints: ["`||` 會把 0 當成假值；`??` 只在 null 或 undefined 時才用右邊", "0 || 10 得到 10，0 ?? 10 得到 0"]
+    ref: chapter2/12_optional_chaining_nullish.md
+
+  - id: vue-ch02-q09
+    difficulty: 1
+    type: choice
+    prompt: |
+      tools.mjs 的內容如下：
+
+          export default function main() {
+            return "主要功能";
+          }
+          export const VERSION = "1.0";
+
+      在同一個資料夾的另一個檔案裡，哪一行能同時拿到預設匯出的函式和 `VERSION`？
+    choices:
+      - 'import main, { VERSION } from "./tools.mjs";'
+      - 'import { main, VERSION } from "./tools.mjs";'
+      - 'import main, VERSION from "./tools.mjs";'
+      - 'import { main, VERSION } from "tools.mjs";'
+    answer: 0
+    hints: ["預設匯出不用大括號，具名匯出要用大括號", "自己的檔案路徑要以 ./ 開頭；預設匯出寫在前面，具名的放在大括號裡"]
+    ref: chapter2/13_import_export.md
+
+  - id: vue-ch02-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      在 api.js 完成 `async` 函式 `loadJson(url)`：
+      - 用 `fetch(url)` 取得回應。
+      - 如果 `response.ok` 是 `false`，丟出 `new Error(...)`，訊息為「伺服器回應失敗：狀態碼」，例如 `伺服器回應失敗：404`。
+      - 成功時回傳 `response.json()` 轉出來的物件。
+      （測試會用假的 `fetch` 取代真的網路請求。）
+    hints: ["fetch 和 response.json() 都回傳 Promise，兩個都要 await", "if (!response.ok) { throw new Error(`伺服器回應失敗：${response.status}`); } 之後 return await response.json();"]
+    ref: chapter2/15_fetch_json.md
+
+  - id: vue-ch02-q11
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 裡的 `fetchStudent(id)` 會回傳 Promise：稍等一下後給出學生，找不到時以「查無此人」失敗。
+      請改寫 `showStudent(id)`：成功時印出「名字 的數學成績：分數」，失敗時印出「錯誤：錯誤訊息」。
+      接著**依序**查詢 id 2、99、1（等前一個完成才查下一個），全部結束後再印「查詢結束」。預期輸出：
+
+          小華 的數學成績：55
+          錯誤：查無此人
+          小明 的數學成績：90
+          查詢結束
+    expected_stdout: "小華 的數學成績：55\n錯誤：查無此人\n小明 的數學成績：90\n查詢結束\n"
+    hints: ["showStudent 要宣告成 async，用 await 等 fetchStudent，並用 try...catch 接住失敗", "依序呼叫也要寫在一個 async 函式裡：async function main() { await showStudent(2); await showStudent(99); await showStudent(1); console.log(\"查詢結束\"); }"]
+    ref: chapter2/14_promise_async_await.md

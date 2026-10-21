@@ -92,13 +92,13 @@ func TestGoCodeQuestion_PassAndFail(t *testing.T) {
 	}
 }
 
-func enterFirstQuestion(e *env, want ...string) {
+func enterFirstQuestion(e *env, want ...string) string {
 	e.t.Helper()
 	e.waitFor("選擇今天要測驗的語言")
 	e.key(tea.KeyEnter)
 	e.waitFor("1")
 	e.key(tea.KeyEnter)
-	e.waitFor(want...)
+	return e.waitFor(want...)
 }
 
 func TestStdoutQuestion_MismatchThenPass(t *testing.T) {
@@ -213,13 +213,28 @@ func TestChoiceAndShortQuestions(t *testing.T) {
 	cfg := newConfig(t)
 	cfg.Bank = os.DirFS("testdata/quiz")
 	e := start(t, cfg)
-	enterFirstQuestion(e, "哪個 receiver", "func (r *T) M()")
+	screen := enterFirstQuestion(e, "哪個 receiver 能修改原本的 struct", "兩者皆可") // inline markdown is rendered, not shown raw
+	if !strings.Contains(screen, "type T struct { N int `json:\"n\"` }") {
+		t.Errorf("an indented code line must keep its backticks:\n%s", screen)
+	}
 
-	e.key(tea.KeyEnter) // first option is wrong
+	right := slices.Index(choiceOrder(screen, quizChoices...), "func (r *T) M()")
+	wrong := (right + 1) % len(quizChoices)
+	for range wrong {
+		e.key(tea.KeyDown)
+	}
+	e.key(tea.KeyEnter)
 	e.waitFor("✗ 答錯")
-	e.key(tea.KeyDown)
+	for range wrong {
+		e.key(tea.KeyUp)
+	}
+	for range right {
+		e.key(tea.KeyDown)
+	}
 	e.key(tea.KeyEnter)
 	e.waitFor("✓ 通過")
+	e.press("r")
+	e.waitFor("正確答案：func (r *T) M()")
 	e.key(tea.KeyEnter)
 	e.waitFor("指標型別怎麼寫", "答案：")
 
@@ -230,6 +245,28 @@ func TestChoiceAndShortQuestions(t *testing.T) {
 	e.tm.Type("  Pointer   to T ") // normalized: trimmed, lower-cased, spaces collapsed
 	e.key(tea.KeyEnter)
 	e.waitFor("✓ 通過")
+}
+
+var quizChoices = []string{"func (r T) M()", "func (r *T) M()", "兩者皆可"}
+
+// choiceOrder returns choices in the order the screen lists them.
+func choiceOrder(screen string, choices ...string) []string {
+	order := slices.Clone(choices)
+	slices.SortFunc(order, func(a, b string) int { return strings.Index(screen, a) - strings.Index(screen, b) })
+	return order
+}
+
+func TestChoices_AreShuffled(t *testing.T) {
+	for seed := range uint64(8) {
+		cfg := newConfig(t)
+		cfg.Bank, cfg.Seed = os.DirFS("testdata/quiz"), seed
+		e := start(t, cfg)
+		screen := enterFirstQuestion(e, "兩者皆可")
+		if !slices.Equal(choiceOrder(screen, quizChoices...), quizChoices) {
+			return
+		}
+	}
+	t.Fatal("choices were listed in bank order for every seed")
 }
 
 func TestProgress_ResumesAfterRestart(t *testing.T) {
@@ -470,6 +507,127 @@ func TestNodeLang_InstallsOnFirstEntryThenGrades(t *testing.T) {
 	e.writeAnswer("typescript", "ts-add", "add.ts", "export function add(a: number, b: number): number { return a + b }\n")
 	e.key(tea.KeyEnter)
 	e.waitFor("✓ 通過")
+}
+
+func TestNodeLang_ReinstallsWhenBankWorkspaceChanges(t *testing.T) {
+	bank := t.TempDir() // typescript only, so the ⚙ marker can only be its own
+	if err := os.CopyFS(filepath.Join(bank, "typescript"), os.DirFS("testdata/node/typescript")); err != nil {
+		t.Fatal(err)
+	}
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS(bank)
+	e := start(t, cfg)
+	e.waitFor("TypeScript", "⚙ 首次進入將安裝依賴")
+	e.key(tea.KeyEnter)
+	e.waitFor("安裝 TypeScript 依賴中")
+	e.waitFor("第一步") // chapter list after npm install
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+
+	e = start(t, cfg) // same bank: no reinstall
+	if screen := e.waitFor("TypeScript", "選擇今天要測驗的語言"); strings.Contains(screen, "⚙") {
+		t.Fatalf("an unchanged workspace asked to reinstall:\n%s", screen)
+	}
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+
+	// a new release of the bank adds a dependency
+	pkg := filepath.Join(bank, "typescript", "_workspace", "package.json")
+	raw, err := os.ReadFile(pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(pkg, bytes.Replace(raw, []byte(`"private": true,`), []byte(`"private": true, "description": "v2",`), 1), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e = start(t, cfg)
+	e.waitFor("TypeScript", "⚙ 首次進入將安裝依賴")
+	e.key(tea.KeyEnter)
+	e.waitFor("安裝 TypeScript 依賴中")
+}
+
+func TestWorkspace_ArchivedWhenBankStarterChanges(t *testing.T) {
+	bank := t.TempDir()
+	if err := os.CopyFS(bank, os.DirFS("testdata/bank")); err != nil {
+		t.Fatal(err)
+	}
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS(bank)
+	restart := func(e *env) *env {
+		if err := e.tm.Quit(); err != nil {
+			t.Fatal(err)
+		}
+		return start(t, cfg)
+	}
+	e := start(t, cfg)
+	enterFirstQuestion(e, "實作 Add")
+	e.writeAnswer("go", "go-ch01-q01", "main.go", "// my work\n")
+
+	e = restart(e) // same bank: the learner's work stays
+	enterFirstQuestion(e, "實作 Add", "// my work")
+
+	// a new release of the bank changes this question's starter
+	starter := filepath.Join(bank, "go", "go-ch01-q01", "starter", "main.go")
+	if err := os.WriteFile(starter, []byte("package main\n\n// v2 starter\nfunc Add(a, b int) int { return 0 }\n\nfunc main() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e = restart(e)
+	enterFirstQuestion(e, "實作 Add", "// v2 starter") // the inline editor shows the new starter
+	old, err := filepath.Glob(filepath.Join(cfg.DataDir, "workspace", "go", "go-ch01-q01.bak-*", "main.go"))
+	if err != nil || len(old) != 1 {
+		t.Fatalf("want the old workspace archived once, got %v %v", old, err)
+	}
+	if b, _ := os.ReadFile(old[0]); string(b) != "// my work\n" {
+		t.Fatalf("archive lost the learner's work: %q", b)
+	}
+}
+
+func TestRun_ResampledWhenBankChapterChanges(t *testing.T) {
+	bank := t.TempDir()
+	if err := os.CopyFS(bank, os.DirFS("testdata/bank")); err != nil {
+		t.Fatal(err)
+	}
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS(bank)
+	e := start(t, cfg)
+	enterFirstQuestion(e, "第 1/2 題")
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+
+	e = start(t, cfg) // same bank: the saved run resumes
+	enterFirstQuestion(e, "第 1/2 題")
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+
+	// a new release of the bank changes the chapter; the old run's questions no longer mean the same thing
+	ch := filepath.Join(bank, "go", "01-basics.yaml")
+	raw, err := os.ReadFile(ch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(ch, bytes.Replace(raw, []byte("sample: 2"), []byte("sample: 1"), 1), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e = start(t, cfg)
+	enterFirstQuestion(e, "第 1/1 題")
+}
+
+func TestInlineEditor_MissingMainFileShowsError(t *testing.T) {
+	cfg := newConfig(t)
+	e := start(t, cfg)
+	enterFirstQuestion(e, "實作 Add")
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(cfg.DataDir, "workspace", "go", "go-ch01-q01", "main.go")); err != nil {
+		t.Fatal(err)
+	}
+	e = start(t, cfg)
+	enterFirstQuestion(e, "實作 Add", "錯誤：", "main.go")
 }
 
 func TestNodeLang_FailedInstallCanBeRetried(t *testing.T) {

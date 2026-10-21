@@ -1,0 +1,144 @@
+lang: vue
+chapter: ""
+title: 附錄二
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/appendix2, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ap2-q01
+    difficulty: 1
+    type: short
+    prompt: |
+      在 Nuxt 專案裡，要用**一行指令**安裝 `@pinia/nuxt` 與 `pinia`，並自動把模組加進 `nuxt.config.ts`。請寫出這行指令。
+    answers: ["^(npx )?nuxt module add (pinia|@pinia/nuxt)$", "^npx nuxi module add (pinia|@pinia/nuxt)$"]
+    hints: ["Nuxt 有一個專門加模組的子指令：nuxt module add <模組名稱>", "模組名稱用 nuxt.com/modules 上的簡短名字：npx nuxt module add pinia"]
+    ref: appendix2/a_pinia_in_nuxt.md
+
+  - id: vue-ap2-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      完成 `cart.ts` 的 setup store `useCartStore`（名字是 "cart"）：
+      `count` 要算出 `items` 有幾件，`add(name)` 要把商品加進 `items`。
+      這題在一般 Vue 環境測試，沒有 Nuxt 的自動匯入，所以檔案最上面的 `import` 要保留。
+    hints: ["count 用 computed 回傳 items.value.length", "add 裡面寫 items.value.push(name)"]
+    ref: appendix2/a_pinia_in_nuxt.md
+
+  - id: vue-ap2-q03
+    difficulty: 2
+    type: choice
+    prompt: |
+      Nuxt 專案裝好 `@pinia/nuxt` 之後，下列哪一個檔案裡的 store **不會**被自動匯入，元件裡直接呼叫會找不到？
+    choices:
+      - "app/stores/cart.ts"
+      - "app/stores/shop/cart.ts"
+      - "app/stores/products.ts"
+      - "app/stores/user.ts"
+    answer: 1
+    hints: ["自動匯入只掃描 app/stores/ 這一層資料夾", "放在子資料夾裡的檔案不會被掃到（子資料夾的 index.ts 例外）"]
+    ref: appendix2/a_pinia_in_nuxt.md
+
+  - id: vue-ap2-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `leakyCart.ts` 用 `handleRequest(add)` 模擬伺服器處理一個請求，每次呼叫代表一位不同的使用者。
+      現在小明加的鍵盤會出現在小華的結果裡，這就是**跨請求的狀態汙染**。
+      請修改 `useCart`，讓每個請求都拿到自己的一份 `items`（`handleRequest` 不用改）。
+    hints: ["問題出在 ref 宣告在函式外面，整個伺服器只有一份", "把 const items = ref<string[]>([]) 搬進 useCart 函式裡"]
+    ref: appendix2/a_pinia_in_nuxt.md
+
+  - id: vue-ap2-q05
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `serverCart.ts` 模擬伺服器用 Pinia 處理請求：`handleRequest(adds)` 裡，`adds` 的每一項代表頁面上不同元件各自呼叫 `useCartStore()` 加入的商品。
+      現在所有請求共用同一個 Pinia，前一個請求加的商品會留到下一個請求。
+      請模仿 `@pinia/nuxt` 的做法修改 `handleRequest`：**每個請求開始時**建立自己的一份 Pinia，同一個請求裡的元件仍要共用同一個 store。
+    hints: ["@pinia/nuxt 會在每個請求開始時呼叫一次 createPinia()", "在 handleRequest 一開始寫 setActivePinia(createPinia())，並刪掉檔案層級的 pinia；不要在迴圈裡每次都建立新的"]
+    ref: appendix2/a_pinia_in_nuxt.md
+
+  - id: vue-ap2-q06
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `callOnce.ts` 的 `createCallOnce()` 回傳一個仿照 Nuxt 的 `callOnce(key, fn)`：同一個 `key` 的 `fn` 只能執行一次，之後再呼叫就不執行。
+      要求：
+        - 不同 `key` 各自執行一次
+        - `await callOnce(...)` 要等到 `fn`（可能是 async 函式）做完
+        - 第一次還沒做完時又用同一個 `key` 呼叫，不能再執行 `fn`，但也要等到第一次做完才結束
+    hints: ["用一個 Map 記住每個 key 對應的 Promise", "第一次呼叫時把 Promise.resolve(fn()) 存進 Map；之後同一個 key 直接回傳存好的那個 Promise"]
+    ref: appendix2/a_pinia_in_nuxt.md
+
+  - id: vue-ap2-q07
+    difficulty: 2
+    type: choice
+    prompt: |
+      依照本書的建議，下列哪一種資料用 Nuxt 內建的 `useState` 就夠了，不必另外寫 Pinia store？
+    choices:
+      - "購物車：要加入、移除、算總價"
+      - "側邊欄目前有沒有打開"
+      - "好幾個頁面都要用的登入使用者資料與登出操作"
+      - "商品清單，加上從 API 載入、篩選的操作"
+    answer: 1
+    hints: ["useState 裝的是一個值；Pinia 可以把 state、getters、actions 收成一組", "只是幾個零散的值用 useState，有一堆相關操作的資料用 Pinia"]
+    ref: appendix2/a_pinia_in_nuxt.md
+
+  - id: vue-ap2-q08
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      `main.ts` 會從標準輸入一行讀一個價格，用 `useFormatPrice` 格式化後印出來。
+      請完成 `useFormatPrice`，讓 1200 印成 `NT$ 1,200`、1234567 印成 `NT$ 1,234,567`（千分位用台灣的格式）。
+    stdin: "1200\n600\n1234567\n0\n"
+    expected_stdout: "NT$ 1,200\nNT$ 600\nNT$ 1,234,567\nNT$ 0\n"
+    hints: ["數字有一個方法可以依地區加上千分位", "price.toLocaleString(\"zh-TW\")，前面再接上 NT$ 和一個空白"]
+    ref: appendix2/b_layers_and_modules.md
+
+  - id: vue-ap2-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `layers.ts` 的 `resolveFiles(project, layer)` 模擬 Nuxt 用 `extends` 疊上一個 Layer 之後，專案實際用到哪些檔案。
+      兩個參數都是「檔案路徑 → 檔案內容」的物件。Layer 的檔案要疊進來，但同名檔案要以**專案自己的**為準。目前的結果剛好相反，請修正。
+    hints: ["規則是越靠近專案的越優先，Layer 只是提供預設值", "物件展開時後面的會蓋掉前面的：{ ...layer, ...project }"]
+    ref: appendix2/b_layers_and_modules.md
+
+  - id: vue-ap2-q10
+    difficulty: 1
+    type: short
+    prompt: |
+      要讓 `my-site` 共用旁邊 `base-layer` 資料夾裡的設定與元件，要在 `my-site/nuxt.config.ts` 的 `defineNuxtConfig` 裡加上哪一個屬性（只寫屬性名稱）？
+    answers: ["^extends:?$"]
+    hints: ["這個屬性的值是一個陣列，例如 ['../base-layer']", "屬性名稱的意思是「延伸、繼承」：extends"]
+    ref: appendix2/b_layers_and_modules.md
+
+  - id: vue-ap2-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      VitePress 的每個 `.md` 檔就是一頁。請完成 `vitepress.ts`（`file` 是 `docs/` 底下的相對路徑）：
+        - `routeOf(file)`：回傳這頁的網址。`api-examples.md` 是 `/api-examples`，`guide/intro.md` 是 `/guide/intro`，`index.md` 是首頁 `/`
+        - `htmlOf(file)`：回傳 `npm run docs:build` 後產生的檔名，例如 `counter.md` 是 `counter.html`
+    hints: ["把結尾的 .md 拿掉，前面加上 /；index.md 要特別處理成 /", "htmlOf 只要把結尾的 .md 換成 .html：file.replace(/\\.md$/, \".html\")"]
+    ref: appendix2/c_vitepress.md
+
+  - id: vue-ap2-q12
+    difficulty: 1
+    type: choice
+    prompt: |
+      你要做一個有使用者登入、可以留言、資料存在資料庫的網站。依照本書的比較，應該選哪一個？
+    choices:
+      - "VitePress，因為它內建一套好看的主題"
+      - "Nuxt，因為 VitePress 產出的是靜態 HTML，沒有伺服器"
+      - "VitePress 加上 @nuxt/content 模組"
+      - "兩個都做不到，只能用第 8 章的純 Vue 專案"
+    answer: 1
+    hints: ["VitePress 建置後只有一堆 .html 檔", "需要伺服器與資料的網站選 Nuxt；VitePress 做不到第 14 章那種留言板"]
+    ref: appendix2/c_vitepress.md

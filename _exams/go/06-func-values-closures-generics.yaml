@@ -1,0 +1,160 @@
+# 第 6 章沒有 EXERCISES.md 固定題，以下題目都依課文新設計
+lang: go
+chapter: "6"
+title: 函式值、閉包與泛型
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter6, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch06-q01
+    difficulty: 1
+    type: short
+    prompt: |
+      函式宣告 func add(a, b int) int 的「函式型別」怎麼寫？
+      （也就是要宣告一個能裝下 add 的變數時，var op 後面要接的型別）
+    answers: ["^func ?\\(int, ?int\\) ?int$"]
+    hints: ["把函式名稱和參數名稱拿掉，只留下參數型別和回傳型別", "func(int, int) int"]
+    ref: chapter6/01_function_value.md
+  - id: go-ch06-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 MakeAccumulator(start int) func(int) int：
+      回傳一個函式，每次呼叫時把參數 n 加進累計值（從 start 開始），並回傳目前的累計值。
+      例如 a := MakeAccumulator(10)，a(5) 回傳 15，接著 a(1) 回傳 16。
+      每次呼叫 MakeAccumulator 得到的累加器要各自獨立。
+    hints: ["在 MakeAccumulator 裡宣告一個變數記住累計值，再回傳一個用到它的匿名函式（閉包）", "total := start；return func(n int) int { total += n; return total }"]
+    ref: chapter6/03_closure.md
+  - id: go-ch06-q03
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式會印出什麼？（Go 1.22 以後的版本）
+
+          var fs []func()
+          n := 0
+          for i := range 3 {
+              n++
+              fs = append(fs, func() { fmt.Println(i, n) })
+          }
+          for _, f := range fs {
+              f()
+          }
+    choices: ["0 3、1 3、2 3（各一行）", "0 1、1 2、2 3（各一行）", "2 3、2 3、2 3（各一行）", "0 0、1 1、2 2（各一行）"]
+    answer: 0
+    hints: ["閉包抓住的是變數本身；但 for 那一行宣告的迴圈變數，每一輪都是新的一份", "每個閉包有自己那一輪的 i，卻共用迴圈外的同一個 n，呼叫時 n 已經是 3"]
+    ref: chapter6/04_loop_variable_closure.md
+  - id: go-ch06-q04
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作可變參數函式 Average(nums ...float64) float64，回傳所有參數的平均值。
+      沒有傳任何參數時回傳 0。
+      例如 Average(1, 2, 3, 4) 回傳 2.5；手上有切片 scores 時，可以用 Average(scores...) 呼叫。
+    hints: ["在函式裡 nums 就是一個 []float64，可以用 len 和 for range", "先檢查 len(nums) == 0 就回傳 0，否則加總後除以 float64(len(nums))"]
+    ref: chapter6/05_variadic.md
+  - id: go-ch06-q05
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 Compose(fs ...func(int) int) func(int) int：
+      把好幾個函式串成一個新函式。新函式收到 x 後，依序交給 fs[0]、fs[1]……，
+      前一個的結果是下一個的輸入，最後回傳結果。沒有傳任何函式時，新函式直接回傳 x。
+      例如 double 是乘 2、addOne 是加 1，Compose(double, addOne)(5) 回傳 11。
+    hints: ["回傳一個匿名函式，它會用到外面的 fs（閉包）", "return func(x int) int { for _, f := range fs { x = f(x) }; return x }"]
+    ref: chapter6/06_function_as_param.md
+  - id: go-ch06-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 SortStudents(students []Student)，就地排序學生：
+      分數由高到低；分數相同時，名字由 A 到 Z。
+      請用 slices.SortFunc 搭配 cmp.Compare。
+    hints: ["比較函式回傳負數表示 a 排前面；把 a、b 對調就是反向排序", "先算 c := cmp.Compare(b.Score, a.Score)，c 不是 0 就回傳 c，否則回傳 cmp.Compare(a.Name, b.Name)"]
+    ref: chapter6/07_sortfunc.md
+  - id: go-ch06-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作泛型函式 Filter[T any](s []T, keep func(T) bool) []T：
+      回傳 s 裡所有讓 keep 回傳 true 的元素，順序不變。
+      同一個 Filter 要能用在 []int，也能用在 []string。
+    hints: ["在函式裡，T 就像一般的型別名稱，可以宣告 var result []T", "走訪 s，keep(v) 是 true 就 append 到 result，最後回傳 result"]
+    ref: chapter6/08_generic_function.md
+  - id: go-ch06-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作泛型函式 Dedup，回傳去掉重複元素後的新切片，保留每個值第一次出現的順序。
+      例如 Dedup([]int{3, 1, 3, 2, 1}) 回傳 [3 1 2]。
+      要能用在 int、string，以及欄位都能比較的 struct。
+      起始程式的約束是 any，請改成合適的約束。
+    hints: ["要記住「看過哪些值」可以用 map[T]bool，而 map 的 key 必須能用 == 比較", "約束改成 comparable：func Dedup[T comparable](s []T) []T，沒看過的值才 append"]
+    ref: chapter6/10_comparable_ordered.md
+  - id: go-ch06-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      起始程式的 Total 只能用在 int、int64 本身。
+      請修改約束 Integer，讓 Total([]Score{80, 95, 70}) 也能編譯，
+      而且回傳的仍然是 Score（所以印出來會是「245 分」）。
+      底層型別是 int64 的自訂型別也要能用。
+    hints: ["錯誤訊息會提示 possibly missing ~，型別前面加 ~ 代表「底層型別是它的所有型別」", "type Integer interface { ~int | ~int64 }"]
+    ref: chapter6/11_tilde.md
+  - id: go-ch06-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      完成泛型佇列 Queue[T any]（先放進去的先拿出來）的三個方法：
+      - Push(v T)：放到最後面
+      - Pop() (T, bool)：拿出並移除最前面的元素；佇列是空的時回傳 T 的零值和 false
+      - Len() int：目前元素數量
+      零值的 Queue 要能直接使用，例如 var q Queue[string]。
+    hints: ["Push 用 append；Pop 拿 q.items[0]，再把 q.items 改成 q.items[1:]", "空佇列時 var zero T，再 return zero, false"]
+    ref: chapter6/12_generic_type.md
+  - id: go-ch06-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      關於 Go 1.27 新增的泛型方法（例如 func (l ShoppingList) Map[U any](f func(string) U) []U），哪一句正確？
+    choices: ["介面裡的方法也可以宣告型別參數", "泛型方法只要名稱對得上，就能用來實作介面的方法", "呼叫時可以寫 list.Map[int](...) 指定型別，也可以讓 Go 推論", "方法自己的型別參數，只能用在泛型型別上，一般 struct 不行"]
+    answer: 2
+    hints: ["課文提到兩個限制：一個和「介面的方法」有關，一個和「實作介面」有關", "介面的方法不能有型別參數，泛型方法也不能拿來實作介面；呼叫方式則和泛型函式一樣"]
+    ref: chapter6/13_generic_method.md
+  - id: go-ch06-q12
+    difficulty: 1
+    type: short
+    prompt: |
+      有一個泛型函式：
+
+          func zero[T any]() T {
+              var z T
+              return z
+          }
+
+      直接寫 zero() 會出現 cannot infer T 的編譯錯誤。
+      要拿到 int 的零值，這個呼叫應該怎麼寫？
+    answers: ["^zero ?\\[int\\] ?\\(\\)$"]
+    hints: ["T 沒有出現在參數裡，Go 沒有線索可以推論，要自己寫出型別參數", "在函式名稱後面用方括號指定：zero[int]()"]
+    ref: chapter6/14_type_inference.md
+  - id: go-ch06-q13
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      起始程式已經有 scores := []int{72, 95, 60, 88} 並先印出 scores。
+      接著用 slices 套件依序印出（每行一個結果）：
+      1. 最高分和最低分，同一行：fmt.Println(最高, 最低)
+      2. scores 裡有沒有 88
+      3. 複製一份叫 sorted，由小到大排序後印出
+      4. 再印一次 scores，原本的順序不能被改到
+    expected_stdout: "[72 95 60 88]\n95 60\ntrue\n[60 72 88 95]\n[72 95 60 88]\n"
+    hints: ["slices.Max、slices.Min、slices.Contains 可以直接用；slices.Sort 會修改傳進去的切片", "sorted := slices.Clone(scores)，再 slices.Sort(sorted)，這樣 scores 不受影響"]
+    ref: chapter6/15_slices_maps_packages.md

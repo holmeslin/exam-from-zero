@@ -1,0 +1,198 @@
+# 附錄一：EXERCISES.md 只收第 1、2 章的固定題，這一章的題目都是依課文新出的
+lang: rust
+chapter: ""
+title: 附錄一
+source: { repo: holmeslin/learning-rust-from-zero, path: zh-TW/src/appendix1, sha: 2ec6ab0fa6bd17db304f906d16cf39401106ab73 }
+sample: 5
+questions:
+  - id: rust-ap1-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下列哪一個整數字面值的值**不是** 255？
+    choices:
+      - "`0xFF`"
+      - "`0b1111_1111`"
+      - "`0o255`"
+      - "`2_55u8`"
+    answer: 2
+    hints: ["`0x` 是十六進位、`0b` 是二進位、`0o` 是八進位；底線和型別後綴都不影響數值", "八進位的 255 要寫成 `0o377`（3×64 + 7×8 + 7）"]
+    ref: appendix1/a_number_literals.md
+
+  - id: rust-ap1-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `ratio_above(a: i32, b: i32, limit: i32) -> bool`：
+      當 `b` 不是 0、而且 `a / b` 大於 `limit` 時回傳 true，否則回傳 false。
+      目前的寫法在 `b` 是 0 時會 panic（除以零），請利用 `&&` 的短路行為修好它，`b` 是 0 時要回傳 false。
+    hints: ["`&&` 的左邊是 false 時，右邊根本不會被執行", "把 `b != 0` 放在 `&&` 的左邊，`a / b > limit` 放在右邊"]
+    ref: appendix1/b_short_circuit.md
+
+  - id: rust-ap1-q03
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      實作 `first_square_above(limit: u32) -> u32`：回傳第一個**大於** `limit` 的平方數（1、4、9、16……）。
+      例如 `first_square_above(100)` 回傳 121。
+      請用 `loop` 搭配 `break` 帶值，讓整個 `loop` 成為表達式。
+    hints: ["`let result = loop { ... break 值; };` 會讓 `result` 拿到 `break` 帶出的值", "迴圈裡算 `n * n`，大於 `limit` 就 `break` 它，否則 `n += 1`"]
+    ref: appendix1/c_break_return_value.md
+
+  - id: rust-ap1-q04
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 `find_pair(nums: &[i32], target: i32) -> Option<(usize, usize)>`：
+      找出第一組 `i < j` 且 `nums[i] + nums[j] == target` 的索引，回傳 `Some((i, j))`；找不到回傳 `None`。
+      「第一組」指 `i` 最小；`i` 相同時 `j` 最小。
+      骨架已經有一個 labeled block `'search: { ... }`，請在裡面用兩層 `for` 搜尋，找到時用 `break 'search 值` 直接跳出兩層迴圈並帶出結果。
+    hints: ["labeled block 裡要帶值跳出，一定要寫出標籤：`break 'search Some((i, j));`", "外層 `for i in 0..nums.len()`，內層 `for j in (i + 1)..nums.len()`；兩層都跑完才落到最後的 `None`"]
+    ref: appendix1/c_break_return_value.md
+
+  - id: rust-ap1-q05
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的程式會印出什麼？
+
+          fn main() {
+              let a = "Hello, \
+                       World";
+              let b = r"C:\new\table";
+              println!("{a}|{b}");
+          }
+    choices:
+      - "`Hello, World|C:\\new\\table`（照原樣，沒有換行、沒有 tab）"
+      - "`Hello,` 換行後接 `World|C:`，再換行、接 tab 等跳脫字元的效果"
+      - "`Hello, World|C:` 後面 `\\n` 變換行、`\\t` 變 tab"
+      - "`Hello,` 換行、前面有一排空白，再接 `World|C:\\new\\table`"
+    answer: 0
+    hints: ["行尾的 `\\` 會吃掉換行和下一行開頭的空白", "`r\"...\"` 是 raw string，裡面的 `\\n`、`\\t` 都照原樣保留，不會被當成跳脫字元"]
+    ref: appendix1/d_multiline_raw_strings.md
+
+  - id: rust-ap1-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 `format_row(id: u32, name: &str, score: f64) -> String`，用 `format!` 依照以下規則組出一列文字，各段用 `|` 隔開：
+      1. `id`：用 `0` 填充、靠右、寬度 5
+      2. `name`：靠左、寬度 6，外面包一組中括號 `[ ]`
+      3. `score`：小數點後 2 位、靠右、寬度 7
+      4. 最後一段：大括號包住 `0x` 加上 `id` 的十六進位（小寫），不足 2 位時補 0
+
+      例如 `format_row(42, "Andy", 87.5678)` 回傳：
+
+          00042|[Andy  ]|  87.57|{0x2a}
+    hints: ["`{id:0>5}` 是零填充到寬度 5；`{name:<6}` 靠左；`{score:>7.2}` 是寬度 7、小數 2 位", "十六進位用 `{id:0>2x}`；要印出大括號本身，寫成 `{{` 和 `}}`"]
+    ref: appendix1/e_format_strings.md
+
+  - id: rust-ap1-q07
+    difficulty: 1
+    type: choice
+    prompt: |
+      以下四段都寫在 `fn main() { ... }` 裡面，哪一段會**編譯失敗**？
+    choices:
+      - "先寫 `greet();`，再在後面定義 `fn greet() { println!(\"嗨\"); }`"
+      - "先寫 `let p = Point { x: 1, y: 2 };`，再在後面定義 `struct Point { x: i32, y: i32 }`"
+      - "先寫 `println!(\"{}\", n);`，再在後面寫 `let n = 42;`"
+      - "先寫 `let c = Color::Red;`，再在後面定義 `enum Color { Red, Green }`"
+    answer: 2
+    hints: ["`fn`、`struct`、`enum` 這些「項目」不受定義順序影響", "`let` 綁定不是項目，必須在使用之前出現"]
+    ref: appendix1/f_items_in_main.md
+
+  - id: rust-ap1-q08
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Config` 已經實作好 `Default`（800×600、非全螢幕、標題 "My App"）。請用 struct update syntax（`..`）實作兩個函式：
+      - `game_config(title: &str) -> Config`：`fullscreen` 為 true、`title` 為傳入的標題，其餘欄位用預設值。
+      - `resized(base: Config, width: u32, height: u32) -> Config`：只換掉 `width`、`height`，其餘欄位沿用 `base`。
+    hints: ["`Config { fullscreen: true, title: ..., ..Config::default() }`，`..` 一定要放在最後面", "`resized` 用 `Config { width, height, ..base }`；`base` 的 `title` 會被 move 進新的 `Config`"]
+    ref: appendix1/g_struct_update_syntax.md
+
+  - id: rust-ap1-q09
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `len_and_keep(data: Option<String>) -> (usize, Option<String>)` 要回傳內容的長度（`None` 為 0），並把原本的 `data` 原封不動還回去。
+      **目前的骨架編譯不過**：`match data` 的 `Some(s)` 把 `String` move 走了，之後就不能再回傳 `data`。
+      請只修改 `match` 那一行，讓它借用而不是 move。
+    hints: ["`match` 一個參考時，模式裡的綁定會自動變成參考（match ergonomics）", "改成 `match &data`，`Some(s)` 裡的 `s` 就是 `&String`（舊寫法是 `Some(ref s)`）"]
+    ref: appendix1/h_ref_pattern_match_ergonomics.md
+
+  - id: rust-ap1-q10
+    difficulty: 1
+    type: short
+    prompt: |
+      某個 `trait` 要求實作 `load` 方法，但對你的型別來說這個功能沒有意義，你也**不打算**之後實作它。
+      方法本體裡應該放哪一個會 panic 的巨集？（寫出巨集名稱，例如 `xxx!()`）
+    answers: ['^`?unimplemented!?(\(\))?;?`?$']
+    hints: ["`todo!()` 的意思是「之後會實作」，這裡不適合", "表示「沒有實作、不保證之後會做」的巨集是 `unimplemented!()`"]
+    ref: appendix1/i_panic_todo_unimplemented_unreachable.md
+
+  - id: rust-ap1-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `sum_if_positive(a: Option<i32>, b: Option<i32>) -> Option<i32>`：`a`、`b` 都是 `Some`，而且**兩個值都大於 0** 時回傳 `Some(兩者相加)`，否則回傳 `None`。
+      目前的骨架是三層巢狀的 `if let`，而且漏掉了「`b` 的值大於 0」的檢查。
+      請用 `let` chains 把它改寫成一個扁平的 `if`，並補上缺少的條件。
+    hints: ["`if let Some(x) = a && x > 0 && let Some(y) = b && ... { }`，前面綁定的 `x` 在後面可以使用", "條件不成立時要走 `else` 回傳 `None`；別忘了 `y > 0`"]
+    ref: appendix1/j_let_chains.md
+
+  - id: rust-ap1-q12
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      雙向鏈結串列的節點：`next` 用 `Rc`（擁有後一個節點），`prev` 用 `Weak`（只觀察前一個節點）。請實作：
+      - `link(a, b)`：把 `b` 接在 `a` 後面——`a` 的 `next` 指向 `b`，`b` 的 `prev` 指回 `a`。
+      - `prev_value(node) -> Option<i32>`：回傳前一個節點的值；沒有前一個節點，或前一個節點已經被釋放時回傳 `None`。
+
+      測試會檢查 `Rc::strong_count` 與 `Rc::weak_count`，也會檢查節點在 drop 之後真的被釋放（不能有 strong count 的迴圈）。
+    hints: ["`a.borrow_mut().next = Some(b.clone());`、`b.borrow_mut().prev = Some(Rc::downgrade(a));`", "`prev` 是 `Option<Weak<...>>`：先 `.as_ref()`，再 `.and_then(|w| w.upgrade())` 拿到 `Option<Rc<...>>`，最後取 `.borrow().value`"]
+    ref: appendix1/k_rc_cycle_weak.md
+
+  - id: rust-ap1-q13
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `Animal` 和 `Robot` 兩個 `trait` 都有一個沒有 `self` 的 associated function `category()`，`CyberDog` 兩個都實作了。
+      請實作 `categories() -> (&'static str, &'static str)`，回傳 `(Animal 版本的 category, Robot 版本的 category)`。
+      注意：直接寫 `Animal::category()` 會編譯失敗，因為編譯器不知道是哪個型別的實作。
+    hints: ["沒有 `self` 可以讓編譯器推斷型別時，要用完全限定語法", "`<CyberDog as Animal>::category()` 與 `<CyberDog as Robot>::category()`"]
+    ref: appendix1/l_fully_qualified_syntax.md
+
+  - id: rust-ap1-q14
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      `bracket(val: &T) -> String` 會把任何可以 `Display` 的值用中括號包起來，例如 `bracket(&42)` 回傳 `"[42]"`。
+      隱藏測試除了 `bracket(&42)`、`bracket(&String::from("world"))`，還會呼叫 `bracket("hello")`——這時 `T` 是 `str`。
+      目前的寫法對 `str` 編譯不過。請修改泛型參數的 bound，讓 `T` 可以是 DST。
+    hints: ["泛型參數預設帶有 `T: Sized` bound，而 `str` 的大小在編譯時期未知", "把 bound 改成 `T: Display + ?Sized`；參數本來就是 `&T`，所以 DST 也沒問題"]
+    ref: appendix1/m_dst_intro.md
+
+  - id: rust-ap1-q15
+    difficulty: 1
+    type: choice
+    prompt: |
+      關於 `extern crate rand;`，下列敘述何者正確？
+    choices:
+      - "它會自動下載 `rand`，所以不用在 `Cargo.toml` 加 dependency"
+      - "它和 `use rand::RngExt;` 的作用完全一樣，兩者擇一即可"
+      - "它會明確載入外部 crate `rand`；新版 Rust 的一般 Cargo 專案通常不需要寫"
+      - "新版 Rust 一定要先寫它，否則無法使用任何外部 crate"
+    answer: 2
+    hints: ["`extern crate` 不會下載套件，也不能取代 `Cargo.toml` 裡的 dependency", "`use` 是把名稱引入作用域；`extern crate` 處理的是外部 crate 本身"]
+    ref: appendix1/n_extern_crate.md

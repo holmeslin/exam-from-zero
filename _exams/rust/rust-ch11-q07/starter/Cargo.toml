@@ -1,0 +1,4 @@
+[package]
+name = "rust_ch11_q07"
+version = "0.1.0"
+edition = "2024"

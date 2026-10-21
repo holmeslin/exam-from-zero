@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -86,13 +88,33 @@ var runners = map[string]runner{
 
 const setupTimeout = 10 * time.Minute
 
-// langReady reports whether the lang root has finished its one-time setup.
-func langReady(lang, root string) bool {
+// langReady reports whether the lang root has finished setup for the bank's current shared workspace files.
+func langReady(b *Bank, lang, root string) bool {
 	if runners[lang].setup == nil {
 		return true
 	}
-	_, err := os.Stat(filepath.Join(root, ".ready"))
-	return err == nil
+	stamp, err := os.ReadFile(filepath.Join(root, ".ready"))
+	return err == nil && string(stamp) == workspaceStamp(b, lang)
+}
+
+// workspaceStamp hashes <lang>/_workspace so a bank release that changes dependencies triggers a reinstall.
+func workspaceStamp(b *Bank, lang string) string {
+	return treeStamp(b.FS, path.Join(lang, "_workspace"))
+}
+
+// treeStamp hashes every file under dir. A read error only changes the hash, which at worst causes one extra reinstall or reset.
+func treeStamp(fsys fs.FS, dir string) string {
+	h := sha256.New()
+	_ = fs.WalkDir(fsys, dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		data, err := fs.ReadFile(fsys, p)
+		fmt.Fprintf(h, "%s\x00%d\x00", p, len(data))
+		h.Write(data)
+		return err
+	})
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // setupLang copies the bank's shared workspace files into root and installs dependencies; the output explains a failure.
@@ -104,7 +126,7 @@ func setupLang(ctx context.Context, b *Bank, lang, root string) (string, error) 
 	if err != nil || !res.Pass() {
 		return res.Output, cmp.Or(err, fmt.Errorf("%s 失敗", strings.Join(runners[lang].setup, " ")))
 	}
-	return "", os.WriteFile(filepath.Join(root, ".ready"), nil, 0o644)
+	return "", os.WriteFile(filepath.Join(root, ".ready"), []byte(workspaceStamp(b, lang)), 0o644)
 }
 
 // Workspace is where a learner edits one question.
@@ -116,13 +138,50 @@ func workspaceDir(dataDir, lang, id string) string {
 func prepareWorkspace(b *Bank, dataDir, lang string, q *Question) (string, error) {
 	dir := workspaceDir(dataDir, lang, q.ID)
 	if _, err := os.Stat(dir); err == nil {
-		return dir, nil
+		if stamp, _ := os.ReadFile(filepath.Join(dir, starterStamp)); string(stamp) == starterHash(b, lang, q) {
+			return dir, nil
+		}
+		// the bank changed this question since the workspace was made: keep the old work aside, start from the new starter
+		bak, err := archivePath(dir)
+		if err == nil {
+			err = os.Rename(dir, bak)
+		}
+		if err != nil {
+			return dir, err
+		}
 	}
 	return dir, resetWorkspace(b, dataDir, lang, q)
 }
 
+// starterStamp is the file in a learner workspace recording which starter it was made from.
+const starterStamp = ".exam-starter"
+
+func starterHash(b *Bank, lang string, q *Question) string {
+	return treeStamp(b.FS, b.questionDir(lang, q.ID, "starter"))
+}
+
 func resetWorkspace(b *Bank, dataDir, lang string, q *Question) error {
-	return materialize(b, lang, q, "starter", workspaceDir(dataDir, lang, q.ID))
+	dir := workspaceDir(dataDir, lang, q.ID)
+	if err := materialize(b, lang, q, "starter", dir); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, starterStamp), []byte(starterHash(b, lang, q)), 0o644)
+}
+
+// archivePath is where dir moves when it is set aside; it never overwrites an earlier archive.
+func archivePath(dir string) (string, error) {
+	base := dir + ".bak-" + time.Now().Format("2006-01-02")
+	p := base
+	for i := 2; ; i++ {
+		_, err := os.Stat(p)
+		if errors.Is(err, fs.ErrNotExist) {
+			return p, nil
+		}
+		if err != nil { // e.g. permission denied: every candidate would fail the same way
+			return "", err
+		}
+		p = fmt.Sprintf("%s-%d", base, i)
+	}
 }
 
 // materialize writes one part (starter or solution) of q into dir, replacing whatever was there.

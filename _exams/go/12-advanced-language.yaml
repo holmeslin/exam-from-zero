@@ -1,0 +1,227 @@
+# 第 11 章：進階語言功能
+# 執行環境是 go 1.25：Go 1.26 才有的 reflect Fields() 與自我參照約束，題目改用 NumField/Field(i) 與 Sum 上的約束
+lang: go
+chapter: "11"
+title: 進階語言功能
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter11, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch11-q01
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      起始程式碼有一個 values 切片。請用 reflect.TypeOf 取得每個值的型別 t，
+      每行印出「型別 種類」，也就是 fmt.Println(t, t.Kind())。
+
+      預期輸出：
+
+          int int
+          main.Celsius float64
+          main.Point struct
+          []string slice
+    expected_stdout: "int int\nmain.Celsius float64\nmain.Point struct\n[]string slice\n"
+    hints: ["記得 import \"reflect\"，reflect.TypeOf(x) 回傳型別資訊", "t := reflect.TypeOf(x)，再 fmt.Println(t, t.Kind())；自訂型別的種類是它的底層分類"]
+    ref: chapter11/01_reflect.md
+  - id: go-ch11-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 Describe(x any) string，用 reflect.ValueOf 看 x 的種類（Kind）：
+
+      - 種類是 int：回傳 "整數 <值>"，例如 Describe(41) 回傳 "整數 41"
+      - 種類是 string：回傳 "字串長度 <長度>"
+      - 種類是 slice：回傳 "切片長度 <元素個數>"
+      - 其他：回傳 "不處理 <種類>"，例如 Describe(true) 回傳 "不處理 bool"
+
+      注意：自訂型別也要照種類處理，例如 type Age int，Describe(Age(30)) 要回傳 "整數 30"。
+    hints: ["type switch 抓不到 Age 這種自訂型別，要改看 reflect.ValueOf(x).Kind()", "switch v.Kind() { case reflect.Int: … v.Int() … case reflect.String, reflect.Slice: … v.Len() … }；預設分支用 v.Kind().String()"]
+    ref: chapter11/01_reflect.md
+  - id: go-ch11-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 JSONNames(x any) []string：x 是一個 struct，依欄位順序回傳每個欄位在 JSON 裡的名字。
+
+      - 讀欄位的 json tag，取逗號前面那段當名字，例如 `json:"title,omitempty"` 的名字是 title
+      - 沒有 json tag，或逗號前面是空的（例如 `json:",omitempty"`），就用欄位名稱
+
+      例如：
+
+          type item struct {
+              ID    int    `json:"id"`
+              Title string `json:"title,omitempty"`
+              Note  string `json:",omitempty"`
+              Price float64
+          }
+
+      JSONNames(item{}) 要回傳 []string{"id", "title", "Note", "Price"}。
+      （Go 1.26 才有 Fields() 迭代器，這裡請用 NumField() 搭配 Field(i)。）
+    hints: ["t := reflect.TypeOf(x)，for i := range t.NumField() 取出 f := t.Field(i)", "f.Tag.Get(\"json\") 取得 tag 值，用 strings.Cut(值, \",\") 拿逗號前面；結果是空字串就改用 f.Name"]
+    ref: chapter11/02_reflect_struct_tag.md
+  - id: go-ch11-q04
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      寫一個通用的必填欄位檢查 Validate(x any) error：
+
+      - x 不是 struct：回傳錯誤，訊息是「只能檢查 struct」
+      - 標了 `validate:"required"` 而且值是零值的欄位，各產生一個錯誤「<欄位名稱> 是必填欄位」
+      - 用 errors.Join 把這些錯誤合在一起回傳；都沒問題就回傳 nil
+
+      例如 Validate(user{Age: 30})（Name、Email 都標了 required）的錯誤訊息是：
+
+          Name 是必填欄位
+          Email 是必填欄位
+
+      （Go 1.26 才有 Fields() 迭代器，這裡請用 NumField() 搭配 Field(i)。）
+    hints: ["v := reflect.ValueOf(x)，先檢查 v.Kind() != reflect.Struct；型別資訊用 v.Type() 拿", "for i := range t.NumField()：t.Field(i).Tag.Get(\"validate\") == \"required\" && v.Field(i).IsZero() 時 append 一個 fmt.Errorf(\"%s 是必填欄位\", …)，最後 return errors.Join(errs...)"]
+    ref: chapter11/02_reflect_struct_tag.md
+  - id: go-ch11-q05
+    difficulty: 1
+    type: short
+    prompt: |
+      寫出一行宣告：讓 Handlers 成為 map[string]func(int) error 的「型別別名」
+      （和原型別是同一個型別，不是新的自訂型別）。
+    answers: ["^type handlers ?= ?map\\[string\\] ?func ?\\(int\\) ?error$"]
+    hints: ["別名和自訂型別的寫法只差一個符號", "type Handlers = map[string]func(int) error"]
+    ref: chapter11/03_type_alias.md
+  - id: go-ch11-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      起始程式碼的 Set 是泛型自訂型別，所以 fmt.Sprintf("%T", Unique(...)) 會印出 main.Set[string]。
+
+      1. 把 Set 改成泛型別名，讓 Set[string] 就是 map[string]struct{} 本身，
+         %T 印出來是 map[string]struct {}
+      2. 實作 Unique(words []string) Set[string]：回傳 words 裡出現過的字，每個字只記一次。
+         例如 Unique([]string{"go", "is", "go", "fun"}) 有 3 個 key
+    hints: ["泛型別名的寫法和泛型型別一樣，只是中間多一個 =", "type Set[T comparable] = map[T]struct{}；Unique 裡 seen := Set[string]{}，每個字 seen[w] = struct{}{}"]
+    ref: chapter11/03_type_alias.md
+  - id: go-ch11-q07
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      起始程式碼有介面 Adder[A any] interface{ Add(A) A }，以及
+      func Sum[A Adder[A]](xs ...A) A，約束 A Adder[A] 的意思是「A 能跟自己相加，得到 A」。
+
+      1. 完成 Money 的 Add 方法：回傳兩筆金額的和
+      2. 完成 Sum：從 A 的零值開始，用 Add 把 xs 全部加起來
+
+      測試會呼叫 Sum[Money](100, 250, 30)（要得到 380），
+      也會用另一個有 Add 方法的型別 Vec（測試裡自己定義）呼叫 Sum。
+    hints: ["Sum 裡不能寫 total + x，因為 A 不一定是數字；只能用約束保證有的 Add 方法", "Money 的 Add 是 return m + o；Sum 是 for _, x := range xs { total = total.Add(x) }"]
+    ref: chapter11/04_self_referential_constraint.md
+  - id: go-ch11-q08
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      資料夾裡有 hello.txt 和 menu 資料夾（裡面有 coffee.txt、tea.txt）。請用 //go:embed：
+
+      1. 把 hello.txt 放進 string 變數 greeting，原樣印出（它最後已經有換行）
+      2. 把整個 menu 資料夾放進一個 embed.FS 變數，用 ReadDir 列出裡面的檔名，每行一個
+      3. 用 ReadFile 讀出 menu/tea.txt，原樣印出
+
+      預期輸出：
+
+          你好，歡迎光臨！
+          coffee.txt
+          tea.txt
+          綠茶 40 元
+    expected_stdout: "你好，歡迎光臨！\ncoffee.txt\ntea.txt\n綠茶 40 元\n"
+    hints: ["//go:embed 要緊貼在套件層級變數正上方，// 和 go:embed 之間不能有空格；用到 embed.FS 就要 import \"embed\"", "//go:embed menu 放在 var menu embed.FS 上面；menu.ReadDir(\"menu\") 走訪 e.Name()，menu.ReadFile(\"menu/tea.txt\") 再 fmt.Print(string(data))"]
+    ref: chapter11/05_go_embed.md
+  - id: go-ch11-q09
+    difficulty: 2
+    type: choice
+    prompt: |
+      一個資料夾裡有四個檔案，除了 main.go，其他三個的第一行分別是：
+
+          free.go:   //go:build !pro
+          pro.go:    //go:build pro
+          debug.go:  //go:build pro && debug
+
+      執行 go build -tags debug . 時，除了 main.go，還有哪些檔案會參與編譯？
+    choices: ["只有 free.go", "free.go 和 debug.go", "pro.go 和 debug.go", "三個都會"]
+    answer: 0
+    hints: ["-tags debug 只打開 debug 這個標籤，pro 沒有成立", "!pro 成立，pro 不成立，pro && debug 要兩個都成立"]
+    ref: chapter11/06_build_tags.md
+  - id: go-ch11-q10
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一支產生程式碼的小程式（產生器）。這題不用寫檔案，直接把「要產生的檔案內容」印出來：
+      第一行是自動產生檔案的固定慣例註解，接著是一張 0～5 的立方表。
+
+      預期輸出（數字那幾行開頭是一個 tab）：
+
+          // Code generated by gen.go; DO NOT EDIT.
+
+          package main
+
+          var cubes = []int{
+          	0,
+          	1,
+          	8,
+          	27,
+          	64,
+          	125,
+          }
+    expected_stdout: "// Code generated by gen.go; DO NOT EDIT.\n\npackage main\n\nvar cubes = []int{\n\t0,\n\t1,\n\t8,\n\t27,\n\t64,\n\t125,\n}\n"
+    hints: ["用 strings.Builder 一段一段組出內容，數字那幾行用 fmt.Fprintf(&b, \"\\t%d,\\n\", …)", "依序 WriteString(\"package main\\n\\n\")、WriteString(\"var cubes = []int{\\n\")，for i := range 6 寫 i*i*i，最後 WriteString(\"}\\n\")"]
+    ref: chapter11/07_go_generate.md
+  - id: go-ch11-q11
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      起始程式碼的 Event 在 64 位元電腦上，unsafe.Sizeof(Event{}) 是 24。
+      只調整欄位的順序（不增減欄位、不改型別），讓它變成 16 個位元組。
+    hints: ["int64 要從 8 的倍數開始，bool 夾在大欄位中間會補很多空白（padding）", "把大的欄位放前面：ID int64、Code int32，再把兩個 bool 擠在一起"]
+    ref: chapter11/08_unsafe.md
+  - id: go-ch11-q12
+    difficulty: 3
+    type: choice
+    prompt: |
+      下面這段程式最後一行會印出什麼？
+
+          b := []byte("hello")
+          copied := string(b)
+          shared := unsafe.String(unsafe.SliceData(b), len(b))
+          b[0] = 'J'
+          fmt.Println(copied, shared)
+    choices: ["hello hello", "hello Jello", "Jello Jello", "執行時 panic：字串不能修改"]
+    answer: 1
+    hints: ["string(b) 會複製一份資料，unsafe.String 不會", "shared 和 b 共用同一塊記憶體，所以改 b 會讓這個「不能修改」的字串跟著變"]
+    ref: chapter11/08_unsafe.md
+  - id: go-ch11-q13
+    difficulty: 1
+    type: choice
+    prompt: |
+      在一台裝了 C 編譯器的 Mac 上，go env CGO_ENABLED 印出 1。
+      同一台電腦執行 GOOS=linux go env CGO_ENABLED，會印出什麼？
+    choices: ["1", "0", "空白（沒有設定）", "錯誤：Mac 上不能查 Linux 的設定"]
+    answer: 1
+    hints: ["GOOS 和本機不同，就是交叉編譯", "交叉編譯時 CGO_ENABLED 預設是 0"]
+    ref: chapter11/09_cgo.md
+  - id: go-ch11-q14
+    difficulty: 2
+    type: choice
+    prompt: |
+      用 runtime.AddCleanup(f, func(fd int) { … }, f.fd) 登記清理時，
+      第三個參數傳的是 f.fd，而不是 f 本身。為什麼？
+    choices:
+      - "因為 AddCleanup 的第三個參數只能是 int"
+      - "為了讓清理函式在 main goroutine 裡執行"
+      - "如果清理函式或參數還能碰到 f，f 就永遠有人指著、不會被回收；直接傳 f 還會 panic"
+      - "因為清理時 f 已經被設成 nil，傳 f 會拿到 nil"
+    answer: 2
+    hints: ["想想 GC 什麼時候才會回收一個物件", "只要還有東西指著 f，f 就不會被回收，清理也就永遠不會發生"]
+    ref: chapter11/10_cleanup_weak.md

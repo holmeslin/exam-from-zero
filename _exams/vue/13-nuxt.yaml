@@ -1,0 +1,186 @@
+lang: vue
+chapter: "12"
+title: Nuxt 入門
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter12, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch12-q01
+    difficulty: 1
+    type: short
+    prompt: |
+      Nuxt 先在伺服器上把畫面算成 HTML 送給瀏覽器，但這份 HTML 的按鈕還不能按。
+      瀏覽器下載 Vue 之後「接手」這份 HTML，把事件和響應式接上去，畫面才真正能互動。
+      這個步驟的英文名稱是什麼？
+    answers: ['^hydration$', '^hydrate$', '^補水$']
+    hints: ["字面意思是「補水」：替伺服器送來的「乾」HTML 補上互動能力", "答案是一個英文單字，開頭是 h"]
+    ref: chapter12/01_why_framework.md
+
+  - id: vue-ch12-q02
+    difficulty: 1
+    type: short
+    prompt: |
+      你想用 `npm run preview` 在本機看看 Nuxt 網站「正式上線的樣子」，
+      但在那之前一定要先執行另一個 npm 指令產生上線版本。請寫出那個完整指令。
+    answers: ['^npm run build$', '^npx nuxt build$', '^nuxt build$']
+    hints: ["preview 用的是建置之後的結果", "看 package.json 的 scripts：npm run b…"]
+    ref: chapter12/02_create_nuxt_app.md
+
+  - id: vue-ch12-q03
+    difficulty: 1
+    type: choice
+    prompt: |
+      Nuxt 4 專案的 `nuxt.config.ts` 寫了：
+
+          css: ["~/assets/css/main.css"],
+
+      這個 CSS 檔實際上放在專案的哪裡？
+    choices:
+      - "專案根目錄的 assets/css/main.css"
+      - "app/assets/css/main.css"
+      - "public/assets/css/main.css"
+      - "src/assets/css/main.css"
+    answer: 1
+    hints: ["Nuxt 4 把 Vue 的程式碼放在哪個資料夾？", "`~` 代表 `app/`，就像第一部的 `@/` 代表 `src/`"]
+    ref: chapter12/03_project_structure.md
+
+  - id: vue-ch12-q04
+    difficulty: 1
+    type: short
+    prompt: |
+      你建立了 `app/pages/index.vue`，畫面卻沒變，終端機還警告「Your project has pages but the ... component has not been used」。
+      `app.vue` 裡要放哪一個元件（第 9 章 `<RouterView />` 的 Nuxt 版），頁面才會顯示出來？只寫元件名稱即可。
+    answers: ['^<?nuxtpage\s*/?>?$', '^<?nuxt-page\s*/?>?$']
+    hints: ["在 Nuxt 裡一律不用 `<RouterView />`", "名稱是 Nuxt 加上 Page"]
+    ref: chapter12/04_app_and_pages.md
+
+  - id: vue-ch12-q05
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      Nuxt 會照 `pages/` 裡的檔案自動產生路由。請完成 `main.ts` 的 `fileToRoute`，
+      把檔案路徑換成網址（動態參數用第 9 章的 `:id` 寫法表示）：
+
+          pages/index.vue        →  /
+          pages/books/index.vue  →  /books
+          pages/books/hot.vue    →  /books/hot
+          pages/books/[id].vue   →  /books/:id
+
+      程式會從標準輸入一行讀一個檔案路徑，每行印出對應的網址。
+    stdin: "pages/index.vue\npages/about.vue\npages/books.vue\npages/books/index.vue\npages/books/hot.vue\npages/books/[id].vue\npages/old-books.vue\n"
+    expected_stdout: "/\n/about\n/books\n/books\n/books/hot\n/books/:id\n/old-books\n"
+    hints: ["`index` 代表資料夾本身，不會出現在網址裡；先用 `split('/')` 拆成一段一段再處理", "把等於 `index` 的那段濾掉，再把 `[名稱]` 換成 `:名稱`（例如 `seg.replace(/^\\[(.+)\\]$/, ':$1')`），最後用 `/` 接起來"]
+    ref: chapter12/05_file_routing.md
+
+  - id: vue-ch12-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      在 `[id].vue` 裡，`useRoute().params.id` 的型別是 `string | string[] | undefined`。
+      請完成 `findBook.ts` 的 `findBook(param)`：只有 `param` 是字串時才用 `getBook` 找書，
+      是陣列或 `undefined` 時直接回傳 `undefined`。
+    hints: ["聯集型別要先用 `typeof` 縮小範圍；`String(param)` 會把陣列 `[\"1\"]` 變成 `\"1\"`，不對", "`return typeof param === \"string\" ? getBook(param) : undefined`"]
+    ref: chapter12/06_dynamic_routes.md
+
+  - id: vue-ch12-q07
+    difficulty: 2
+    type: choice
+    prompt: |
+      導覽列有三個連結：`<NuxtLink to="/">`、`<NuxtLink to="/books">`、`<NuxtLink to="/about">`，
+      而且 `pages/` 裡有外層路由 `books.vue` 和 `books/[id].vue`。
+      目前網址是 `/books/2`，「書籍」（`to="/books"`）這個連結會被加上哪些 class？
+    choices:
+      - "router-link-active 和 router-link-exact-active 都有"
+      - "只有 router-link-active"
+      - "只有 router-link-exact-active"
+      - "都沒有，因為網址和 /books 不完全一樣"
+    answer: 1
+    hints: ["`/books/2` 是 `books.vue` 這個外層路由的孩子", "「符合」但不是「完全一樣」"]
+    ref: chapter12/07_nuxt_link.md
+
+  - id: vue-ch12-q08
+    difficulty: 2
+    type: choice
+    prompt: |
+      專案裡有 `app.vue`（用 `<NuxtLayout>` 包住 `<NuxtPage />`）、`layouts/default.vue`、
+      外層路由 `pages/books.vue` 和頁面 `pages/books/[id].vue`。
+      打開 `/books/2` 時，由外到內一層一層包起來的順序是哪一個？
+    choices:
+      - "app.vue → pages/books.vue → layouts/default.vue → pages/books/[id].vue"
+      - "layouts/default.vue → app.vue → pages/books.vue → pages/books/[id].vue"
+      - "app.vue → layouts/default.vue → pages/books.vue → pages/books/[id].vue"
+      - "app.vue → layouts/default.vue → pages/books/[id].vue（books.vue 只套用在 /books）"
+    answer: 2
+    hints: ["每一頁都會經過 `app.vue`；layout 是整個網站的外框", "`<NuxtPage />` 被放進 layout 的 `<slot />`，而 `books/` 底下的頁面一定會被 `books.vue` 包住"]
+    ref: chapter12/08_layouts.md
+
+  - id: vue-ch12-q09
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      完成 `useLikes.ts` 這個 composable（在 Nuxt 裡會放在 `app/composables/`，自動匯入）：
+      `likes` 是從 0 開始的 ref，每呼叫一次 `like()` 就加 1。
+      每次呼叫 `useLikes()` 都要得到一組獨立的數字。
+    hints: ["ref 的值要透過 `.value` 讀寫", "在 `like` 裡寫 `likes.value++`"]
+    ref: chapter12/09_auto_imports.md
+
+  - id: vue-ch12-q10
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      放在 `app/components/` 的元件會自動匯入，檔名就是元件名稱，子資料夾的名稱會加在前面。
+      請完成 `componentName.ts` 的 `componentName(file)`，`file` 是 `components/` 底下的相對路徑：
+
+          BookCard.vue       →  BookCard
+          shop/Banner.vue    →  ShopBanner
+          shop/sale/Tag.vue  →  ShopSaleTag
+    hints: ["去掉 `.vue` 後用 `/` 拆開，每一段的第一個字母改成大寫", "`part[0].toUpperCase() + part.slice(1)`，最後用 `join(\"\")` 接起來"]
+    ref: chapter12/09_auto_imports.md
+
+  - id: vue-ch12-q11
+    difficulty: 3
+    type: choice
+    prompt: |
+      你建立了 `app/error.vue`，打開 `/books/999` 時確實顯示了自己的錯誤頁，
+      但是畫面上沒有導覽列和 footer，原始碼的 `<html>` 也沒有 `lang`、沒有 `<title>`。
+      （導覽列放在 `layouts/default.vue`，`lang` 和 `titleTemplate` 是在 `app.vue` 用 `useHead` 設定的。）原因是什麼？
+    choices:
+      - "出錯時 Nuxt 用 error.vue 取代整個 app.vue，所以 app.vue 的 <NuxtLayout> 和 useHead 都沒有執行；要在 error.vue 自己包 <NuxtLayout>、呼叫 useHead"
+      - "error.vue 放錯位置，應該放在 app/pages/ 裡"
+      - "createError 少寫了 fatal: true，所以 layout 沒有套上"
+      - "statusText 寫成了英文的 Not Found，伺服器才省略了 <head>"
+    answer: 0
+    hints: ["`error.vue` 和 `app.vue` 是並排的", "錯誤頁不會經過 `app.vue`"]
+    ref: chapter12/10_error_page.md
+
+  - id: vue-ch12-q12
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      `app.vue` 用 `useHead` 設定了 `titleTemplate`。請修好 `main.ts` 的 `titleTemplate(title)`：
+      頁面有設定標題時回傳「標題｜小書店」，沒設定（`undefined` 或空字串）時只回傳「小書店」。
+    expected_stdout: "關於我們｜小書店\n小書店\n貓咪的程式課｜小書店\n小書店\n"
+    hints: ["`undefined` 和空字串都是 falsy", "用三元運算子：title 有值就回傳樣板字面值「${title}｜小書店」，否則回傳 \"小書店\""]
+    ref: chapter12/11_head_and_seo.md
+
+  - id: vue-ch12-q13
+    difficulty: 1
+    type: choice
+    prompt: |
+      首頁用了：
+
+          <NuxtImg src="/cover.png" alt="書店的招牌" width="600" height="400" format="webp" preload />
+
+      其中寫上 `width` 和 `height`，對瀏覽器最直接的好處是什麼？
+    choices:
+      - "讓圖片轉成比 PNG 更小的 WebP 格式"
+      - "讓瀏覽器一進頁面就提早載入這張圖"
+      - "讓螢幕閱讀器和圖片載入失敗時有文字說明"
+      - "讓瀏覽器在圖片載入前就預留位置，版面不會跳動"
+    answer: 3
+    hints: ["其他三個選項各自是另一個屬性的功能", "對照 `format`、`preload`、`alt`"]
+    ref: chapter12/12_image_and_fonts.md

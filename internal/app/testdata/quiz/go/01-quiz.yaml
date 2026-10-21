@@ -7,8 +7,11 @@ questions:
   - id: go-choice
     difficulty: 1
     type: choice
-    prompt: 哪個 receiver 能修改原本的 struct？
-    choices: ["func (r T) M()", "func (r *T) M()", "兩者皆可"]
+    prompt: |
+      哪個 `receiver` 能修改**原本的** struct？
+
+          type T struct { N int `json:"n"` }
+    choices: ["func (r T) M()", "`func (r *T) M()`", "兩者皆可"]
     answer: 1
     hints: ["想想傳值與傳指標", "pointer receiver"]
     ref: chapter3/04_methods.md

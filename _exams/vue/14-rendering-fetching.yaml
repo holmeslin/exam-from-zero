@@ -1,0 +1,192 @@
+lang: vue
+chapter: "13"
+title: 渲染與資料抓取
+source: { repo: holmeslin/learning-vue-from-zero, path: zh-TW/src/chapter13, sha: fe2a0e6a6c56fcc1cd03b229a80357ba7ab8a286 }
+sample: 5
+questions:
+  - id: vue-ch13-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      在 Nuxt 頁面的 `<script setup>` 裡寫了下面四段程式。打開頁面（直接輸入網址）時，
+      哪一段**只會在瀏覽器裡執行**，伺服器上不會跑？
+
+          console.log("A");
+          if (import.meta.server) console.log("B");
+          onMounted(() => console.log("C"));
+          const count = ref(0); console.log("D", count.value);
+    choices:
+      - "A：直接寫在 setup 裡的 console.log"
+      - "B：if (import.meta.server) 裡的 console.log"
+      - "C：onMounted 裡的 console.log"
+      - "D：建立 ref 之後的 console.log"
+    answer: 2
+    hints: ["setup 會跑兩次：先在伺服器，再在瀏覽器", "伺服器只負責產生 HTML，沒有「掛載到畫面上」這一步"]
+    ref: chapter13/01_server_and_browser.md
+
+  - id: vue-ch13-q02
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      Width.vue 在 setup 裡直接讀 `window.innerWidth`。在第一部的 Vite 專案沒問題，
+      但放到 Nuxt 裡，伺服器先執行 setup 時沒有 `window`，頁面就變成 500 錯誤。
+      修改 Width.vue：伺服器產生的 HTML 先顯示「視窗寬度：0px」，
+      到了瀏覽器、元件掛載之後，再換成真正的 `window.innerWidth`。
+      （測試會用 Vue 的 `renderToString` 在沒有 `window` 的環境模擬伺服器渲染。）
+    hints: ["伺服器不會執行 onMounted", "const width = ref(0)，在 onMounted 裡設定 width.value = window.innerWidth；記得 import ref 和 onMounted"]
+    ref: chapter13/01_server_and_browser.md
+
+  - id: vue-ch13-q03
+    difficulty: 1
+    type: short
+    prompt: |
+      伺服器送來的 HTML 只是「長得像」頁面，按鈕按了沒反應。
+      JavaScript 下載完後，Vue 在瀏覽器裡再執行一次元件，對上現有的 HTML、綁好事件，
+      讓畫面可以互動。這個過程的英文名稱是什麼？
+    answers: ['^hydration$', '^hydrate$', '^hydration（補水）$', '^hydration \(補水\)$']
+    hints: ["字面意思是「補水」：脫水的畫面泡了水才活過來", "這個詞沒有通用的中文翻譯，大家都直接說英文，h 開頭"]
+    ref: chapter13/02_ssr_and_hydration.md
+
+  - id: vue-ch13-q04
+    difficulty: 1
+    type: short
+    prompt: |
+      第 6 章自己寫的 `useFetch` 回傳 `loading` 表示「抓取中」。
+      Nuxt 內建的 `useFetch` 改用 `status` 表示目前狀態。
+      資料還在抓的時候，`status.value` 會是哪個字串？（只要填字串內容）
+    answers: ['^"?pending"?$', "^'?pending'?$"]
+    hints: ["status 有四種值：idle、pending、success、error", "「抓取中」就是還在等待（擱置中）的意思"]
+    ref: chapter13/03_use_fetch.md
+
+  - id: vue-ch13-q05
+    difficulty: 2
+    type: choice
+    prompt: |
+      兩個頁面都在 setup 裡抓同一篇文章，一個用 `$fetch`，一個用 `useFetch`：
+
+          // twice.vue
+          const post = await $fetch<Post>(url);
+          // once.vue
+          const { data: post } = await useFetch<Post>(url);
+
+      直接在網址列打開（或重新整理）這兩頁，看開發者工具的「網路」分頁。下列敘述哪一個正確？
+    choices:
+      - "兩頁的瀏覽器都不會發請求，因為 setup 只在伺服器執行一次"
+      - "twice.vue 的瀏覽器會再發一次請求；once.vue 不會，因為資料放在 payload（__NUXT_DATA__）跟著 HTML 一起送來"
+      - "once.vue 的瀏覽器會再發一次請求，因為 useFetch 內部也是用 $fetch"
+      - "兩頁的瀏覽器都會再發一次請求，因為 setup 會跑兩次"
+    answer: 1
+    hints: ["setup 確實跑兩次，差別在第二次跑的時候資料從哪裡來", "useFetch 會用一個 key 到 payload 裡找伺服器抓過的資料"]
+    ref: chapter13/04_fetch_vs_use_fetch.md
+
+  - id: vue-ch13-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      用一般的 TypeScript 模擬 `useAsyncData` 怎麼避免抓兩次。
+      完成 asyncData.ts 的 `useAsyncData(payload, key, fn)`：
+
+      - `payload` 裡**已經有** `key`（就算存的值是 `0` 或空字串）：直接回傳那個值，**不要**執行 `fn`。
+      - 還沒有：執行 `fn`，把結果用 `key` 存進 `payload`，再回傳結果。
+
+      伺服器呼叫時 payload 是空的，會執行 `fn`；瀏覽器 hydration 時拿到同一份 payload，就不會再執行。
+    hints: ["用 key in payload 判斷有沒有這個 key，不要用 if (payload[key])", "沒有的話 const data = await fn(); payload[key] = data; return data"]
+    ref: chapter13/05_use_async_data.md
+
+  - id: vue-ch13-q07
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 的 `loadPage` 要同時拿到文章和留言。現在寫了兩行 `await`，
+      要等文章抓完才開始抓留言，總共要等兩支 API 的時間相加。
+      改用 `Promise.all` 讓兩個請求**同時出發**，結果照原本順序拆成 `post` 和 `comments`。
+      正確的輸出會先印出兩行「開始抓…」，而且比較快的留言會先抓好。
+    expected_stdout: "開始抓文章\n開始抓留言\n留言抓好了\n文章抓好了\nNuxt 入門：共有 2 則留言\n"
+    hints: ["Promise.all 收一個 Promise 陣列，等全部完成後照原本順序回傳結果陣列", "const [post, comments] = await Promise.all([fetchPost(), fetchComments()])"]
+    ref: chapter13/05_use_async_data.md
+
+  - id: vue-ch13-q08
+    difficulty: 2
+    type: choice
+    prompt: |
+      Nuxt 專案的 `app/composables/useVisitor.ts` 這樣寫：
+
+          const visitor = ref("");
+          export function useVisitor() {
+            return visitor;
+          }
+
+      Amy 打開 `/hello?name=Amy` 把名字存進去後，另一個人打開 `/hello`，
+      伺服器送來的 HTML 也顯示 Amy。原因和修法是什麼？
+    choices:
+      - "ref 寫在函式外面，伺服器上所有請求共用同一份；改成 return useState(\"visitor\", () => \"\")"
+      - "瀏覽器的快取記住了上一頁；在 onMounted 裡把 visitor 清空就好"
+      - "ref 不能放在 composables 資料夾；把它搬進 hello.vue 的 setup 外面"
+      - "沒有 await 造成的；改成 const visitor = await ref(\"\")"
+    answer: 0
+    hints: ["伺服器只有一台，所有使用者的請求都在同一個程式裡處理", "要「每個請求各自一份」又能跨元件共用，用 Nuxt 內建的那個 key + 初始值函式的工具"]
+    ref: chapter13/06_use_state.md
+
+  - id: vue-ch13-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      自己用 Vue 做一個簡化版的 `<ClientOnly>`。完成 ClientOnly.vue：
+
+      - 還沒掛載時（包括在伺服器上），只渲染名為 `fallback` 的具名 slot，**完全不執行**預設 slot 裡的元件。
+      - 元件掛載之後，換成預設 slot 的內容。
+
+      測試會用 `renderToString` 在沒有 `window` 的環境模擬伺服器渲染，預設 slot 裡放的是一個 setup 就讀 `window` 的元件。
+    hints: ["伺服器不跑 onMounted，所以可以用一個 mounted 的 ref 記住「掛載了沒」", "ref(false) 在 onMounted 裡改成 true，template 用 <slot v-if=\"mounted\" /> 和 <slot v-else name=\"fallback\" />"]
+    ref: chapter13/07_client_only.md
+
+  - id: vue-ch13-q10
+    difficulty: 3
+    type: choice
+    prompt: |
+      Console 出現 hydration mismatch 的警告。下面的「原因 → 修法」配對，哪一個是**錯的**？
+    choices:
+      - "setup 裡 Math.floor(Math.random() * 100) → 用 useState 包起來，讓伺服器算一次再透過 payload 帶到瀏覽器"
+      - "setup 裡 new Date().toLocaleTimeString() 顯示使用者的目前時間 → 用 useState 包起來，把伺服器的時間帶到瀏覽器"
+      - "setup 裡直接 await $fetch(...) → 改用 useFetch 或 useAsyncData"
+      - "setup 裡讀 localStorage 的值 → 放進 onMounted，伺服器先顯示佔位內容"
+    answer: 1
+    hints: ["修法有兩個方向：讓伺服器算一次再帶過去，或乾脆等到瀏覽器再算", "目前時間本來就該是使用者那邊的值，伺服器的時間（甚至可能在別的時區）帶過去也不對"]
+    ref: chapter13/08_hydration_mismatch.md
+
+  - id: vue-ch13-q11
+    difficulty: 2
+    type: choice
+    prompt: |
+      `PostComments.vue` 是留言區元件。下列哪一種寫法，才能讓它的程式碼
+      **等使用者按下按鈕要顯示時才下載**？（`show` 一開始是 `false`）
+    choices:
+      - "<PostComments v-if=\"show\" />"
+      - "<LazyPostComments />"
+      - "<LazyPostComments v-if=\"show\" />"
+      - "<ClientOnly><PostComments /></ClientOnly>"
+    answer: 2
+    hints: ["Lazy 前綴把元件拆成獨立檔案「需要時」才載入", "如果元件一開始就在畫面上，它一開始就需要，加了 Lazy 也會馬上載入"]
+    ref: chapter13/09_lazy_components.md
+
+  - id: vue-ch13-q12
+    difficulty: 3
+    type: choice
+    prompt: |
+      長文章最底下有一個「讚」按鈕，寫成：
+
+          <LazyLikeButton hydrate-on-visible />
+
+      下列敘述哪一個正確？
+    choices:
+      - "伺服器的 HTML 裡沒有這個按鈕，要捲到它出現時才在瀏覽器渲染，和 <ClientOnly> 一樣"
+      - "伺服器的 HTML 裡已經有這個按鈕，捲到它出現在畫面上時才 hydration，之後才能按"
+      - "拿掉 Lazy 前綴寫成 <LikeButton hydrate-on-visible /> 效果也一樣"
+      - "改成 hydrate-never 會更快，而且按鈕照樣能按"
+    answer: 1
+    hints: ["lazy hydration 延遲的是「讓它可以互動」，不是「渲染出 HTML」", "一定要有 Lazy 前綴；hydrate-never 永遠不 hydration，按鈕永遠沒反應"]
+    ref: chapter13/10_lazy_hydration.md

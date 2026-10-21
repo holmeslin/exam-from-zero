@@ -1,0 +1,194 @@
+lang: react
+chapter: "15"
+title: 快取、渲染與部署
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter15, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 5
+questions:
+  - id: react-ch15-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      `npm run build` 的路由表裡，`/guestbook` 前面的符號是 `◐`（Partial Prerender）。這代表什麼？
+    choices:
+      - 整頁都在建置時產生，每次請求直接送出同一份 HTML
+      - 外殼是建置時產生的靜態 HTML，其中一部分（例如 `<Suspense>` 包住的內容）在請求時才串流進來
+      - 每次請求時整頁重新產生，使用者要等整頁完成才看得到內容
+      - 這個頁面只在瀏覽器執行，伺服器不產生任何 HTML
+    answer: 1
+    hints: ["`○` 是純靜態、`ƒ` 是整頁動態，`◐` 介於兩者之間", "想想 `<Suspense>` 讓外殼先送出、內容後到的效果"]
+    ref: chapter15/01_static_and_dynamic.md
+
+  - id: react-ch15-q02
+    difficulty: 2
+    type: short
+    prompt: |
+      頁面裡直接寫 `new Date()` 會讓 `npm run build` 失敗。若要選擇「動態」，讓這段程式碼等到真的有人請求時才執行，要在它前面 `await` 哪一個從 `next/server` 匯入的函式？（只寫函式名稱）
+    answers: ['^(await )?connection(\(\))?;?$']
+    hints: ["錯誤訊息的 [dynamic] 選項就有提到它", "`await connection()`，再用 `<Suspense>` 包住這個元件"]
+    ref: chapter15/01_static_and_dynamic.md
+
+  - id: react-ch15-q03
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面的元件放在一個頁面裡，執行 `npm run build` 後再 `npm run start`，每隔幾秒重複請求這個頁面（假設沒有用 `cacheLife` 指定設定，且沒有超過預設的 15 分鐘）：
+
+          async function Clock() {
+            "use cache";
+            return <p>{new Date().toLocaleTimeString("zh-TW")}</p>;
+          }
+
+      畫面上的時間會怎樣？
+    choices:
+      - 每次請求都顯示當下的時間
+      - 每次都顯示同一個時間，也就是建置的那一刻
+      - 建置會失敗，因為 `new Date()` 沒有用 `<Suspense>` 包起來
+      - 第一次請求時記下時間，之後每次請求都加上經過的秒數
+    answer: 1
+    hints: ["`\"use cache\"` 讓函式只執行一次，結果被記起來給所有人共用", "在建置時被快取的內容，請求時不會重新執行"]
+    ref: chapter15/02_use_cache.md
+
+  - id: react-ch15-q04
+    difficulty: 3
+    type: choice
+    prompt: |
+      你想快取「目前登入者的個人資料」，而登入者的 id 存在 cookie 裡。依照官方建議，正確的做法是哪一個？
+    choices:
+      - 在 `"use cache"` 函式裡直接呼叫 `cookies()` 讀取 id
+      - 在快取外面用 `cookies()` 讀出 id，再當成參數傳進 `"use cache"` 的函式，不同的 id 會各自快取
+      - 把 id 寫進 `NEXT_PUBLIC_USER_ID` 環境變數，讓快取函式去讀
+      - 不能快取，凡是跟使用者有關的資料都只能用 `connection()` 動態產生
+    answer: 1
+    hints: ["快取的內容是要給所有人共用的，所以裡面不能看「這次是誰在請求」", "被快取函式的參數，會成為快取的「鑰匙」"]
+    ref: chapter15/02_use_cache.md
+
+  - id: react-ch15-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      `route.ts` 是 `/api/messages` 的 Route Handler，留言存在記憶體的 `messages` 陣列裡。`GET` 已經寫好了，請完成 `POST`：
+
+      - 用 `request.json()` 解析內容；不是 JSON 時不能丟出錯誤，當作沒有資料處理
+      - `name` 去掉前後空白後是空的（或不是字串）：回傳 `{ error: "請輸入名字" }`，狀態碼 400
+      - `text` 去掉前後空白後是空的（或不是字串）：回傳 `{ error: "請輸入留言" }`，狀態碼 400
+      - 驗證通過：把去掉空白後的 `{ name, text }` 加進 `messages`，回傳 `{ ok: true }`，狀態碼 201
+    hints: ["`await request.json().catch(() => null)`，之後用 `body?.name` 讀取", "`Response.json(資料, { status: 400 })` 可以指定狀態碼"]
+    ref: chapter15/05_route_handlers.md
+
+  - id: react-ch15-q06
+    difficulty: 2
+    type: short
+    prompt: |
+      用 `cacheLife({ stale: 300, revalidate: 10, expire: 3600 })` 快取一段內容。超過 10 秒之後，第一個請求**仍然拿到舊的內容**，伺服器同時在背景重新產生，下一個請求才拿到新的。這種「先給舊的，同時更新」的模式叫什麼？（英文名稱）
+    answers: ['^stale[- ]?while[- ]?revalidate$', '^swr$']
+    hints: ["名稱由三個英文字組成，用連字號連接", "stale-…-revalidate"]
+    ref: chapter15/03_cache_life.md
+
+  - id: react-ch15-q07
+    difficulty: 3
+    type: choice
+    prompt: |
+      下面四個寫在 `"use cache"` 元件裡的 `cacheLife` 設定，哪一個會讓這塊內容被當成「動態」，必須用 `<Suspense>` 包起來，否則 `npm run build` 會失敗？
+    choices:
+      - '`cacheLife("hours")`'
+      - '`cacheLife({ stale: 300, revalidate: 10, expire: 3600 })`'
+      - '`cacheLife({ stale: 5, revalidate: 10, expire: 3600 })`'
+      - '`cacheLife("max")`'
+    answer: 2
+    hints: ["時間太短的快取，在建置時先做出來沒有意義", "規則：`revalidate` 為 0、`expire` 不到 5 分鐘，或 `stale` 不到 30 秒"]
+    ref: chapter15/03_cache_life.md
+
+  - id: react-ch15-q08
+    difficulty: 3
+    type: choice
+    prompt: |
+      留言板把讀取拆成兩個函式：
+
+          async function readMessages() { /* 直接讀檔案，沒有快取 */ }
+
+          export async function getMessages() {
+            "use cache";
+            cacheLife("max");
+            cacheTag("messages");
+            return readMessages();
+          }
+
+      為什麼 `addMessage`（先讀現在的留言、加一則、再寫回檔案）要用 `readMessages`，而不是 `getMessages`？
+    choices:
+      - 因為 `getMessages` 只能在 Server Component 裡呼叫
+      - 因為快取的資料可能已經過期，根據舊資料寫回檔案，會把別人剛新增的留言蓋掉
+      - 因為 `readMessages` 比較快
+      - 因為 `cacheTag` 會讓 `getMessages` 回傳空陣列
+    answer: 1
+    hints: ["想想「讀了再寫」時，讀到的資料必須是什麼狀態", "快取裡的資料不一定是最新的"]
+    ref: chapter15/04_cache_tag.md
+
+  - id: react-ch15-q09
+    difficulty: 2
+    type: choice
+    prompt: |
+      使用者在留言板送出留言後，希望**馬上**在列表上看到自己的留言。在 Server Function 裡，應該用哪一個方式讓標籤為 `messages` 的快取過期？
+    choices:
+      - '`updateTag("messages")`'
+      - '`revalidateTag("messages", "max")`'
+      - '`cacheLife("seconds")`'
+      - 什麼都不用做，`"use cache"` 會自動偵測檔案改變
+    answer: 0
+    hints: ["`revalidateTag(標籤, \"max\")` 是先給舊的、背景更新", "要「馬上作廢」，而且是在 Server Function 裡呼叫"]
+    ref: chapter15/04_cache_tag.md
+
+  - id: react-ch15-q10
+    difficulty: 2
+    type: choice
+    prompt: |
+      你在 `proxy.ts` 裡檢查登入狀態，未登入就導向登入頁。為什麼官方文件提醒「不能只靠 `proxy` 做權限檢查」？
+    choices:
+      - 因為 `proxy` 只在 `npm run dev` 時執行，正式環境會略過
+      - 因為 Server Function 是 `POST` 到使用它的頁面網址，如果 `matcher` 沒涵蓋那個網址，或日後 Server Function 被搬到別的頁面，保護就悄悄消失了
+      - 因為 `proxy` 不能使用 `NextResponse.redirect()`
+      - 因為 `proxy` 只能讀取標頭，不能讀取網址
+    answer: 1
+    hints: ["`config.matcher` 決定 `proxy` 對哪些網址生效", "結論和第 14 章一樣：每個 Server Function 自己要檢查權限"]
+    ref: chapter15/06_proxy.md
+
+  - id: react-ch15-q11
+    difficulty: 1
+    type: short
+    prompt: |
+      Next.js 的環境變數預設只有伺服器看得到。如果某個設定（例如網站名稱）要在 Client Component 裡用 `process.env` 讀取，變數名稱必須以什麼開頭？
+    answers: ['^next_public_?$']
+    hints: ["開頭是全大寫的英文加底線", "`NEXT_PUBLIC_SITE_NAME` 就是一個例子"]
+    ref: chapter15/07_environment_variables.md
+
+  - id: react-ch15-q12
+    difficulty: 3
+    type: choice
+    prompt: |
+      `.env.local` 裡有 `NEXT_PUBLIC_SITE_NAME=我的留言板`。執行 `npm run build` 之後，用下面的指令啟動：
+
+          NEXT_PUBLIC_SITE_NAME=換成別的名字 npm run start
+
+      Client Component 裡的 `{process.env.NEXT_PUBLIC_SITE_NAME}` 會顯示什麼？
+    choices:
+      - 換成別的名字
+      - 我的留言板
+      - 空白，因為 Client Component 讀不到環境變數
+      - 建置會失敗，因為環境變數在建置和啟動時不一致
+    answer: 1
+    hints: ["`NEXT_PUBLIC_` 開頭的變數會在什麼時候被替換成值？", "它在建置時就被寫死進送給瀏覽器的 JavaScript"]
+    ref: chapter15/07_environment_variables.md
+
+  - id: react-ch15-q13
+    difficulty: 1
+    type: choice
+    prompt: |
+      本章的留言板用了 Server Function、Route Handler 和 `proxy.ts`。下面哪一種部署方式**不適合**它？
+    choices:
+      - 在能執行 Node.js 的主機上 `npm run build` 再 `npm run start`
+      - 包成 Docker 容器
+      - 靜態輸出（static export），把純 HTML、CSS、JavaScript 檔案放到靜態主機
+      - 使用支援 Next.js 的平台，例如 Vercel
+    answer: 2
+    hints: ["哪一種方式完全沒有伺服器？", "需要伺服器的功能，在靜態輸出裡都不支援"]
+    ref: chapter15/08_build_and_deploy.md

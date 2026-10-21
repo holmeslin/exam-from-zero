@@ -1,0 +1,154 @@
+lang: typescript
+chapter: "3"
+title: 物件型別
+source: { repo: holmeslin/learning-typescript-from-zero, path: zh-TW/src/chapter3, sha: 4b4e1d12eb5df70e84b0a931e3f8b96c41dbb3b2 }
+sample: 5
+questions:
+  # 第 1 集：物件型別的寫法
+  - id: ts-ch03-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      book.ts 已經用型別別名定義了 `Book`（有 `title` 和 `price`）。
+      請完成 `describe(book: Book)`，回傳「書名：價格 元」，例如 `{ title: "小王子", price: 250 }` 要回傳 `小王子：250 元`。
+    hints: ["用 book.title 和 book.price 讀出屬性，再用樣板字串組起來", "return `${book.title}：${book.price} 元`;"]
+    ref: chapter3/01_object_types.md
+  # 第 2 集：可選屬性
+  - id: ts-ch03-q02
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 裡的 `User` 型別中，`email` 是可選屬性。現在執行到沒有 email 的使用者時，程式會當掉。
+      請修改 `showEmail`：有 email 就印出大寫的 email，沒有就印出 `沒有填 email`。預期輸出：
+          MING@EXAMPLE.COM
+          沒有填 email
+    expected_stdout: "MING@EXAMPLE.COM\n沒有填 email\n"
+    hints: ["可選屬性的型別其實是 string | undefined，要先處理 undefined 的情況", "user.email?.toUpperCase() ?? \"沒有填 email\""]
+    ref: chapter3/02_optional_properties.md
+  # 第 3 集：readonly
+  - id: ts-ch03-q03
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式碼用 `npx tsc` 檢查，結果是什麼？
+          type Order = {
+            readonly id: number;
+            readonly items: string[];
+          };
+          const order: Order = { id: 1001, items: ["筆記本"] };
+          order.items.push("原子筆");
+    choices:
+      - "沒有錯誤"
+      - "TS2540 錯誤：items 是唯讀屬性，不能 push"
+      - "TS2339 錯誤：readonly 陣列沒有 push 方法"
+      - "沒有錯誤，但執行時會丟出 TypeError"
+    answer: 0
+    hints: ["readonly 只管一層", "想連內容都不能改，要寫成 readonly items: readonly string[]"]
+    ref: chapter3/03_readonly.md
+  - id: ts-ch03-q04
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      scores.ts 的 `addScore(scores: readonly number[], score: number)` 應該回傳「加上 score 之後」的**新陣列**。
+      目前的寫法偷偷 push 到原本的陣列上，違反了 `readonly` 的本意。請改成不修改原本的陣列。
+    hints: ["readonly 陣列不能用 push 這類會改到陣列本身的方法，但可以產生新陣列", "return [...scores, score];"]
+    ref: chapter3/03_readonly.md
+  # 第 4 集：type 與 interface
+  - id: ts-ch03-q05
+    difficulty: 1
+    type: choice
+    prompt: |
+      關於 `type` 和 `interface`，下面哪一個敘述正確？
+    choices:
+      - "同名的 interface 寫兩次會自動合併；同名的 type 寫兩次會出現 Duplicate identifier 錯誤"
+      - "同名的 type 寫兩次會自動合併；同名的 interface 寫兩次會報錯"
+      - "interface 可以替 string | null 這種聯集型別取名，type 只能描述物件"
+      - "interface 寫法和 type 一樣，名稱後面要接等號"
+    answer: 0
+    hints: ["type 可以替任何型別取名，interface 只能描述物件", "合併的功能主要是給函式庫替既有型別補上新屬性用的"]
+    ref: chapter3/04_type_and_interface.md
+  # 第 5 集：extends 與交集型別
+  - id: ts-ch03-q06
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      post.ts 用交集型別組出 `Post = HasId & HasTimestamps & { title: string }`。請完成兩個函式：
+      - `createPost(id, title, now)`：回傳一篇文章，`createdAt` 和 `updatedAt` 都是 `now`。
+      - `touch(post, now)`：回傳一篇**新**文章，只把 `updatedAt` 換成 `now`，其他屬性不變，也不要改到原本的 `post`。
+    hints: ["交集型別的物件，兩邊的屬性都要有：id、title、createdAt、updatedAt", "touch 可以寫成 return { ...post, updatedAt: now };"]
+    ref: chapter3/05_extends_and_intersection.md
+  # 第 6 集：巢狀物件與物件陣列
+  - id: ts-ch03-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      order.ts 的 `Order` 有一個物件陣列 `items: { name: string; price: number; quantity: number }[]`。請完成：
+      - `itemNames(order)`：回傳所有商品名稱組成的陣列。
+      - `orderTotal(order)`：回傳每項商品 `price × quantity` 的總和，沒有商品時是 0。
+    hints: ["陣列型別確定之後，map、reduce 的 callback 參數不用自己標型別", "order.items.map((item) => item.name)；總和用 reduce((sum, item) => sum + item.price * item.quantity, 0)"]
+    ref: chapter3/06_nested_objects.md
+  # 第 7 集：索引簽章與 Record
+  - id: ts-ch03-q08
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      stock.ts 用 `Record<string, number>` 記錄每個商品的庫存。請修正兩個函式：
+      - `countOf(stock, name)`：回傳商品的庫存，商品不存在時回傳 0。
+      - `restock(stock, name, amount)`：把 `amount` 加到該商品的庫存上（直接修改 `stock`），商品原本不存在時當作 0。
+      注意：型別說「任何名稱都對應到數字」，但讀取不存在的名稱，執行時會得到 `undefined`。
+    hints: ["TypeScript 預設不會提醒你讀到 undefined，要自己處理「可能沒有這個名稱」的情況", "用 stock[name] ?? 0 取代直接讀 stock[name]"]
+    ref: chapter3/07_index_signatures.md
+  # 第 8 集：多餘屬性檢查
+  - id: ts-ch03-q09
+    difficulty: 2
+    type: choice
+    prompt: |
+      已知：
+          type Settings = { theme: string; fontSize: number };
+          function apply(settings: Settings) {}
+      下面哪一行用 `npx tsc` 檢查會出現錯誤？
+    choices:
+      - "apply({ theme: \"dark\", fontSize: 16, fontsize: 18 });"
+      - "const saved = { theme: \"dark\", fontSize: 16, updatedAt: \"2026-10-19\" }; apply(saved);"
+      - "const s = { theme: \"dark\", fontSize: 16 }; apply(s);"
+      - "三行都不會報錯"
+    answer: 0
+    hints: ["多餘屬性檢查只針對直接寫出來的物件字面值", "先放進變數再傳，就不會做多餘屬性檢查"]
+    ref: chapter3/08_excess_property_checks.md
+  # 第 9 集：結構型別
+  - id: ts-ch03-q10
+    difficulty: 1
+    type: short
+    prompt: |
+      TypeScript 比對物件型別時，只看屬性（形狀），不看型別的名字。所以名字不同、形狀相同的 `Point` 和 `Size` 可以互相傳遞。
+      這種規則叫什麼？（中文或英文都可以）
+    answers:
+      - "^結構(化|性)?型別(系統)?$"
+      - "^structural( typing| type system| types?)?$"
+      - "^結構(化|性)?型別(系統)?[ ]?[（(]?structural typing[)）]?$"
+    hints: ["只看「結構」，不看名字", "中文四個字：結○型別"]
+    ref: chapter3/09_structural_typing.md
+  # 第 10 集：綜合練習
+  - id: ts-ch03-q11
+    difficulty: 3
+    type: code
+    check: stdout
+    prompt: |
+      main.ts 是圖書館練習：`Author`、`Book`、`Library` 型別都定義好了，但 `describe` 下面三行各有一個型別錯誤，其中一行還會讓程式執行時當掉。請改對：
+      - 圖書館名稱是唯讀的，改名那一行整行刪掉。
+      - 借閱次數必須是數字，`978-986-2` 借了 1 次。
+      - 新書要補上作者「林小華」（國家：台灣），沒有標籤。
+      預期輸出：
+          小王子（聖修伯里，法國）
+          TypeScript 入門（王小明，未知）
+          新書（林小華，台灣）
+          { '978-986-1': 3, '978-986-2': 1 }
+    expected_stdout: "小王子（聖修伯里，法國）\nTypeScript 入門（王小明，未知）\n新書（林小華，台灣）\n{ '978-986-1': 3, '978-986-2': 1 }\n"
+    hints: ["三個錯誤分別和 readonly、Record 的值、少了必填屬性有關", "「沒有標籤」是 tags: []；新書寫成 { isbn: \"978-986-3\", title: \"新書\", author: { name: \"林小華\", country: \"台灣\" }, tags: [] }"]
+    ref: chapter3/10_practice.md

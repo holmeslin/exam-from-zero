@@ -15,6 +15,9 @@ func verify(t *testing.T, bank fs.FS, args ...string) (string, error) {
 }
 
 func TestVerify_EmbeddedBankPasses(t *testing.T) {
+	if testing.Short() {
+		t.Skip("verifies every question in the embedded bank; run without -short")
+	}
 	bank, _ := fs.Sub(exams, "_exams")
 	if out, err := verify(t, bank); err != nil {
 		t.Fatalf("embedded bank failed verify: %v\n%s", err, out)
@@ -50,5 +53,22 @@ func TestVerify_ReportsBrokenQuestions(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in output:\n%s", want, out)
 		}
+	}
+}
+
+func TestVerify_BankFlagVerifiesADirectory(t *testing.T) {
+	var out strings.Builder
+	if err := run(nil, []string{"verify", "-bank", "internal/app/testdata/stdin", "go"}, &out); err != nil {
+		t.Fatalf("verify -bank failed: %v\n%s", err, out.String())
+	}
+	if err := run(nil, []string{"verify", "-bank", "testdata/badbank"}, &out); err == nil {
+		t.Fatal("verify -bank ignored the directory")
+	}
+}
+
+func TestVerify_UnknownFlagPrintsUsageToOut(t *testing.T) {
+	out, err := verify(t, nil, "-nope")
+	if err == nil || !strings.Contains(out, "-bank") {
+		t.Fatalf("want an error and the usage on out, got %v:\n%s", err, out)
 	}
 }

@@ -1,0 +1,129 @@
+lang: go
+chapter: "10"
+title: context
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter10, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 5
+questions:
+  - id: go-ch10-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      關於 ctx := context.Background()，下面哪個敘述正確？
+    choices:
+      - "ctx.Err() 是 nil，ctx.Done() 是 nil channel，代表永遠不會被取消"
+      - "ctx.Err() 是 context.Canceled，因為它還沒有被任何人啟動"
+      - "ctx.Done() 回傳一個已經關閉的 channel"
+      - "ctx.Deadline() 的 ok 是 true，預設截止時間是程式結束時"
+    answer: 0
+    hints: ["Background 是一個「空的」context：不會被取消、沒有截止時間、沒有資料", "從 nil channel 接收會永遠等下去，剛好代表「永遠不會被取消」"]
+    ref: chapter10/01_why_context.md
+  - id: go-ch10-q02
+    difficulty: 1
+    type: short
+    prompt: 某個函式應該由呼叫端傳 context 進來，但還沒改好，想先放一個「之後要改」的佔位 context。要呼叫哪個函式？（寫出完整呼叫，例如 context.Xxx()）
+    answers: ["^context\\.todo\\(\\)$", "^todo\\(\\)$", "^context\\.todo$", "^todo$"]
+    hints: ["它的行為和 context.Background() 一模一樣，差別只在意思", "日後搜尋 TODO 就能找到該修的地方"]
+    ref: chapter10/01_why_context.md
+  - id: go-ch10-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 Produce(ctx context.Context, out chan<- int) error：
+      依序把 1、2、3……送到 out，直到 ctx 被取消為止，取消後回傳 ctx.Err()。
+      沒人接收時不能卡死在送出那一步。
+    hints: ["用 for 加 select，同時等「ctx 被取消」和「有人要收下一個數字」", "case <-ctx.Done(): return ctx.Err()；case out <- i:"]
+    ref: chapter10/02_with_cancel.md
+  - id: go-ch10-q04
+    difficulty: 2
+    type: choice
+    prompt: |
+      下面這段程式執行到最後一行時，三個 Err() 分別是什麼？
+
+          parent, cancelParent := context.WithCancel(context.Background())
+          defer cancelParent()
+          child, cancelChild := context.WithCancel(parent)
+          defer cancelChild()
+          sibling, cancelSibling := context.WithCancel(parent)
+          defer cancelSibling()
+
+          cancelChild()
+          fmt.Println(parent.Err(), child.Err(), sibling.Err())
+    choices:
+      - "<nil> context canceled <nil>"
+      - "context canceled context canceled context canceled"
+      - "context canceled context canceled <nil>"
+      - "<nil> context canceled context canceled"
+    answer: 0
+    hints: ["取消會往下傳給子孫，但不會往上傳", "取消 child 只影響 child 自己，parent 和 sibling 都不受影響"]
+    ref: chapter10/02_with_cancel.md
+  - id: go-ch10-q05
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 SlowQuery(ctx context.Context, d time.Duration) (string, error)：
+      模擬一個要花 d 的查詢，做完回傳 "完成", nil；
+      如果 ctx 先被取消或逾時，要立刻回傳 "", ctx.Err()，不能把 d 等完。
+    hints: ["time.Sleep 一旦開始睡就叫不醒，要改用 select", "select 同時等 <-time.After(d) 和 <-ctx.Done()，哪個先來就走哪條路"]
+    ref: chapter10/03_with_timeout.md
+  - id: go-ch10-q06
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 Fetch(parent context.Context, timeout time.Duration, fn func(ctx context.Context) (string, error)) (string, error)：
+      - 從 parent 衍生一個時限為 timeout 的 context，用它呼叫 fn。
+      - fn 成功就回傳它的結果；失敗時回傳 "", 並把錯誤包成 "查詢失敗: <原本的錯誤>"，
+        而且要讓 errors.Is(err, context.DeadlineExceeded) 仍然認得出來。
+      - Fetch 回傳前，衍生出來的 context 必須已經被取消（釋放計時器）。
+    hints: ["ctx, cancel := context.WithTimeout(parent, timeout)，下一行就寫 defer cancel()", "用 fmt.Errorf(\"查詢失敗: %w\", err) 包錯誤，%w 才能讓 errors.Is 往裡面找"]
+    ref: chapter10/03_with_timeout.md
+  - id: go-ch10-q07
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作一組存取請求編號的函式：
+      - WithID(ctx context.Context, id string) context.Context：回傳帶著 id 的新 context
+      - IDFrom(ctx context.Context) (string, bool)：取出請求編號，沒有就回傳 "", false
+      key 不能用字串或 int 這類內建型別，請自訂一個未匯出的 key 型別，避免和別人的 key 撞在一起。
+    hints: ["type ctxKey int，再定義 const idKey ctxKey = 0", "IDFrom 用 comma-ok 的型別斷言：id, ok := ctx.Value(idKey).(string)"]
+    ref: chapter10/04_with_value.md
+  - id: go-ch10-q08
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      寫一個 main：
+      1. 用 context.WithCancelCause 建立 parent，再用 context.WithCancel(parent) 建立 child（記得 defer 取消）。
+      2. 印出「取消前: 」加上 context.Cause(child)。
+      3. 呼叫 parent 的取消函式，原因是 errors.New("訂單已被刪除")；接著再呼叫一次，原因是 errors.New("第二次取消")。
+      4. 印出「Err: 」加上 child.Err()，再印出「Cause: 」加上 context.Cause(child)。
+      （每項用 fmt.Println 印一行，例如 fmt.Println("Err:", child.Err())）
+    expected_stdout: "取消前: <nil>\nErr: context canceled\nCause: 訂單已被刪除\n"
+    hints: ["還沒取消時 Cause 回傳 nil；只有第一次取消的原因會被記下", "子 context 查得到父 context 的原因，但 Err() 仍然只是 context.Canceled"]
+    ref: chapter10/05_cause.md
+  - id: go-ch10-q09
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 CloseOnCancel(ctx context.Context, ch chan struct{}) (stop func() bool)：
+      登記「ctx 被取消後就 close(ch)」，並回傳可以撤銷登記的 stop。
+      - 還沒取消時 ch 不能被關閉；登記時 ctx 已經取消的話，ch 要馬上被關閉。
+      - stop() 成功攔下時回傳 true，之後就算取消，ch 也不會被關閉；已經撤過或來不及時回傳 false。
+    hints: ["context.AfterFunc(ctx, f) 會在 ctx 取消後，於新的 goroutine 裡呼叫 f", "AfterFunc 回傳的就是符合要求的 stop：return context.AfterFunc(ctx, func() { close(ch) })"]
+    ref: chapter10/06_after_func.md
+  - id: go-ch10-q10
+    difficulty: 3
+    type: code
+    check: test
+    prompt: |
+      實作 AuditContext(reqCtx context.Context, limit time.Duration) (context.Context, context.CancelFunc)，
+      替請求結束後的「寫稽核紀錄」準備 context：
+      - reqCtx 被取消時，回傳的 context 不能跟著被取消；
+      - reqCtx 上的資料（Value）仍然拿得到；
+      - 但最多只給 limit 的時間，到期就自動取消。
+    hints: ["context.WithoutCancel(reqCtx) 不受 parent 取消影響，但保留 parent 的資料", "再從它衍生一個有時限的版本：context.WithTimeout(context.WithoutCancel(reqCtx), limit)"]
+    ref: chapter10/07_context_conventions.md
