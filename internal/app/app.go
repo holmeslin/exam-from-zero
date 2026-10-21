@@ -3,6 +3,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"math/rand/v2"
@@ -84,8 +85,13 @@ type model struct {
 	clearedRun  *Run // the run that just finished, for the cleared screen
 
 	width   int
+	height  int
 	out     viewport.Model // scrollable grading output
 	saveErr error
+
+	ctx      context.Context // canceled on quit so grading / setup processes die with exam
+	cancel   context.CancelFunc
+	quitting bool // ctrl+c arrived mid-command; quit once it reports back
 }
 
 type editorDoneMsg struct{ err error }
@@ -122,6 +128,7 @@ func New(cfg Config) (tea.Model, error) {
 		flags: flags,
 		out:   viewport.New(0, 0),
 	}
+	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.input = textinput.New()
 	m.input.Prompt = "答案："
 	m.editor = textarea.New()
@@ -169,6 +176,9 @@ func (m *model) unlocked(i int) bool { return i == 0 || m.passed(i-1) }
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case gradedMsg:
+		if m.quitting { // killed by quit, not the learner's result
+			return m, tea.Quit
+		}
 		m.grading = false
 		m.result, m.err = &msg.res, msg.err
 		if msg.err == nil {
@@ -182,15 +192,23 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.loadEditor()
 		}
 	case setupDoneMsg:
+		if m.quitting {
+			return m, tea.Quit
+		}
 		m.settingUp, m.setupOut, m.setupErr = false, msg.out, msg.err
 		if msg.err == nil {
 			m.scr, m.chapCur = scrChapters, 0
 		}
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
+		m.width, m.height = msg.Width, msg.Height
 		m.sizeEditor()
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
+			m.cancel()
+			if m.grading || m.settingUp { // wait so the process group is killed and the grading copy removed
+				m.quitting = true
+				return m, nil
+			}
 			return m, tea.Quit
 		}
 		switch m.scr {
@@ -202,7 +220,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateQuestion(msg)
 		case scrRedoIntro:
 			if msg.String() == "enter" {
-				m.loadQuestion()
+				if m.err != nil { // a redo must start from the starter, so retry the reset that failed
+					m.err = m.resetWrong()
+				}
+				if m.err == nil {
+					m.loadQuestion()
+				}
 			}
 		case scrCleared:
 			return m.updateCleared(msg)
@@ -228,7 +251,7 @@ func (m *model) startSetup() tea.Cmd {
 	m.settingUp, m.setupErr, m.setupOut = true, nil, ""
 	b, lang, root := m.bank, m.lang().ID, m.langRoot()
 	return func() tea.Msg {
-		out, err := setupLang(context.Background(), b, lang, root)
+		out, err := setupLang(m.ctx, b, lang, root)
 		return setupDoneMsg{out, err}
 	}
 }
@@ -249,12 +272,16 @@ func (m *model) allPassed(lang string) bool {
 }
 
 // archiveDir is where a reset moves the old workspace; it never overwrites an earlier archive.
-func (m *model) archiveDir(lang string) string {
+func (m *model) archiveDir(lang string) (string, error) {
 	base := filepath.Join(m.cfg.DataDir, "workspace", lang+".bak-"+time.Now().Format("2006-01-02"))
 	p := base
 	for i := 2; ; i++ {
-		if _, err := os.Stat(p); os.IsNotExist(err) {
-			return p
+		_, err := os.Stat(p)
+		if errors.Is(err, fs.ErrNotExist) {
+			return p, nil
+		}
+		if err != nil { // e.g. permission denied: every candidate would fail the same way
+			return "", err
 		}
 		p = fmt.Sprintf("%s-%d", base, i)
 	}
@@ -263,11 +290,16 @@ func (m *model) archiveDir(lang string) string {
 func (m *model) reset() {
 	lang := m.lang().ID
 	ws := filepath.Join(m.cfg.DataDir, "workspace", lang)
-	if _, err := os.Stat(ws); err == nil {
-		if err := os.Rename(ws, m.archiveDir(lang)); err != nil {
-			m.resetMsg = "封存失敗：" + err.Error()
-			return
+	_, err := os.Stat(ws)
+	if err == nil {
+		var dst string
+		if dst, err = m.archiveDir(lang); err == nil {
+			err = os.Rename(ws, dst)
 		}
+	}
+	if err != nil && !errors.Is(err, fs.ErrNotExist) { // never drop progress while the workspace is still in place
+		m.resetMsg = "封存失敗：" + err.Error()
+		return
 	}
 	delete(m.prog, lang)
 	m.save()
@@ -450,34 +482,45 @@ func (m *model) loadEditor() {
 }
 
 // syncEditor writes inline edits back, or reloads the file when the editor was not touched so an IDE edit is never overwritten.
-func (m *model) syncEditor() {
+func (m *model) syncEditor() error {
 	if m.editFile == "" {
-		return
+		return nil
 	}
 	if v := m.editor.Value(); v != m.editSaved {
 		if err := os.WriteFile(m.editFile, []byte(v), 0o644); err != nil {
-			m.err = err
-			return
+			return err
 		}
 		m.editSaved = v
-		return
+		return nil
 	}
 	m.loadEditor()
+	return nil
 }
 
 func (m *model) sizeEditor() {
 	m.editor.SetWidth(max(m.width-8, 20))
-	m.editor.SetHeight(min(max(strings.Count(m.editor.Value(), "\n")+2, 5), 20))
+	m.editor.SetHeight(min(max(strings.Count(m.editor.Value(), "\n")+2, 5), 20, m.paneMax(2)))
+}
+
+// paneMax caps a scrolling pane at 1/div of the terminal (it is unknown until the first resize) so the question view fits.
+func (m *model) paneMax(div int) int {
+	if m.height == 0 {
+		return 20
+	}
+	return max(m.height/div-2, 3)
 }
 
 func (m *model) startGrading() tea.Cmd {
-	m.syncEditor()
+	if err := m.syncEditor(); err != nil { // grading now would test the old file and drop the edits
+		m.err = err
+		return nil
+	}
 	m.editing = false
 	m.editor.Blur()
 	m.grading, m.result, m.err = true, nil, nil
 	b, lang, q, dir := m.bank, m.lang().ID, m.q, m.wsDir
 	return func() tea.Msg {
-		res, err := gradeCode(context.Background(), b, lang, q, dir)
+		res, err := gradeCode(m.ctx, b, lang, q, dir)
 		return gradedMsg{res, err}
 	}
 }
@@ -500,7 +543,10 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.editing {
 		switch msg.String() {
 		case "esc":
-			m.syncEditor()
+			if err := m.syncEditor(); err != nil {
+				m.err = err
+				return m, nil
+			}
 			m.editing = false
 			m.editor.Blur()
 		case "ctrl+s":
@@ -531,11 +577,17 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.confirmFlag = true
 		return m, nil
 	case k == "tab" && m.editFile != "" && !m.run.Cleared:
-		m.syncEditor()
+		if err := m.syncEditor(); err != nil {
+			m.err = err
+			return m, nil
+		}
 		m.editing = true
 		return m, m.editor.Focus()
 	case k == "e" && m.q.Type == "code":
-		m.syncEditor() // keep inline edits before handing the file to another editor
+		if err := m.syncEditor(); err != nil { // the editor would open the old file and its reload would drop the edits
+			m.err = err
+			return m, nil
+		}
 		return m, m.openEditor()
 	case k == "r" && m.run.Cleared:
 		m.showRef = !m.showRef
@@ -592,20 +644,20 @@ func (m *model) flagged(id string) bool {
 func (m *model) flag() {
 	id := m.q.ID
 	m.flags = append(m.flags, Flag{Lang: m.lang().ID, ID: id, Time: time.Now()})
-	if err := writeJSON(flagsPath(m.cfg.ConfigDir), m.flags); err != nil {
-		m.saveErr = err
+	if err := writeJSON(flagsPath(m.cfg.ConfigDir), m.flags); err != nil { // keep the question, or it would come back after a restart
+		m.flags = m.flags[:len(m.flags)-1]
+		m.err = fmt.Errorf("檢舉未儲存：%w", err)
+		return
 	}
 	replacement := ""
-	if !m.run.Redo {
-		var spare []string
-		for _, q := range m.chapter().Questions {
-			if !slices.Contains(m.run.IDs, q.ID) && !m.flagged(q.ID) {
-				spare = append(spare, q.ID)
-			}
+	var spare []string
+	for _, q := range m.chapter().Questions {
+		if !slices.Contains(m.run.IDs, q.ID) && !m.flagged(q.ID) {
+			spare = append(spare, q.ID)
 		}
-		if len(spare) > 0 {
-			replacement = spare[m.rng.IntN(len(spare))]
-		}
+	}
+	if len(spare) > 0 {
+		replacement = spare[m.rng.IntN(len(spare))]
 	}
 	m.advance(m.run.Drop(replacement, func(id string) int { return m.bank.byID[id].Difficulty }))
 }
@@ -624,17 +676,23 @@ func (m *model) advance(startedRedo, done bool) {
 		delete(lp.Runs, key)
 		m.clearedRun, m.scr = m.run, scrCleared
 	case startedRedo:
-		for _, id := range m.run.Wrong {
-			if q := m.bank.byID[id]; q.Type == "code" {
-				if err := resetWorkspace(m.bank, m.cfg.DataDir, m.lang().ID, q); err != nil {
-					m.err = err
-				}
-			}
-		}
+		m.err = m.resetWrong()
 		m.scr = scrRedoIntro
 	default:
 		m.loadQuestion()
 	}
+}
+
+// resetWrong puts every wrong code question back to its starter for the redo pass.
+func (m *model) resetWrong() error {
+	for _, id := range m.run.Wrong {
+		if q := m.bank.byID[id]; q.Type == "code" {
+			if err := resetWorkspace(m.bank, m.cfg.DataDir, m.lang().ID, q); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (m *model) updateCleared(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -672,6 +730,14 @@ func md(s string) string {
 }
 
 func (m *model) View() string {
+	s := m.screen()
+	if m.saveErr != nil { // saves happen on every screen, so the failure must show on every screen
+		s += "\n" + badStyle.Render("  進度儲存失敗：") + m.saveErr.Error()
+	}
+	return s
+}
+
+func (m *model) screen() string {
 	switch m.scr {
 	case scrChapters:
 		return m.viewChapters()
@@ -727,8 +793,12 @@ func (m *model) viewMenu() string {
 	}
 	if m.resetting {
 		l := m.lang()
-		body := fmt.Sprintf("所有進度將清除，workspace 會封存為\n%s\n\n輸入 %s 以確認：%s",
-			tildePath(m.archiveDir(l.ID)), l.ID, m.resetInput.View())
+		where, err := m.archiveDir(l.ID)
+		where = tildePath(where)
+		if err != nil {
+			where = badStyle.Render("無法存取：" + err.Error())
+		}
+		body := fmt.Sprintf("所有進度將清除，workspace 會封存為\n%s\n\n輸入 %s 以確認：%s", where, l.ID, m.resetInput.View())
 		if m.resetMsg != "" {
 			body += "\n" + badStyle.Render(m.resetMsg)
 		}
@@ -736,9 +806,6 @@ func (m *model) viewMenu() string {
 		return s.String()
 	}
 	s.WriteString(help("↑/↓ 選擇   enter 進入   R 重置（僅限全部過關）   q 離開"))
-	if m.saveErr != nil {
-		s.WriteString("\n" + badStyle.Render("  進度儲存失敗：") + m.saveErr.Error())
-	}
 	return s.String()
 }
 
@@ -890,6 +957,9 @@ func (m *model) viewRedoIntro() string {
 		nums = append(nums, fmt.Sprint(slices.Index(m.run.IDs, id)+1))
 	}
 	body := fmt.Sprintf("⟲ 第 %s 題你曾答錯，workspace 已重設為 starter，\n  請從頭再寫一次。", strings.Join(nums, "、"))
+	if m.err != nil {
+		return m.box(body) + "\n" + badStyle.Render("  重設失敗：") + m.err.Error() + "\n" + help("enter 重試")
+	}
 	return m.box(body) + "\n  進度  " + m.progressRow() + "\n" + help("enter 開始")
 }
 
@@ -939,7 +1009,7 @@ const maxOutputLines = 15
 func (m *model) setOutput(body string) {
 	lines := strings.Count(body, "\n") + 1
 	m.out.Width = max(m.width-6, 20)
-	m.out.Height = min(lines, maxOutputLines)
+	m.out.Height = min(lines, maxOutputLines, m.paneMax(4))
 	m.out.SetContent(body)
 	m.out.GotoTop()
 }
