@@ -9,6 +9,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -56,8 +57,9 @@ type model struct {
 	input       textinput.Model
 	clearedRun  *Run // the run that just finished, for the cleared screen
 
-	width int
-	out   viewport.Model // scrollable grading output
+	width   int
+	out     viewport.Model // scrollable grading output
+	saveErr error
 }
 
 type gradedMsg struct {
@@ -70,11 +72,15 @@ func New(cfg Config) (tea.Model, error) {
 	if err != nil {
 		return nil, err
 	}
+	prog, err := loadProgress(cfg.ConfigDir)
+	if err != nil {
+		return nil, err
+	}
 	m := &model{
 		cfg:  cfg,
 		bank: b,
 		rng:  rand.New(rand.NewPCG(cfg.Seed, cfg.Seed)),
-		prog: map[string]*LangProgress{},
+		prog: prog,
 		out:  viewport.New(0, 0),
 	}
 	m.input = textinput.New()
@@ -115,7 +121,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.grading = false
 		m.result, m.err = &msg.res, msg.err
 		if msg.err == nil {
-			m.run.Record(msg.res.Pass())
+			m.record(msg.res)
 		}
 		m.setOutput(resultBody(msg.res))
 		return m, nil
@@ -176,12 +182,31 @@ func (m *model) updateChapters(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // enterChapter resumes the chapter's unfinished run, or samples a new one.
 func (m *model) enterChapter() {
 	c, lp := m.chapter(), m.lp()
+	// a saved run may name questions the bank has since dropped; resample instead of crashing
+	if r := lp.Runs[c.Key]; r != nil && slices.ContainsFunc(r.IDs, func(id string) bool { return m.bank.byID[id] == nil }) {
+		delete(lp.Runs, c.Key)
+	}
 	if lp.Runs[c.Key] == nil {
 		lp.Runs[c.Key] = newRun(c, m.rng, func(string) bool { return false })
 	}
 	m.run, lp.Last = lp.Runs[c.Key], c.Key
+	m.save()
 	m.loadQuestion()
 }
+
+// record applies a grading outcome to the run and the question's stats, then persists.
+func (m *model) record(res Result) {
+	m.run.Record(res.Pass())
+	st := m.lp().stat(m.q.ID)
+	st.Attempts++
+	st.Status, st.Last = "wrong", time.Now()
+	if res.Pass() {
+		st.Status = "correct"
+	}
+	m.save()
+}
+
+func (m *model) save() { m.saveErr = saveProgress(m.cfg.ConfigDir, m.prog) }
 
 func (m *model) loadQuestion() {
 	m.scr, m.confirmQuit = scrQuestion, false
@@ -232,7 +257,7 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.q.Type != "code" {
 			res := gradeAnswer(m.q, m.choiceCur, m.input.Value())
 			m.result, m.err = &res, nil
-			m.run.Record(res.Pass())
+			m.record(res)
 			m.setOutput("")
 			return m, nil
 		}
@@ -256,6 +281,7 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *model) next() {
 	startedRedo, done := m.run.Next()
+	defer m.save()
 	switch {
 	case done:
 		lp, key := m.lp(), m.chapter().Key
@@ -333,9 +359,21 @@ func (m *model) viewMenu() string {
 	var s strings.Builder
 	s.WriteString(titleStyle.Render("exam-from-zero\n你真的學會了嗎？") + "\n\n  選擇今天要測驗的語言\n\n")
 	for i, l := range m.langs {
-		fmt.Fprintf(&s, "  %s%s\n", cursor(i == m.langCur), l.Name)
+		chs, lp := m.bank.Chapters[l.ID], m.prog[l.ID]
+		done, status := 0, ""
+		if lp != nil {
+			done = len(lp.Passed)
+			idx := slices.IndexFunc(chs, func(c *Chapter) bool { return c.Key == lp.Last })
+			if run := lp.Runs[lp.Last]; run != nil && idx >= 0 {
+				status = fmt.Sprintf("▸ 第 %s 關進行中 (%d/%d)", chapterLabel(chs[idx]), run.done(), len(run.IDs))
+			}
+		}
+		fmt.Fprintf(&s, "  %s%s %s  %3d/%-3d %s\n", cursor(i == m.langCur), pad(l.Name, 12), bar(done, len(chs)), done, len(chs), status)
 	}
 	s.WriteString(help("↑/↓ 選擇   enter 進入   q 離開"))
+	if m.saveErr != nil {
+		s.WriteString("\n" + badStyle.Render("  進度儲存失敗：") + m.saveErr.Error())
+	}
 	return s.String()
 }
 
@@ -365,6 +403,15 @@ func (m *model) viewChapters() string {
 	}
 	s.WriteString(help("↑/↓ 選擇   enter 進入／接續   esc 回主選單"))
 	return s.String()
+}
+
+func bar(done, total int) string {
+	const w = 18
+	n := 0
+	if total > 0 {
+		n = done * w / total
+	}
+	return strings.Repeat("█", n) + strings.Repeat("░", w-n)
 }
 
 func stars(d int) string { return strings.Repeat("★", d) + strings.Repeat("☆", max(3-d, 0)) }

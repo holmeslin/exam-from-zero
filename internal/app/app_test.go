@@ -225,3 +225,54 @@ func TestChoiceAndShortQuestions(t *testing.T) {
 	e.key(tea.KeyEnter)
 	e.waitFor("✓ 通過")
 }
+
+func TestProgress_ResumesAfterRestart(t *testing.T) {
+	cfg := newConfig(t)
+	e := start(t, cfg)
+	e.waitFor("選擇今天要測驗的語言")
+	e.key(tea.KeyEnter)
+	e.waitFor("基礎")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 Add")
+	e.writeAnswer("go", "go-ch01-q01", "main.go", goFunc("Add", "+"))
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 Sub")
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg.Seed = 99 // a resumed run must not be resampled
+	e = start(t, cfg)
+	e.waitFor("0/2", "▸ 第 1 關進行中 (1/2)")
+	e.key(tea.KeyEnter)
+	e.waitFor("進行中 1/2")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 Sub", "第 2/2 題")
+
+	raw, err := os.ReadFile(filepath.Join(cfg.ConfigDir, "progress.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"go-ch01-q01"`, `"status": "correct"`, `"attempts": 1`} {
+		if !strings.Contains(string(raw), want) {
+			t.Errorf("progress.json missing %s:\n%s", want, raw)
+		}
+	}
+}
+
+func TestProgress_CorruptFileIsReportedNotOverwritten(t *testing.T) {
+	cfg := newConfig(t)
+	p := filepath.Join(cfg.ConfigDir, "progress.json")
+	if err := os.WriteFile(p, []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := New(cfg)
+	if err == nil || !strings.Contains(err.Error(), "progress.json") {
+		t.Fatalf("want error naming progress.json, got %v", err)
+	}
+	if raw, _ := os.ReadFile(p); string(raw) != "{not json" {
+		t.Fatalf("corrupt progress file was overwritten: %q", raw)
+	}
+}
