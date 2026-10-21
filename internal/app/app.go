@@ -58,6 +58,8 @@ type model struct {
 	// one-time dependency install for the selected lang
 	settingUp bool
 	setupOut  string
+	setupLive *capBuf   // install output so far, shown while settingUp
+	setupAt   time.Time // when the install started
 	setupErr  error
 
 	// reset dialog on the menu
@@ -96,6 +98,13 @@ type model struct {
 }
 
 type editorDoneMsg struct{ err error }
+
+// setupTickMsg redraws the install view so its output and elapsed time stay current.
+type setupTickMsg struct{}
+
+func setupTick() tea.Cmd {
+	return tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg { return setupTickMsg{} })
+}
 
 type setupDoneMsg struct {
 	out string
@@ -195,6 +204,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.editFile != "" {
 			m.loadEditor()
 		}
+	case setupTickMsg:
+		if m.settingUp {
+			return m, setupTick()
+		}
 	case setupDoneMsg:
 		if m.quitting {
 			return m, tea.Quit
@@ -253,11 +266,12 @@ func (m *model) langRoot() string { return filepath.Join(m.cfg.DataDir, "workspa
 
 func (m *model) startSetup() tea.Cmd {
 	m.settingUp, m.setupErr, m.setupOut = true, nil, ""
-	b, lang, root := m.bank, m.lang().ID, m.langRoot()
-	return func() tea.Msg {
-		out, err := setupLang(m.ctx, b, lang, root)
+	m.setupLive, m.setupAt = &capBuf{}, time.Now()
+	b, lang, root, live := m.bank, m.lang().ID, m.langRoot(), m.setupLive
+	return tea.Batch(func() tea.Msg {
+		out, err := setupLang(m.ctx, b, lang, root, live)
 		return setupDoneMsg{out, err}
-	}
+	}, setupTick())
 }
 
 // stepLang returns the next lang from i in direction d whose toolchain is available, or i if there is none.
@@ -951,7 +965,17 @@ func (m *model) progressRow() string {
 func (m *model) viewSetup() string {
 	name := m.lang().Name
 	if m.settingUp {
-		return m.box(fmt.Sprintf("⚙ 安裝 %s 依賴中…（%s，第一次需要一點時間）", name, strings.Join(runners[m.lang().ID].setup, " ")))
+		body := fmt.Sprintf("⚙ 安裝 %s 依賴中…（%s，已經過 %d 秒）", name, strings.Join(runners[m.lang().ID].setup, " "), int(time.Since(m.setupAt).Seconds()))
+		if out := strings.TrimSpace(m.setupLive.String()); out != "" {
+			lines := strings.Split(out, "\n")
+			lines = lines[max(len(lines)-liveSetupLines, 0):]
+			clip := helpStyle.MaxWidth(max(m.width-8, 20)) // inside the box; a long line must not wrap and push the view
+			for i, l := range lines {
+				lines[i] = clip.Render(l[strings.LastIndex(l, "\r")+1:]) // keep what a progress line last drew
+			}
+			body += "\n\n" + strings.Join(lines, "\n")
+		}
+		return m.box(body)
 	}
 	body := badStyle.Render("✗ 安裝失敗") + "：" + m.setupErr.Error()
 	if out := strings.TrimSpace(m.setupOut); out != "" {
@@ -1014,6 +1038,9 @@ func resultBody(r Result) string {
 }
 
 const maxOutputLines = 15
+
+// liveSetupLines is how much of a running install the setup view shows.
+const liveSetupLines = 10
 
 // setOutput loads grading output into the viewport, capped so long compiler errors scroll instead of overflowing.
 func (m *model) setOutput(body string) {

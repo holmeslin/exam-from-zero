@@ -47,7 +47,7 @@ func Verify(ctx context.Context, fsys fs.FS, only string, w io.Writer) error {
 			continue
 		}
 		if runners[l.ID].setup != nil {
-			if out, err := setupLang(ctx, b, l.ID, filepath.Join(tmp, l.ID)); err != nil {
+			if out, err := setupLang(ctx, b, l.ID, filepath.Join(tmp, l.ID), nil); err != nil {
 				report(l.ID, "安裝依賴失敗：%v\n%s", err, out)
 				continue
 			}

@@ -133,11 +133,11 @@ func firstBuildPending(lang, root string) bool {
 }
 
 // setupLang copies the bank's shared workspace files into root and installs dependencies; the output explains a failure.
-func setupLang(ctx context.Context, b *Bank, lang, root string) (string, error) {
+func setupLang(ctx context.Context, b *Bank, lang, root string, live io.Writer) (string, error) {
 	if _, err := copyTree(b.FS, path.Join(lang, "_workspace"), root); err != nil {
 		return "", err
 	}
-	res, _, err := execIn(ctx, root, setupTimeout, nil, runners[lang].setup)
+	res, _, err := execIn(ctx, root, setupTimeout, nil, runners[lang].setup, "", live)
 	if err != nil || !res.Pass() {
 		return res.Output, cmp.Or(err, fmt.Errorf("%s 失敗", strings.Join(runners[lang].setup, " ")))
 	}
@@ -264,7 +264,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		cwd = filepath.Dir(work)
 	}
 	if r.build != nil {
-		res, _, err := execIn(ctx, cwd, r.timeout, env, r.build)
+		res, _, err := execIn(ctx, cwd, r.timeout, env, r.build, "", nil)
 		if res.Kind != KindPass || err != nil {
 			if res.Kind == KindTest {
 				res.Kind = KindCompile
@@ -273,7 +273,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		}
 	}
 	if q.Check == "stdout" {
-		res, stdout, err := execIn(ctx, cwd, r.timeout, env, r.run, q.Stdin)
+		res, stdout, err := execIn(ctx, cwd, r.timeout, env, r.run, q.Stdin, nil)
 		if err != nil || res.Kind != KindPass {
 			return res, err
 		}
@@ -282,7 +282,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		}
 		return res, nil
 	}
-	res, _, err := execIn(ctx, cwd, r.timeout, env, r.test)
+	res, _, err := execIn(ctx, cwd, r.timeout, env, r.test, "", nil)
 	return res, err
 }
 
@@ -299,7 +299,8 @@ func inDir(argv []string, dir string) []string {
 }
 
 // execIn runs argv in dir and returns combined output plus stdout alone; a non-zero exit is a KindTest result, not an error.
-func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []string, stdin ...string) (Result, string, error) {
+// execIn runs argv in dir; live, when set, also receives the combined output as it arrives.
+func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []string, stdin string, live io.Writer) (Result, string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
@@ -307,11 +308,13 @@ func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []
 	if env != nil {
 		cmd.Env = append(os.Environ(), env...)
 	}
-	if len(stdin) > 0 {
-		cmd.Stdin = strings.NewReader(stdin[0])
-	}
+	cmd.Stdin = strings.NewReader(stdin)
 	var out, stdout capBuf
-	cmd.Stdout, cmd.Stderr = io.MultiWriter(&out, &stdout), &out
+	var sink io.Writer = &out
+	if live != nil {
+		sink = io.MultiWriter(&out, live)
+	}
+	cmd.Stdout, cmd.Stderr = io.MultiWriter(sink, &stdout), sink
 	// kill the whole group: `go test` / `cargo run` spawn the real binary as a child
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
@@ -342,6 +345,12 @@ type capBuf struct {
 	mu   sync.Mutex
 	buf  bytes.Buffer
 	over bool
+}
+
+func (c *capBuf) String() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.buf.String()
 }
 
 func (c *capBuf) Write(p []byte) (int, error) {

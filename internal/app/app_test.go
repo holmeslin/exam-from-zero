@@ -630,6 +630,25 @@ func TestInlineEditor_MissingMainFileShowsError(t *testing.T) {
 	enterFirstQuestion(e, "實作 Add", "錯誤：", "main.go")
 }
 
+func TestNodeLang_InstallShowsLiveOutput(t *testing.T) {
+	bin := t.TempDir() // a fake npm that prints in steps
+	script := "#!/bin/sh\ni=1\nwhile [ $i -le 30 ]; do printf 'line %02d\\n' $i; i=$((i+1)); done\nsleep 1\necho 'line 31'\nsleep 1\n"
+	if err := os.WriteFile(filepath.Join(bin, "npm"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/node")
+	e := start(t, cfg)
+	e.waitFor("TypeScript")
+	e.key(tea.KeyEnter)
+	e.waitFor("安裝 TypeScript 依賴中", "line 30", "秒")
+	if out := e.waitFor("line 31"); strings.Contains(out, "line 05") {
+		t.Fatalf("the install view should keep only the last lines:\n%s", out)
+	}
+	e.waitFor("第一步") // chapter list once the install finishes
+}
+
 func TestNodeLang_FailedInstallCanBeRetried(t *testing.T) {
 	cfg := newConfig(t)
 	cfg.Bank = os.DirFS("testdata/badnode")
@@ -762,7 +781,7 @@ func TestRunDrop_InRedoRemovesFromIDsAndQueuesReplacement(t *testing.T) {
 }
 
 func TestExecIn_CapsOutputOfPrintLoop(t *testing.T) {
-	res, _, err := execIn(t.Context(), t.TempDir(), time.Second, nil, []string{"yes"})
+	res, _, err := execIn(t.Context(), t.TempDir(), time.Second, nil, []string{"yes"}, "", nil)
 	if err != nil || res.Kind != KindTimeout || len(res.Output) > maxOutput+100 {
 		t.Fatalf("kind %v, %d bytes, err %v", res.Kind, len(res.Output), err)
 	}
