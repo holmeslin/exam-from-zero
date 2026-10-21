@@ -1,0 +1,21 @@
+lang: go
+chapter: 2
+title: 壞選擇題
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: bad-choice
+    difficulty: 1
+    type: choice
+    prompt: 選一個
+    choices: ["a", "b"]
+    answer: 9
+    hints: ["a", "b"]
+    ref: x.md
+  - id: bad-short
+    difficulty: 1
+    type: short
+    prompt: 打一個
+    answers: ["(unclosed"]
+    hints: ["a", "b"]
+    ref: x.md

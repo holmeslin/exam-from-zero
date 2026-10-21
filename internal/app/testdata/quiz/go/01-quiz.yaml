@@ -1,0 +1,21 @@
+lang: go
+chapter: 3
+title: 結構與指標
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 2
+questions:
+  - id: go-choice
+    difficulty: 1
+    type: choice
+    prompt: 哪個 receiver 能修改原本的 struct？
+    choices: ["func (r T) M()", "func (r *T) M()", "兩者皆可"]
+    answer: 1
+    hints: ["想想傳值與傳指標", "pointer receiver"]
+    ref: chapter3/04_methods.md
+  - id: go-short
+    difficulty: 2
+    type: short
+    prompt: 型別 T 的指標型別怎麼寫？
+    answers: ["^\\*T$", "^pointer to T$"] # written as the spec shows; matching must ignore case
+    hints: ["加一個符號", "*T"]
+    ref: chapter3/02_pointer.md

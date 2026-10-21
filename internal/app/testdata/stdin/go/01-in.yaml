@@ -1,0 +1,15 @@
+lang: go
+chapter: 1
+title: 讀取輸入
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: go-stdin
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: 讀一個整數，印出它的兩倍。
+    stdin: "21\n"
+    expected_stdout: "42\n"
+    hints: ["fmt.Scan", "fmt.Println(n * 2)"]
+    ref: chapter1/15_stdin.md

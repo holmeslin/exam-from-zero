@@ -1,0 +1,14 @@
+lang: go
+chapter: 3
+title: ""
+source: { repo: fixture, path: fixture, sha: TODO }
+sample: 1
+questions:
+  - id: bad-sha
+    difficulty: 1
+    type: choice
+    prompt: 選一個
+    choices: ["a", "b"]
+    answer: 0
+    hints: ["a", "b"]
+    ref: x.md

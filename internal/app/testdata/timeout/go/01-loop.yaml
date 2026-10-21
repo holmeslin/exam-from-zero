@@ -1,0 +1,14 @@
+lang: go
+chapter: 1
+title: 迴圈
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: go-timeout
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: 印出 done 後結束
+    expected_stdout: "done\n"
+    hints: ["別寫無窮迴圈", "fmt.Println(\"done\")"]
+    ref: chapter1/01.md

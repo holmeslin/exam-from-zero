@@ -1,0 +1,20 @@
+lang: go
+chapter: 2
+title: 函式
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: go-ch02-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: 實作 Mul(a, b int) int。
+    hints: ["*", "return a * b"]
+    ref: chapter2/01.md
+  - id: go-ch02-q02
+    difficulty: 1
+    type: code
+    check: test
+    prompt: 實作 Div(a, b int) int。
+    hints: ["/", "return a / b"]
+    ref: chapter2/01.md

@@ -1,0 +1,15 @@
+# 格式樣本（#14）：#19 產生題庫時會從第 1 章補齊
+lang: react
+chapter: 4
+title: 第一個 React 程式
+source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter4, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+sample: 1
+questions:
+  - id: react-ch04-q01
+    difficulty: 1
+    type: code
+    check: test
+    prompt: |
+      讓 TodoList 元件接收 items: string[]，用 <ul> 與 <li> 列出每一項，key 用項目本身。
+    hints: ["在 JSX 裡用 items.map(...)", "<ul>{items.map(item => <li key={item}>{item}</li>)}</ul>"]
+    ref: chapter4/10_lists_and_keys.md

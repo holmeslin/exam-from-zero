@@ -1,0 +1,33 @@
+lang: go
+chapter: 1
+title: 壞題
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: bad-solution
+    difficulty: 1
+    type: code
+    check: test
+    prompt: solution 跑不過測試
+    hints: ["a", "b"]
+    ref: x.md
+  - id: bad-starter
+    difficulty: 1
+    type: code
+    check: test
+    prompt: starter 什麼都不寫就通過
+    hints: ["a", "b"]
+    ref: x.md
+  - id: bad-starter
+    difficulty: 1
+    type: code
+    check: test
+    prompt: 重複 id
+    hints: ["a", "b"]
+    ref: x.md
+  - id: no-prompt
+    difficulty: 5
+    type: code
+    check: test
+    hints: ["a", "b"]
+    ref: x.md

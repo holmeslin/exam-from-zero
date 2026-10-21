@@ -1,0 +1,46 @@
+# 格式樣本（#14）：#15 產生題庫時會補齊這一章
+lang: go
+chapter: 1
+title: 基礎
+source: { repo: holmeslin/learning-go-from-zero, path: zh-TW/src/chapter1, sha: e05e8a5ea07321b470c9012962d4ab788aeb0ce6 }
+sample: 4
+questions:
+  - id: go-ch01-q01
+    difficulty: 1
+    type: choice
+    prompt: |
+      下面這段程式會印出什麼？
+
+          for i := 1; i <= 3; i++ {
+              fmt.Print(i)
+          }
+    choices: ["123", "012", "1234", "0123"]
+    answer: 0
+    hints: ["看清楚起點是 1，條件是 <=", "i 依序是 1、2、3，到 4 時條件不成立"]
+    ref: chapter1/20_for_three_part.md
+  - id: go-ch01-q02
+    difficulty: 1
+    type: short
+    prompt: 變數 n 的型別是 int，要把它轉成 float64，運算式怎麼寫？
+    answers: ["^float64\\(n\\)$"]
+    hints: ["Go 的型別轉換寫法是「型別(值)」", "float64(n)"]
+    ref: chapter1/27_type_conversion.md
+  - id: go-ch01-q03
+    difficulty: 2
+    type: code
+    check: test
+    prompt: |
+      實作 Grade(score int) string：
+      90 分以上回傳 "A"，80～89 回傳 "B"，其他回傳 "C"。請用 switch。
+    hints: ["switch 後面不寫值，每個 case 寫條件", "case score >= 90: return \"A\""]
+    ref: chapter1/30_switch.md
+  # 由 EXERCISES.md 第 1 章第 20 集「題 2」轉換
+  - id: go-ch01-q04
+    difficulty: 2
+    type: code
+    check: stdout
+    prompt: |
+      用三段式 for 印出倒數 10、8、6、4、2（每行一個），最後印出「發射！」。
+    expected_stdout: "10\n8\n6\n4\n2\n發射！\n"
+    hints: ["先想清楚：從幾開始？到幾結束？每次怎麼變？", "for i := 10; i > 0; i -= 2，迴圈結束後再印「發射！」"]
+    ref: chapter1/20_for_three_part.md

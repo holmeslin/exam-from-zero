@@ -1,0 +1,14 @@
+lang: rust
+chapter: 1
+title: 唯一一關
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: reset-rust
+    difficulty: 1
+    type: choice
+    prompt: 選第一個
+    choices: ["這個", "不是這個"]
+    answer: 0
+    hints: ["a", "b"]
+    ref: x.md
