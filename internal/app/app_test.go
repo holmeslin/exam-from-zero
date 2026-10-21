@@ -534,3 +534,33 @@ func TestEditorOpensSourceFileNotManifest(t *testing.T) {
 		t.Fatalf("editor opened %s, want src/lib.rs", got)
 	}
 }
+
+func TestInlineEditor_EditSaveAndGrade(t *testing.T) {
+	e := start(t, newConfig(t))
+	enterFirstQuestion(e, "實作 Add", "return 0", "tab 編輯")
+	e.key(tea.KeyTab)
+	e.waitFor("✎ 編輯中", "ctrl+s 存檔並判定")
+	e.key(tea.KeyCtrlHome)
+	for range 3 {
+		e.key(tea.KeyDown)
+	}
+	e.key(tea.KeyCtrlE) // end of "\treturn 0"
+	e.key(tea.KeyBackspace)
+	e.tm.Type("a + b")
+	e.key(tea.KeyCtrlS)
+	e.waitFor("✓ 通過")
+	if got := e.workspaceFile("go", "go-ch01-q01", "main.go"); !strings.Contains(got, "return a + b") {
+		t.Fatalf("inline edit not saved:\n%s", got)
+	}
+}
+
+func TestInlineEditor_DoesNotClobberEditsMadeElsewhere(t *testing.T) {
+	e := start(t, newConfig(t))
+	enterFirstQuestion(e, "實作 Add", "return 0")
+	e.writeAnswer("go", "go-ch01-q01", "main.go", addRight) // edited in the learner's IDE
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過", "return a + b") // the editor pane reloads what was graded
+	if got := e.workspaceFile("go", "go-ch01-q01", "main.go"); got != addRight {
+		t.Fatalf("IDE edit overwritten:\n%s", got)
+	}
+}

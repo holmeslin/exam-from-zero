@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -70,6 +71,10 @@ type model struct {
 	confirmQuit bool
 	confirmFlag bool
 	choiceCur   int
+	editor      textarea.Model // inline editor for the question's main file
+	editFile    string         // file the inline editor shows; "" when the question has none
+	editSaved   string         // editor content last loaded from / written to editFile
+	editing     bool
 	hintLevel   int  // hints shown for the current question
 	showRef     bool // reference answer expanded
 	input       textinput.Model
@@ -115,6 +120,10 @@ func New(cfg Config) (tea.Model, error) {
 	}
 	m.input = textinput.New()
 	m.input.Prompt = "答案："
+	m.editor = textarea.New()
+	m.editor.ShowLineNumbers = true
+	m.editor.CharLimit = 0
+	m.editor.Prompt = ""
 	m.resetInput = textinput.New()
 	m.resetInput.Prompt = ""
 	m.missing = map[string]bool{}
@@ -165,6 +174,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case editorDoneMsg:
 		m.err = msg.err
+		if m.editFile != "" {
+			m.loadEditor()
+		}
 	case setupDoneMsg:
 		m.settingUp, m.setupOut, m.setupErr = false, msg.out, msg.err
 		if msg.err == nil {
@@ -172,6 +184,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
+		m.sizeEditor()
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
@@ -352,8 +365,8 @@ func (m *model) record(res Result) {
 // manifests are never what the learner should edit first.
 var manifests = []string{"Cargo.toml", "Cargo.lock", "go.mod", "package.json"}
 
-// openEditor suspends the TUI and edits the question's first starter source file.
-func (m *model) openEditor() tea.Cmd {
+// mainFile is the workspace copy of the question's first starter source file.
+func (m *model) mainFile() string {
 	file := m.wsDir
 	starter := m.bank.questionDir(m.lang().ID, m.q.ID, "starter")
 	_ = fs.WalkDir(m.bank.FS, starter, func(p string, d fs.DirEntry, err error) error {
@@ -363,6 +376,12 @@ func (m *model) openEditor() tea.Cmd {
 		}
 		return err
 	})
+	return file
+}
+
+// openEditor suspends the TUI and edits the question's main file.
+func (m *model) openEditor() tea.Cmd {
+	file := m.mainFile()
 	argv := editorCommand()
 	cmd := exec.Command(argv[0], append(argv[1:], file)...)
 	cmd.Dir = m.wsDir
@@ -405,8 +424,56 @@ func (m *model) loadQuestion() {
 	if m.run.Cleared {
 		m.result = &Result{Kind: KindPass}
 	}
+	m.editing, m.editFile = false, ""
 	if m.q.Type == "code" {
 		m.wsDir, m.err = prepareWorkspace(m.bank, m.cfg.DataDir, m.lang().ID, m.q)
+		m.editFile = m.mainFile()
+		m.loadEditor()
+	}
+}
+
+// loadEditor shows the file's current content, picking up edits made in other editors.
+func (m *model) loadEditor() {
+	raw, err := os.ReadFile(m.editFile)
+	if err != nil {
+		m.editFile = ""
+		return
+	}
+	m.editor.SetValue(string(raw))
+	m.editSaved = m.editor.Value() // textarea normalizes (e.g. tabs), so compare against what it holds, not the raw file
+	m.sizeEditor()
+}
+
+// syncEditor writes inline edits back, or reloads the file when the editor was not touched so an IDE edit is never overwritten.
+func (m *model) syncEditor() {
+	if m.editFile == "" {
+		return
+	}
+	if v := m.editor.Value(); v != m.editSaved {
+		if err := os.WriteFile(m.editFile, []byte(v), 0o644); err != nil {
+			m.err = err
+			return
+		}
+		m.editSaved = v
+		return
+	}
+	m.loadEditor()
+}
+
+func (m *model) sizeEditor() {
+	m.editor.SetWidth(max(m.width-8, 20))
+	m.editor.SetHeight(min(max(strings.Count(m.editor.Value(), "\n")+2, 5), 20))
+}
+
+func (m *model) startGrading() tea.Cmd {
+	m.syncEditor()
+	m.editing = false
+	m.editor.Blur()
+	m.grading, m.result, m.err = true, nil, nil
+	b, lang, q, dir := m.bank, m.lang().ID, m.q, m.wsDir
+	return func() tea.Msg {
+		res, err := gradeCode(context.Background(), b, lang, q, dir)
+		return gradedMsg{res, err}
 	}
 }
 
@@ -422,6 +489,22 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.flag()
 		case "n", "esc":
 			m.confirmFlag = false
+		}
+		return m, nil
+	}
+	if m.editing {
+		switch msg.String() {
+		case "esc":
+			m.syncEditor()
+			m.editing = false
+			m.editor.Blur()
+		case "ctrl+s":
+			return m, m.startGrading()
+		default:
+			var cmd tea.Cmd
+			m.editor, cmd = m.editor.Update(msg)
+			m.sizeEditor()
+			return m, cmd
 		}
 		return m, nil
 	}
@@ -442,7 +525,12 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case k == "ctrl+f" && m.q.Type == "short", k == "!" && !short:
 		m.confirmFlag = true
 		return m, nil
+	case k == "tab" && m.editFile != "" && !m.run.Cleared:
+		m.syncEditor()
+		m.editing = true
+		return m, m.editor.Focus()
 	case k == "e" && m.q.Type == "code":
+		m.syncEditor() // keep inline edits before handing the file to another editor
 		return m, m.openEditor()
 	case k == "r" && m.run.Cleared:
 		m.showRef = !m.showRef
@@ -474,12 +562,7 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.setOutput("")
 			return m, nil
 		}
-		m.grading, m.result, m.err = true, nil, nil
-		b, lang, q, dir := m.bank, m.lang().ID, m.q, m.wsDir
-		return m, func() tea.Msg {
-			res, err := gradeCode(context.Background(), b, lang, q, dir)
-			return gradedMsg{res, err}
-		}
+		return m, m.startGrading()
 	case "esc":
 		m.confirmQuit = true
 		return m, nil
@@ -704,6 +787,13 @@ func (m *model) viewQuestion() string {
 		body += "\n\n" + m.input.View()
 	}
 	s.WriteString(m.box(body) + "\n")
+	if m.editFile != "" {
+		state := "（tab 編輯）"
+		if m.editing {
+			state = " ✎ 編輯中"
+		}
+		s.WriteString(m.titledBox(filepath.Base(m.editFile)+state, m.editor.View()) + "\n")
+	}
 	switch {
 	case m.grading:
 		s.WriteString("  ⏳ 執行中…\n")
@@ -733,6 +823,8 @@ func (m *model) viewQuestion() string {
 		s.WriteString("\n  確定檢舉這題有問題？會換一題並不再出現  y 檢舉   n 取消")
 	case m.confirmQuit:
 		s.WriteString("\n  確定離開？進度會保留  y 離開   n 繼續作答")
+	case m.editing:
+		s.WriteString(help("esc 離開編輯   ctrl+s 存檔並判定"))
 	case r.Cleared:
 		s.WriteString(help("enter 下一題   r 參考答案   esc 離開"))
 	case m.q.Type == "choice":
@@ -740,7 +832,7 @@ func (m *model) viewQuestion() string {
 	case m.q.Type == "short":
 		s.WriteString(help("enter 送出   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
 	default:
-		s.WriteString(help("e 開編輯器   enter 判定   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
+		s.WriteString(help("tab 編輯   e 開編輯器   enter 判定   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
 	}
 	return s.String()
 }
