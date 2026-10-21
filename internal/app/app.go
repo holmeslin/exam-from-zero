@@ -9,6 +9,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -359,12 +360,14 @@ func (m *model) updateChapters(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // enterChapter resumes the chapter's unfinished run, or samples a new one.
 func (m *model) enterChapter() {
 	c, lp := m.chapter(), m.lp()
-	// a saved run may name questions the bank has since dropped; resample instead of crashing
-	if r := lp.Runs[c.Key]; r != nil && slices.ContainsFunc(r.IDs, func(id string) bool { return m.bank.byID[id] == nil }) {
+	// a bank release may have changed the chapter (sample size, or what a question id asks); resample
+	stamp := treeStamp(m.bank.FS, path.Join(c.Lang, c.Key+".yaml"))
+	if r := lp.Runs[c.Key]; r != nil && r.Chapter != stamp {
 		delete(lp.Runs, c.Key)
 	}
 	if lp.Runs[c.Key] == nil {
 		lp.Runs[c.Key] = newRun(c, m.rng, m.flagged)
+		lp.Runs[c.Key].Chapter = stamp
 	}
 	m.run, lp.Last = lp.Runs[c.Key], c.Key
 	if len(m.run.IDs) == 0 { // every question in the chapter was flagged: nothing to answer, so it must not block progress

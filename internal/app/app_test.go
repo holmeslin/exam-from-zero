@@ -584,6 +584,38 @@ func TestWorkspace_ArchivedWhenBankStarterChanges(t *testing.T) {
 	}
 }
 
+func TestRun_ResampledWhenBankChapterChanges(t *testing.T) {
+	bank := t.TempDir()
+	if err := os.CopyFS(bank, os.DirFS("testdata/bank")); err != nil {
+		t.Fatal(err)
+	}
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS(bank)
+	e := start(t, cfg)
+	enterFirstQuestion(e, "第 1/2 題")
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+
+	e = start(t, cfg) // same bank: the saved run resumes
+	enterFirstQuestion(e, "第 1/2 題")
+	if err := e.tm.Quit(); err != nil {
+		t.Fatal(err)
+	}
+
+	// a new release of the bank changes the chapter; the old run's questions no longer mean the same thing
+	ch := filepath.Join(bank, "go", "01-basics.yaml")
+	raw, err := os.ReadFile(ch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(ch, bytes.Replace(raw, []byte("sample: 2"), []byte("sample: 1"), 1), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e = start(t, cfg)
+	enterFirstQuestion(e, "第 1/1 題")
+}
+
 func TestInlineEditor_MissingMainFileShowsError(t *testing.T) {
 	cfg := newConfig(t)
 	e := start(t, cfg)
