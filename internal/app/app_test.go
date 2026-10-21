@@ -202,3 +202,26 @@ func TestChallenge_LeavingNeedsConfirmAndResumes(t *testing.T) {
 	e.key(tea.KeyEnter)
 	e.waitFor("實作 Sub", "第 2/2 題")
 }
+
+func TestChoiceAndShortQuestions(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/quiz")
+	e := start(t, cfg)
+	enterFirstQuestion(e, "哪個 receiver", "func (r *T) M()")
+
+	e.key(tea.KeyEnter) // first option is wrong
+	e.waitFor("✗ 答錯")
+	e.key(tea.KeyDown)
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+	e.key(tea.KeyEnter)
+	e.waitFor("指標型別怎麼寫", "答案：")
+
+	e.tm.Type("T")
+	e.key(tea.KeyEnter)
+	e.waitFor("✗ 答錯")
+	e.key(tea.KeyBackspace)
+	e.tm.Type("  Pointer   to T ") // normalized: trimmed, lower-cased, spaces collapsed
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+}

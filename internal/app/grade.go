@@ -9,6 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -163,4 +166,23 @@ func execIn(ctx context.Context, dir string, timeout time.Duration, argv []strin
 		return Result{}, "", err
 	}
 	return Result{Kind: KindPass, Output: out.String()}, stdout.String(), nil
+}
+
+// gradeAnswer grades choice (by index) and short (by normalized text against regexes) questions.
+func gradeAnswer(q *Question, choice int, text string) Result {
+	ok := false
+	switch q.Type {
+	case "choice":
+		ok = choice == q.Answer
+	case "short":
+		norm := strings.ToLower(strings.Join(strings.Fields(text), " "))
+		ok = slices.ContainsFunc(q.Answers, func(re string) bool {
+			m, err := regexp.MatchString(re, norm)
+			return err == nil && m
+		})
+	}
+	if ok {
+		return Result{Kind: KindPass}
+	}
+	return Result{Kind: KindWrong}
 }

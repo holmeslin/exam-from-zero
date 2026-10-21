@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 )
 
 // Verify checks bank structure and that every code question's solution passes and starter fails.
@@ -82,6 +83,22 @@ func checkStructure(q *Question) []string {
 	case "code":
 		if q.Check != "test" && q.Check != "stdout" {
 			p = append(p, "check 必須是 test 或 stdout")
+		}
+	case "choice":
+		if len(q.Choices) < 2 {
+			p = append(p, "choices 至少要兩個")
+		}
+		if q.Answer < 0 || q.Answer >= len(q.Choices) {
+			p = append(p, "answer 超出選項範圍")
+		}
+	case "short":
+		if len(q.Answers) == 0 {
+			p = append(p, "缺少 answers")
+		}
+		for _, re := range q.Answers {
+			if _, err := regexp.Compile(re); err != nil {
+				p = append(p, fmt.Sprintf("regex 無法編譯：%s", re))
+			}
 		}
 	default:
 		p = append(p, "type 必須是 code、choice 或 short")

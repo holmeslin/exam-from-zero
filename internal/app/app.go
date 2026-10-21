@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -51,6 +52,8 @@ type model struct {
 	result      *Result
 	err         error
 	confirmQuit bool
+	choiceCur   int
+	input       textinput.Model
 	clearedRun  *Run // the run that just finished, for the cleared screen
 
 	width int
@@ -74,6 +77,8 @@ func New(cfg Config) (tea.Model, error) {
 		prog: map[string]*LangProgress{},
 		out:  viewport.New(0, 0),
 	}
+	m.input = textinput.New()
+	m.input.Prompt = "答案："
 	for _, l := range langs {
 		if len(b.Chapters[l.ID]) > 0 {
 			m.langs = append(m.langs, l)
@@ -181,7 +186,9 @@ func (m *model) enterChapter() {
 func (m *model) loadQuestion() {
 	m.scr, m.confirmQuit = scrQuestion, false
 	m.q = m.bank.byID[m.run.Current()]
-	m.result, m.err = nil, nil
+	m.result, m.err, m.choiceCur = nil, nil, 0
+	m.input.Reset()
+	m.input.Focus()
 	if m.run.Cleared {
 		m.result = &Result{Kind: KindPass}
 	}
@@ -205,12 +212,28 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.out, cmd = m.out.Update(msg)
 		return m, cmd
+	case "up", "down":
+		if m.q.Type == "choice" && !m.run.Cleared {
+			if msg.String() == "up" {
+				m.choiceCur = max(m.choiceCur-1, 0)
+			} else {
+				m.choiceCur = min(m.choiceCur+1, len(m.q.Choices)-1)
+			}
+			return m, nil
+		}
 	case "enter":
 		if m.grading {
 			return m, nil
 		}
 		if m.run.Cleared {
 			m.next()
+			return m, nil
+		}
+		if m.q.Type != "code" {
+			res := gradeAnswer(m.q, m.choiceCur, m.input.Value())
+			m.result, m.err = &res, nil
+			m.run.Record(res.Pass())
+			m.setOutput("")
 			return m, nil
 		}
 		m.grading, m.result, m.err = true, nil, nil
@@ -221,6 +244,12 @@ func (m *model) updateQuestion(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "esc":
 		m.confirmQuit = true
+		return m, nil
+	}
+	if m.q.Type == "short" && !m.run.Cleared {
+		var cmd tea.Cmd
+		m.input, cmd = m.input.Update(msg)
+		return m, cmd
 	}
 	return m, nil
 }
@@ -350,8 +379,20 @@ func (m *model) viewQuestion() string {
 	s.WriteString(helpStyle.Render(fmt.Sprintf("%s › %s %s", m.lang().Name, chapterLabel(c), c.Title)) +
 		"   " + pos + " " + stars(m.q.Difficulty) + "\n")
 	body := strings.TrimRight(m.q.Prompt, "\n")
-	if m.q.Type == "code" {
+	switch m.q.Type {
+	case "code":
 		body += "\n\n📁 " + tildePath(m.wsDir)
+	case "choice":
+		body += "\n"
+		for i, c := range m.q.Choices {
+			mark := "( )"
+			if i == m.choiceCur {
+				mark = "(•)"
+			}
+			body += fmt.Sprintf("\n%s%s %s", cursor(i == m.choiceCur), mark, c)
+		}
+	case "short":
+		body += "\n\n" + m.input.View()
 	}
 	s.WriteString(m.box(body) + "\n")
 	switch {
@@ -368,6 +409,10 @@ func (m *model) viewQuestion() string {
 		s.WriteString("\n  確定離開？進度會保留  y 離開   n 繼續作答")
 	case r.Cleared:
 		s.WriteString(help("enter 下一題   esc 離開"))
+	case m.q.Type == "choice":
+		s.WriteString(help("↑/↓ 選擇   enter 送出   esc 離開"))
+	case m.q.Type == "short":
+		s.WriteString(help("enter 送出   esc 離開"))
 	default:
 		s.WriteString(help("enter 判定   esc 離開"))
 	}

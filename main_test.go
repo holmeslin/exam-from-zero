@@ -22,7 +22,7 @@ func TestVerify_EmbeddedBankPasses(t *testing.T) {
 }
 
 func TestVerify_FixtureBanksPass(t *testing.T) {
-	for _, dir := range []string{"bank", "stdout", "timeout"} {
+	for _, dir := range []string{"bank", "stdout", "timeout", "quiz"} {
 		t.Run(dir, func(t *testing.T) {
 			if out, err := verify(t, os.DirFS("internal/app/testdata/"+dir)); err != nil {
 				t.Fatalf("fixture bank failed verify: %v\n%s", err, out)
@@ -42,6 +42,8 @@ func TestVerify_ReportsBrokenQuestions(t *testing.T) {
 		"bad-starter: id 重複",
 		"no-prompt: 缺少 prompt",
 		"no-prompt: difficulty 必須是 1-3",
+		"bad-choice: answer 超出選項範圍",
+		"bad-short: regex 無法編譯",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in output:\n%s", want, out)
