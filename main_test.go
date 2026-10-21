@@ -65,3 +65,10 @@ func TestVerify_BankFlagVerifiesADirectory(t *testing.T) {
 		t.Fatal("verify -bank ignored the directory")
 	}
 }
+
+func TestVerify_UnknownFlagPrintsUsageToOut(t *testing.T) {
+	out, err := verify(t, nil, "-nope")
+	if err == nil || !strings.Contains(out, "-bank") {
+		t.Fatalf("want an error and the usage on out, got %v:\n%s", err, out)
+	}
+}

@@ -33,6 +33,7 @@ func main() {
 func run(bank fs.FS, args []string, out io.Writer) error {
 	if len(args) > 0 && args[0] == "verify" {
 		fl := flag.NewFlagSet("verify", flag.ContinueOnError)
+		fl.SetOutput(out)
 		dir := fl.String("bank", "", "verify this bank directory instead of the embedded one")
 		if err := fl.Parse(args[1:]); err != nil {
 			return err

@@ -41,12 +41,12 @@ const (
 )
 
 type model struct {
-	cfg   Config
-	bank  *Bank
-	rng   *rand.Rand
-	shuf  *rand.Rand // choice order; separate so it does not shift sampling
-	prog  map[string]*LangProgress
-	flags []Flag
+	cfg       Config
+	bank      *Bank
+	rng       *rand.Rand
+	choiceRng *rand.Rand // choice order; separate so it does not shift sampling
+	prog      map[string]*LangProgress
+	flags     []Flag
 
 	scr     screen
 	langs   []Lang          // langs present in the bank
@@ -120,13 +120,13 @@ func New(cfg Config) (tea.Model, error) {
 		return nil, err
 	}
 	m := &model{
-		cfg:   cfg,
-		bank:  b,
-		rng:   rand.New(rand.NewPCG(cfg.Seed, cfg.Seed)),
-		shuf:  rand.New(rand.NewPCG(cfg.Seed, ^cfg.Seed)),
-		prog:  prog,
-		flags: flags,
-		out:   viewport.New(0, 0),
+		cfg:       cfg,
+		bank:      b,
+		rng:       rand.New(rand.NewPCG(cfg.Seed, cfg.Seed)),
+		choiceRng: rand.New(rand.NewPCG(cfg.Seed, ^cfg.Seed)),
+		prog:      prog,
+		flags:     flags,
+		out:       viewport.New(0, 0),
 	}
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.input = textinput.New()
@@ -457,7 +457,7 @@ func (m *model) loadQuestion() {
 	m.result, m.err, m.choiceCur, m.hintLevel, m.showRef = nil, nil, 0, 0, false
 	m.input.Reset()
 	m.input.Focus()
-	m.choiceOrder = m.shuf.Perm(len(m.q.Choices)) // the bank tends to list the answer first
+	m.choiceOrder = m.choiceRng.Perm(len(m.q.Choices)) // the bank tends to list the answer first
 	if m.run.Cleared {
 		m.result = &Result{Kind: KindPass}
 	}
