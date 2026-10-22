@@ -1,6 +1,6 @@
 module github.com/holmeslin/exam-from-zero
 
-go 1.25.7
+go 1.25.14
 
 require (
 	github.com/charmbracelet/bubbles v1.0.0
