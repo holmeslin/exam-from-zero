@@ -1,4 +1,4 @@
-// Command exam is a TUI quiz over the learning-*-from-zero books.
+// Command exam-from-zero is a TUI quiz over the learning-*-from-zero books.
 package main
 
 import (
@@ -25,7 +25,7 @@ var exams embed.FS
 func main() {
 	bank, _ := fs.Sub(exams, "_exams")
 	if err := run(bank, os.Args[1:], os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, "exam:", err)
+		fmt.Fprintln(os.Stderr, "exam-from-zero:", err)
 		os.Exit(1)
 	}
 }

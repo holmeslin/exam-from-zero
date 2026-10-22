@@ -3,6 +3,7 @@ package main
 import (
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -63,6 +64,14 @@ func TestVerify_BankFlagVerifiesADirectory(t *testing.T) {
 	}
 	if err := run(nil, []string{"verify", "-bank", "testdata/badbank"}, &out); err == nil {
 		t.Fatal("verify -bank ignored the directory")
+	}
+}
+
+func TestVerify_BankFlagRejectsMissingOrEmptyDirectory(t *testing.T) {
+	for _, dir := range []string{filepath.Join(t.TempDir(), "nope"), t.TempDir()} {
+		if out, err := verify(t, nil, "-bank", dir); err == nil {
+			t.Fatalf("verify -bank %s passed with no chapters:\n%s", dir, out)
+		}
 	}
 }
 
