@@ -707,8 +707,7 @@ func TestNodeLang_FailedInstallCanBeRetried(t *testing.T) {
 	e.key(tea.KeyEnter)
 	e.waitFor("✗ 安裝失敗", "enter 重試")
 	e.key(tea.KeyEnter)
-	e.waitFor("安裝 TypeScript 依賴中")
-	e.waitFor("✗ 安裝失敗")
+	e.waitFor("安裝 TypeScript 依賴中", "✗ 安裝失敗") // a fast npm failure can land in the same read as the spinner
 	e.key(tea.KeyEsc)
 	e.waitFor("選擇今天要測驗的語言")
 }
