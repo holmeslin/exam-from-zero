@@ -60,12 +60,11 @@ func nodeRunner(checker string) runner {
 		build: []string{"npx", "--no-install", checker, "-p", "{dir}/tsconfig.json"},
 		test:  []string{"npx", "--no-install", "vitest", "run", "--dir", "{dir}"},
 		// type stripping is on by default only from Node 22.18, but vitest accepts 22.12
-		run:     []string{"node", "--experimental-strip-types", "{dir}/main.ts"},
-		timeout: 10 * time.Second, // per step: a warm vitest+jsdom run and a type check each measured under 1s
-		inRoot:  true,
-		setup:   []string{"npm", "install", "--no-audit", "--no-fund"},
-		// hidden tests are left out: they may reach into the code in ways the learner's types don't promise
-		scaffold: map[string]string{"tsconfig.json": `{"extends": "../tsconfig.base.json", "include": ["**/*"], "exclude": ["**/*.test.ts", "**/*.test.tsx"]}` + "\n"},
+		run:      []string{"node", "--experimental-strip-types", "{dir}/main.ts"},
+		timeout:  10 * time.Second, // per step: a warm vitest+jsdom run and a type check each measured under 1s
+		inRoot:   true,
+		setup:    []string{"npm", "install", "--no-audit", "--no-fund"},
+		scaffold: map[string]string{"tsconfig.json": `{"extends": "../tsconfig.base.json", "include": ["**/*"]}` + "\n"},
 	}
 }
 
@@ -261,12 +260,6 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 	if err := writeScaffold(lang, work); err != nil {
 		return Result{}, err
 	}
-	if q.Check != "stdout" {
-		if _, err := copyTree(b.FS, b.questionDir(lang, q.ID, "test"), work); err != nil {
-			return Result{}, err
-		}
-	}
-
 	r, cwd := runners[lang], work
 	var env []string
 	if r.env != nil {
@@ -286,6 +279,13 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		}
 		if r.slowFirstBuild {
 			_ = os.WriteFile(filepath.Join(filepath.Dir(work), builtMarker), nil, 0o644) // if this fails the note just shows again
+		}
+	}
+	// hidden files go in only after the build: a type check must not judge helpers the learner can't edit,
+	// and Go's _test.go and Rust's tests/ never take part in a build anyway
+	if q.Check != "stdout" {
+		if _, err := copyTree(b.FS, b.questionDir(lang, q.ID, "test"), work); err != nil {
+			return Result{}, err
 		}
 	}
 	if q.Check == "stdout" {
