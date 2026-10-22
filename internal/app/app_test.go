@@ -123,6 +123,21 @@ func TestCompileError(t *testing.T) {
 	e.waitFor("✗ 編譯錯誤", "syntax error")
 }
 
+func TestGoCodeQuestion_KeepsTheLearnersGoMod(t *testing.T) {
+	e := start(t, newConfig(t))
+	enterFirstQuestion(e, "實作 Add")
+	// a renamed module with a package of its own builds only with the learner's go.mod, not the scaffold's
+	ws := filepath.Join(e.cfg.DataDir, "workspace", "go", "go-ch01-q01")
+	if err := os.MkdirAll(filepath.Join(ws, "calc"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	e.writeAnswer("go", "go-ch01-q01", "go.mod", "module mine\n\ngo 1.25\n")
+	e.writeAnswer("go", "go-ch01-q01", "calc/calc.go", "package calc\n\nfunc Sum(a, b int) int { return a + b }\n")
+	e.writeAnswer("go", "go-ch01-q01", "main.go", "package main\n\nimport \"mine/calc\"\n\nfunc Add(a, b int) int { return calc.Sum(a, b) }\n\nfunc main() {}\n")
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
+}
+
 func TestInfiniteLoopTimesOut(t *testing.T) {
 	cfg := newConfig(t)
 	cfg.Bank = os.DirFS("testdata/timeout")

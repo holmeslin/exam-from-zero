@@ -213,10 +213,15 @@ func materialize(b *Bank, lang string, q *Question, part, dir string) error {
 	return writeScaffold(lang, dir)
 }
 
-// writeScaffold writes the lang's scaffold files (go.mod, tsconfig.json) into dir.
+// writeScaffold writes the lang's scaffold files (go.mod, tsconfig.json) that dir does not have yet;
+// one the learner edited is theirs.
 func writeScaffold(lang, dir string) error {
 	for name, body := range runners[lang].scaffold {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+		p := filepath.Join(dir, name)
+		if _, err := os.Stat(p); err == nil {
+			continue
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
 			return err
 		}
 	}
