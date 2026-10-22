@@ -717,7 +717,12 @@ func (m *model) updateCleared(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 var (
-	titleStyle = lipgloss.NewStyle().Bold(true).Border(lipgloss.RoundedBorder()).Padding(0, 2)
+	accent     = lipgloss.Color("12")
+	titleStyle = lipgloss.NewStyle().Bold(true).Foreground(accent)
+	selStyle   = lipgloss.NewStyle().Bold(true).Foreground(accent)
+	barOnStyle = lipgloss.NewStyle().Foreground(accent)
+	keyStyle   = lipgloss.NewStyle().Bold(true)
+	warnStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 	boxStyle   = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 2)
 	helpStyle  = lipgloss.NewStyle().Faint(true)
 	okStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true)
@@ -779,11 +784,18 @@ func pad(s string, w int) string {
 	return s + strings.Repeat(" ", max(w-lipgloss.Width(s), 0))
 }
 
-func help(s string) string { return "\n" + helpStyle.Render("  "+s) }
+// help renders a key line from key/description pairs: the key bold, the description faint.
+func help(kv ...string) string {
+	parts := make([]string, 0, len(kv)/2)
+	for i := 0; i+1 < len(kv); i += 2 {
+		parts = append(parts, keyStyle.Render(kv[i])+" "+helpStyle.Render(kv[i+1]))
+	}
+	return "\n  " + strings.Join(parts, helpStyle.Render(" • "))
+}
 
 func (m *model) viewMenu() string {
 	var s strings.Builder
-	s.WriteString(titleStyle.Render("exam-from-zero\n你真的學會了嗎？") + "\n\n  選擇今天要測驗的語言\n\n")
+	s.WriteString("  " + titleStyle.Render("exam-from-zero") + "  " + helpStyle.Render("你真的學會了嗎？") + "\n\n  選擇今天要測驗的語言\n\n")
 	for i, l := range m.langs {
 		chs, lp := m.bank.Chapters[l.ID], m.prog[l.ID]
 		done, status := 0, ""
@@ -802,11 +814,17 @@ func (m *model) viewMenu() string {
 				status = fmt.Sprintf("▸ 第 %s 關進行中 (%d/%d)", chapterLabel(chs[idx]), run.done(), len(run.IDs))
 			}
 		}
-		row := fmt.Sprintf("%s %s  %3d/%-3d %s", pad(l.Name, 12), bar(done, len(chs)), done, len(chs), status)
-		if m.missing[l.ID] {
-			row = helpStyle.Render(fmt.Sprintf("%s %s  %3d/%-3d ✗ 缺少 %s", pad(l.Name, 12), bar(done, len(chs)), done, len(chs), l.Tool))
+		name, counts := pad(l.Name, 12), fmt.Sprintf("%3d/%-3d", done, len(chs))
+		on, off := bar(done, len(chs))
+		if m.missing[l.ID] { // one Render: a styled segment inside another would reset it mid-line
+			fmt.Fprintf(&s, "  %s\n", helpStyle.Render(fmt.Sprintf("%s%s %s%s  %s ✗ 缺少 %s", cursor(i == m.langCur), name, on, off, counts, l.Tool)))
+			continue
 		}
-		fmt.Fprintf(&s, "  %s%s\n", cursor(i == m.langCur), row)
+		st := lipgloss.NewStyle()
+		if i == m.langCur {
+			st = selStyle
+		}
+		fmt.Fprintf(&s, "  %s %s%s  %s\n", st.Render(cursor(i == m.langCur)+name), barOnStyle.Render(on), helpStyle.Render(off), st.Render(counts+" "+status))
 	}
 	if m.resetting {
 		l := m.lang()
@@ -819,10 +837,10 @@ func (m *model) viewMenu() string {
 		if m.resetMsg != "" {
 			body += "\n" + badStyle.Render(m.resetMsg)
 		}
-		s.WriteString("\n  重置 " + l.Name + "\n" + boxStyle.Render(body+"\n\nenter 確認   esc 取消"))
+		s.WriteString("\n  " + keyStyle.Render("重置 "+l.Name) + "\n" + boxStyle.Render(body+"\n"+help("enter", "確認", "esc", "取消")))
 		return s.String()
 	}
-	s.WriteString(help("↑/↓ 選擇   enter 進入   R 重置（僅限全部過關）   q 離開"))
+	s.WriteString(help("↑/↓", "選擇", "enter", "進入", "R", "重置（僅限全部過關）", "q", "離開"))
 	return s.String()
 }
 
@@ -836,31 +854,36 @@ func chapterLabel(c *Chapter) string {
 func (m *model) viewChapters() string {
 	var s strings.Builder
 	header := fmt.Sprintf("%s   %d/%d 過關", m.lang().Name, len(m.lp().Passed), len(m.chapters()))
-	s.WriteString(titleStyle.Render(header) + "\n\n")
-	fmt.Fprintf(&s, "    %3s  %s  %s  %s\n", "#", pad("關卡", 36), "題數", "狀態")
+	s.WriteString("  " + titleStyle.Render(header) + "\n\n")
+	s.WriteString(helpStyle.Render(fmt.Sprintf("    %3s  %s  %s  %s", "#", pad("關卡", 36), "題數", "狀態")) + "\n")
 	for i, c := range m.chapters() {
 		status := ""
 		switch run := m.lp().Runs[c.Key]; {
 		case run != nil:
-			status = fmt.Sprintf("▸ 進行中 %d/%d", run.done(), len(run.IDs))
+			status = warnStyle.Render(fmt.Sprintf("▸ 進行中 %d/%d", run.done(), len(run.IDs)))
 		case m.passed(i):
-			status = "✓"
+			status = okStyle.Render("✓")
 		case !m.unlocked(i):
-			status = "🔒"
+			status = helpStyle.Render("🔒")
 		}
-		fmt.Fprintf(&s, "  %s%3s  %s  %4d  %s\n", cursor(i == m.chapCur), chapterLabel(c), pad(c.Title, 36), c.Sample, status)
+		st := lipgloss.NewStyle()
+		if i == m.chapCur {
+			st = selStyle
+		}
+		fmt.Fprintf(&s, "  %s  %s\n", st.Render(fmt.Sprintf("%s%3s  %s  %4d", cursor(i == m.chapCur), chapterLabel(c), pad(c.Title, 36), c.Sample)), status)
 	}
-	s.WriteString(help("↑/↓ 選擇   enter 進入／接續   esc 回主選單"))
+	s.WriteString(help("↑/↓", "選擇", "enter", "進入／接續", "esc", "回主選單"))
 	return s.String()
 }
 
-func bar(done, total int) string {
+// bar returns the filled and empty halves of a progress bar, so callers can style each.
+func bar(done, total int) (on, off string) {
 	const w = 18
 	n := 0
 	if total > 0 {
 		n = done * w / total
 	}
-	return strings.Repeat("█", n) + strings.Repeat("░", w-n)
+	return strings.Repeat("█", n), strings.Repeat("░", w-n)
 }
 
 func stars(d int) string { return strings.Repeat("★", d) + strings.Repeat("☆", max(3-d, 0)) }
@@ -886,7 +909,11 @@ func (m *model) viewQuestion() string {
 			if i == m.choiceCur {
 				mark = "(•)"
 			}
-			body += fmt.Sprintf("\n%s%s %s", cursor(i == m.choiceCur), mark, md(c))
+			line := cursor(i == m.choiceCur) + mark + " " + md(c)
+			if i == m.choiceCur {
+				line = selStyle.Render(cursor(true)+mark) + " " + md(c) // md output is styled; a wrapping Render would reset it
+			}
+			body += "\n" + line
 		}
 	case "short":
 		body += "\n\n" + m.input.View()
@@ -897,7 +924,7 @@ func (m *model) viewQuestion() string {
 		if m.editing {
 			state = " ✎ 編輯中"
 		}
-		s.WriteString(m.titledBox(filepath.Base(m.editFile)+state, m.editor.View()) + "\n")
+		s.WriteString("  " + keyStyle.Render(filepath.Base(m.editFile)+state) + "\n" + boxStyle.Width(max(m.width-2, 20)).Render(m.editor.View()) + "\n") // the editor keeps the full width
 	}
 	switch {
 	case m.grading:
@@ -905,7 +932,7 @@ func (m *model) viewQuestion() string {
 		if firstBuildPending(m.lang().ID, m.langRoot()) {
 			note = "（第一次編譯可能需要一到兩分鐘）"
 		}
-		s.WriteString("  ⏳ 執行中…" + note + "\n")
+		s.WriteString(warnStyle.Render("  ⏳ 執行中…"+note) + "\n")
 	case m.err != nil:
 		s.WriteString(badStyle.Render("  錯誤：") + m.err.Error() + "\n")
 	case m.result != nil:
@@ -918,7 +945,7 @@ func (m *model) viewQuestion() string {
 	if m.showRef {
 		s.WriteString(m.titledBox("參考答案", m.refAnswer()) + "\n")
 	}
-	s.WriteString("  進度  " + m.progressRow() + "\n")
+	s.WriteString(helpStyle.Render("  進度  ") + m.progressRow() + "\n")
 	hintKey := "h"
 	if m.q.Type == "short" {
 		hintKey = "tab"
@@ -929,28 +956,30 @@ func (m *model) viewQuestion() string {
 	}
 	switch {
 	case m.confirmFlag:
-		s.WriteString("\n  確定檢舉這題有問題？會換一題並不再出現  y 檢舉   n 取消")
+		s.WriteString("\n  確定檢舉這題有問題？會換一題並不再出現" + help("y", "檢舉", "n", "取消"))
 	case m.confirmQuit:
-		s.WriteString("\n  確定離開？進度會保留  y 離開   n 繼續作答")
+		s.WriteString("\n  確定離開？進度會保留" + help("y", "離開", "n", "繼續作答"))
 	case m.editing:
-		s.WriteString(help("esc 離開編輯   ctrl+s 存檔並判定"))
+		s.WriteString(help("esc", "離開編輯", "ctrl+s", "存檔並判定"))
 	case r.Cleared:
-		s.WriteString(help("enter 下一題   r 參考答案   esc 離開"))
+		s.WriteString(help("enter", "下一題", "r", "參考答案", "esc", "離開"))
 	case m.q.Type == "choice":
-		s.WriteString(help("↑/↓ 選擇   enter 送出   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
+		s.WriteString(help("↑/↓", "選擇", "enter", "送出", hintKey, "提示", flagKey, "檢舉", "esc", "離開"))
 	case m.q.Type == "short":
-		s.WriteString(help("enter 送出   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
+		s.WriteString(help("enter", "送出", hintKey, "提示", flagKey, "檢舉", "esc", "離開"))
 	default:
-		s.WriteString(help("tab 編輯   e 開編輯器   enter 判定   " + hintKey + " 提示   " + flagKey + " 檢舉   esc 離開"))
+		s.WriteString(help("tab", "編輯", "e", "開編輯器", "enter", "判定", hintKey, "提示", flagKey, "檢舉", "esc", "離開"))
 	}
 	return s.String()
 }
+
+var markStyles = map[string]lipgloss.Style{"✓": okStyle, "✗": badStyle, "●": selStyle, "○": helpStyle}
 
 func (m *model) progressRow() string {
 	r := m.run
 	marks := make([]string, len(r.IDs))
 	for i := range r.IDs {
-		marks[i] = r.Mark(i)
+		marks[i] = markStyles[r.Mark(i)].Render(r.Mark(i))
 	}
 	row := strings.Join(marks, " ")
 	if r.Redo {
@@ -966,7 +995,7 @@ func (m *model) viewSetup() string {
 		if out := strings.TrimSpace(m.setupLive.String()); out != "" {
 			lines := strings.Split(out, "\n")
 			lines = lines[max(len(lines)-liveSetupLines, 0):]
-			clip := helpStyle.MaxWidth(max(m.width-8, 20)) // inside the box; a long line must not wrap and push the view
+			clip := helpStyle.MaxWidth(m.boxWidth() - 6) // inside the box; a long line must not wrap and push the view
 			for i, l := range lines {
 				l = strings.TrimSuffix(l, "\r")                          // a CRLF line end, not a redraw
 				lines[i] = clip.Render(l[strings.LastIndex(l, "\r")+1:]) // keep what a progress line last drew
@@ -980,7 +1009,7 @@ func (m *model) viewSetup() string {
 		lines := strings.Split(out, "\n")
 		body += "\n\n" + strings.Join(lines[max(len(lines)-maxOutputLines, 0):], "\n") // npm errors end with the useful part
 	}
-	return m.box(body) + help("enter 重試   esc 返回")
+	return m.box(body) + help("enter", "重試", "esc", "返回")
 }
 
 func (m *model) viewRedoIntro() string {
@@ -990,9 +1019,9 @@ func (m *model) viewRedoIntro() string {
 	}
 	body := fmt.Sprintf("⟲ 第 %s 題你曾答錯，workspace 已重設為 starter，\n  請從頭再寫一次。", strings.Join(nums, "、"))
 	if m.err != nil {
-		return m.box(body) + "\n" + badStyle.Render("  重設失敗：") + m.err.Error() + "\n" + help("enter 重試")
+		return m.box(body) + "\n" + badStyle.Render("  重設失敗：") + m.err.Error() + "\n" + help("enter", "重試")
 	}
-	return m.box(body) + "\n  進度  " + m.progressRow() + "\n" + help("enter 開始")
+	return m.box(body) + "\n  進度  " + m.progressRow() + "\n" + help("enter", "開始")
 }
 
 func (m *model) viewCleared() string {
@@ -1001,9 +1030,9 @@ func (m *model) viewCleared() string {
 	if m.chapCur+1 < len(m.chapters()) {
 		n := m.chapters()[m.chapCur+1]
 		body += fmt.Sprintf("\n🔓 已解鎖：第 %s 關 %s", chapterLabel(n), n.Title)
-		return m.box(body) + help("enter 下一關   esc 回關卡清單")
+		return m.box(body) + help("enter", "下一關", "esc", "回關卡清單")
 	}
-	return m.box(body+"\n\n✓ 全部過關") + help("esc 回關卡清單")
+	return m.box(body+"\n\n✓ 全部過關") + help("esc", "回關卡清單")
 }
 
 var resultTitles = map[string]string{
@@ -1022,7 +1051,7 @@ func (m *model) viewResult(r Result) string {
 	if m.out.TotalLineCount() > 0 && resultBody(r) != "" {
 		s += m.box(m.out.View()) + "\n"
 		if !m.out.AtTop() || !m.out.AtBottom() {
-			s += helpStyle.Render("  pgup/pgdn 捲動輸出") + "\n"
+			s += help("pgup/pgdn", "捲動輸出") + "\n"
 		}
 	}
 	return s
@@ -1043,14 +1072,14 @@ const liveSetupLines = 10
 // setOutput loads grading output into the viewport, capped so long compiler errors scroll instead of overflowing.
 func (m *model) setOutput(body string) {
 	lines := strings.Count(body, "\n") + 1
-	m.out.Width = max(m.width-6, 20)
+	m.out.Width = m.boxWidth() - 4
 	m.out.Height = min(lines, maxOutputLines, m.paneMax(4))
 	m.out.SetContent(body)
 	m.out.GotoTop()
 }
 
 func (m *model) titledBox(title, content string) string {
-	return "  " + title + "\n" + m.box(content)
+	return "  " + keyStyle.Render(title) + "\n" + m.box(content)
 }
 
 // refAnswer renders the solution: code files for code questions, the right option or accepted patterns otherwise.
@@ -1077,10 +1106,15 @@ func (m *model) refAnswer() string {
 	return strings.TrimRight(s.String(), "\n")
 }
 
-// box wraps content to the terminal so long lines are not truncated by the renderer.
+// boxWidth is the outer width of a content box: the terminal, capped so long prompts stay readable on wide screens.
+func (m *model) boxWidth() int {
+	return max(min(m.width, 100)-2, 26) // never below the old 20-column floor of the panes inside
+}
+
+// box wraps content to the box so long lines are not truncated by the renderer.
 func (m *model) box(content string) string {
 	if m.width > 4 {
-		return boxStyle.Width(m.width - 2).Render(content)
+		return boxStyle.Width(m.boxWidth()).Render(content)
 	}
 	return boxStyle.Render(content)
 }
