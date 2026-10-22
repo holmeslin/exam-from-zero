@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"path"
@@ -77,6 +78,10 @@ func LoadBank(fsys fs.FS) (*Bank, error) {
 	files, err := fs.Glob(fsys, "*/*.yaml")
 	if err != nil {
 		return nil, err
+	}
+	// Glob swallows I/O errors, so a missing directory also lands here
+	if len(files) == 0 {
+		return nil, errors.New("題庫沒有任何章節")
 	}
 	b := &Bank{FS: fsys, Chapters: map[string][]*Chapter{}, byID: map[string]*Question{}}
 	for _, f := range files { // Glob returns lexical order, which is chapter order
