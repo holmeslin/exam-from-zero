@@ -27,12 +27,12 @@ func Verify(ctx context.Context, fsys fs.FS, only string, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 
 	problems := 0
 	report := func(id, format string, a ...any) {
 		problems++
-		fmt.Fprintf(w, "✗ %s: %s\n", id, fmt.Sprintf(format, a...))
+		_, _ = fmt.Fprintf(w, "✗ %s: %s\n", id, fmt.Sprintf(format, a...))
 	}
 	seen := map[string]bool{}
 	for _, l := range langs {
@@ -84,7 +84,7 @@ func Verify(ctx context.Context, fsys fs.FS, only string, w io.Writer) error {
 	if problems > 0 {
 		return fmt.Errorf("%d 個問題", problems)
 	}
-	fmt.Fprintln(w, "✓ 題庫驗證通過")
+	_, _ = fmt.Fprintln(w, "✓ 題庫驗證通過")
 	return nil
 }
 

@@ -384,7 +384,7 @@ func TestFlag_ReplacesQuestionAndExcludesItLater(t *testing.T) {
 	out := e.waitFor("題目")
 	first, other, firstID := "題目甲", "題目乙", "flag-a"
 	if !strings.Contains(out, first) {
-		first, other, firstID = other, first, "flag-b"
+		other, firstID = first, "flag-b"
 	}
 
 	e.press("!")
@@ -707,8 +707,7 @@ func TestNodeLang_FailedInstallCanBeRetried(t *testing.T) {
 	e.key(tea.KeyEnter)
 	e.waitFor("✗ 安裝失敗", "enter 重試")
 	e.key(tea.KeyEnter)
-	e.waitFor("安裝 TypeScript 依賴中")
-	e.waitFor("✗ 安裝失敗")
+	e.waitFor("安裝 TypeScript 依賴中", "✗ 安裝失敗") // a fast npm failure can land in the same read as the spinner
 	e.key(tea.KeyEsc)
 	e.waitFor("選擇今天要測驗的語言")
 }
