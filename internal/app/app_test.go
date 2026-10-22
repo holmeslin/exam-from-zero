@@ -384,7 +384,7 @@ func TestFlag_ReplacesQuestionAndExcludesItLater(t *testing.T) {
 	out := e.waitFor("題目")
 	first, other, firstID := "題目甲", "題目乙", "flag-a"
 	if !strings.Contains(out, first) {
-		first, other, firstID = other, first, "flag-b"
+		other, firstID = first, "flag-b"
 	}
 
 	e.press("!")

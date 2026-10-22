@@ -116,7 +116,7 @@ func treeStamp(fsys fs.FS, dir string) string {
 			return err
 		}
 		data, err := fs.ReadFile(fsys, p)
-		fmt.Fprintf(h, "%s\x00%d\x00", p, len(data))
+		_, _ = fmt.Fprintf(h, "%s\x00%d\x00", p, len(data))
 		h.Write(data)
 		return err
 	})
@@ -257,7 +257,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 	if err := os.RemoveAll(work); err != nil {
 		return Result{}, err
 	}
-	defer os.RemoveAll(work)
+	defer func() { _ = os.RemoveAll(work) }()
 	if _, err := copyTree(os.DirFS(dir), ".", work); err != nil {
 		return Result{}, err
 	}
