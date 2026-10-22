@@ -2,6 +2,7 @@ lang: react
 chapter: "2"
 title: 函式與現代 JavaScript
 source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter2, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+js: true
 sample: 5
 questions:
   - id: react-ch02-q01

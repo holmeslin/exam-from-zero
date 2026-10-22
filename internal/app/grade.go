@@ -50,16 +50,21 @@ type runner struct {
 	inRoot bool
 	// setup runs once in the lang root after <lang>/_workspace from the bank is copied there
 	setup []string
+	// slowFirstBuild: the first build downloads and compiles dependencies, so warn until one build has succeeded
+	slowFirstBuild bool
 }
 
-func nodeRunner() runner {
+// nodeRunner type-checks with checker (tsc, or vue-tsc for .vue files) before running.
+func nodeRunner(checker string) runner {
 	return runner{
-		test: []string{"npx", "--no-install", "vitest", "run", "--dir", "{dir}"},
+		build: []string{"npx", "--no-install", checker, "-p", "{dir}/tsconfig.json"},
+		test:  []string{"npx", "--no-install", "vitest", "run", "--dir", "{dir}"},
 		// type stripping is on by default only from Node 22.18, but vitest accepts 22.12
-		run:     []string{"node", "--experimental-strip-types", "{dir}/main.ts"},
-		timeout: 10 * time.Second, // a warm vitest+jsdom run measured under 1s
-		inRoot:  true,
-		setup:   []string{"npm", "install", "--no-audit", "--no-fund"},
+		run:      []string{"node", "--experimental-strip-types", "{dir}/main.ts"},
+		timeout:  10 * time.Second, // per step: a warm vitest+jsdom run and a type check each measured under 1s
+		inRoot:   true,
+		setup:    []string{"npm", "install", "--no-audit", "--no-fund"},
+		scaffold: map[string]string{"tsconfig.json": `{"extends": "../tsconfig.base.json", "include": ["**/*"]}` + "\n"},
 	}
 }
 
@@ -72,18 +77,19 @@ var runners = map[string]runner{
 		scaffold: map[string]string{"go.mod": "module q\n\ngo 1.25\n"},
 	},
 	"rust": {
-		build:   []string{"cargo", "build", "-q"},
-		test:    []string{"cargo", "test", "-q"},
-		run:     []string{"cargo", "run", "-q"},
-		timeout: 120 * time.Second, // first build also downloads and compiles dependencies
+		build:          []string{"cargo", "build", "-q"},
+		test:           []string{"cargo", "test", "-q"},
+		run:            []string{"cargo", "run", "-q"},
+		timeout:        120 * time.Second, // first build also downloads and compiles dependencies
+		slowFirstBuild: true,
 		// every question is its own package; a shared target dir lets them reuse compiled deps
 		env: func(dir string) []string {
 			return []string{"CARGO_TARGET_DIR=" + filepath.Join(filepath.Dir(dir), ".target")}
 		},
 	},
-	"typescript": nodeRunner(),
-	"vue":        nodeRunner(),
-	"react":      nodeRunner(),
+	"typescript": nodeRunner("tsc"),
+	"vue":        nodeRunner("vue-tsc"),
+	"react":      nodeRunner("tsc"),
 }
 
 const setupTimeout = 10 * time.Minute
@@ -117,12 +123,24 @@ func treeStamp(fsys fs.FS, dir string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// builtMarker in the lang root records that a build has succeeded there.
+const builtMarker = ".built"
+
+// firstBuildPending reports whether the lang's slow first build is still ahead.
+func firstBuildPending(lang, root string) bool {
+	if !runners[lang].slowFirstBuild {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(root, builtMarker))
+	return err != nil
+}
+
 // setupLang copies the bank's shared workspace files into root and installs dependencies; the output explains a failure.
-func setupLang(ctx context.Context, b *Bank, lang, root string) (string, error) {
+func setupLang(ctx context.Context, b *Bank, lang, root string, live io.Writer) (string, error) {
 	if _, err := copyTree(b.FS, path.Join(lang, "_workspace"), root); err != nil {
 		return "", err
 	}
-	res, _, err := execIn(ctx, root, setupTimeout, nil, runners[lang].setup)
+	res, _, err := execIn(ctx, root, setupTimeout, nil, runners[lang].setup, "", live)
 	if err != nil || !res.Pass() {
 		return res.Output, cmp.Or(err, fmt.Errorf("%s 失敗", strings.Join(runners[lang].setup, " ")))
 	}
@@ -192,8 +210,18 @@ func materialize(b *Bank, lang string, q *Question, part, dir string) error {
 	if _, err := copyTree(b.FS, b.questionDir(lang, q.ID, part), dir); err != nil {
 		return err
 	}
+	return writeScaffold(lang, dir)
+}
+
+// writeScaffold writes the lang's scaffold files (go.mod, tsconfig.json) that dir does not have yet;
+// one the learner edited is theirs.
+func writeScaffold(lang, dir string) error {
 	for name, body := range runners[lang].scaffold {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+		p := filepath.Join(dir, name)
+		if _, err := os.Stat(p); err == nil {
+			continue
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
 			return err
 		}
 	}
@@ -233,12 +261,10 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 	if _, err := copyTree(os.DirFS(dir), ".", work); err != nil {
 		return Result{}, err
 	}
-	if q.Check != "stdout" {
-		if _, err := copyTree(b.FS, b.questionDir(lang, q.ID, "test"), work); err != nil {
-			return Result{}, err
-		}
+	// workspaces made before a scaffold file existed don't have it
+	if err := writeScaffold(lang, work); err != nil {
+		return Result{}, err
 	}
-
 	r, cwd := runners[lang], work
 	var env []string
 	if r.env != nil {
@@ -248,17 +274,27 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		r.build, r.test, r.run = inDir(r.build, work), inDir(r.test, work), inDir(r.run, work)
 		cwd = filepath.Dir(work)
 	}
-	if r.build != nil {
-		res, _, err := execIn(ctx, cwd, r.timeout, env, r.build)
+	if r.build != nil && !q.js {
+		res, _, err := execIn(ctx, cwd, r.timeout, env, r.build, "", nil)
 		if res.Kind != KindPass || err != nil {
 			if res.Kind == KindTest {
 				res.Kind = KindCompile
 			}
 			return res, err
 		}
+		if r.slowFirstBuild {
+			_ = os.WriteFile(filepath.Join(filepath.Dir(work), builtMarker), nil, 0o644) // if this fails the note just shows again
+		}
+	}
+	// hidden files go in only after the build: a type check must not judge helpers the learner can't edit,
+	// and Go's _test.go and Rust's tests/ never take part in a build anyway
+	if q.Check != "stdout" {
+		if _, err := copyTree(b.FS, b.questionDir(lang, q.ID, "test"), work); err != nil {
+			return Result{}, err
+		}
 	}
 	if q.Check == "stdout" {
-		res, stdout, err := execIn(ctx, cwd, r.timeout, env, r.run, q.Stdin)
+		res, stdout, err := execIn(ctx, cwd, r.timeout, env, r.run, q.Stdin, nil)
 		if err != nil || res.Kind != KindPass {
 			return res, err
 		}
@@ -267,7 +303,7 @@ func gradeCode(ctx context.Context, b *Bank, lang string, q *Question, dir strin
 		}
 		return res, nil
 	}
-	res, _, err := execIn(ctx, cwd, r.timeout, env, r.test)
+	res, _, err := execIn(ctx, cwd, r.timeout, env, r.test, "", nil)
 	return res, err
 }
 
@@ -284,7 +320,8 @@ func inDir(argv []string, dir string) []string {
 }
 
 // execIn runs argv in dir and returns combined output plus stdout alone; a non-zero exit is a KindTest result, not an error.
-func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []string, stdin ...string) (Result, string, error) {
+// live, when set, also receives the combined output as it arrives.
+func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []string, stdin string, live io.Writer) (Result, string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
@@ -292,11 +329,13 @@ func execIn(ctx context.Context, dir string, timeout time.Duration, env, argv []
 	if env != nil {
 		cmd.Env = append(os.Environ(), env...)
 	}
-	if len(stdin) > 0 {
-		cmd.Stdin = strings.NewReader(stdin[0])
-	}
+	cmd.Stdin = strings.NewReader(stdin)
 	var out, stdout capBuf
-	cmd.Stdout, cmd.Stderr = io.MultiWriter(&out, &stdout), &out
+	var sink io.Writer = &out
+	if live != nil {
+		sink = io.MultiWriter(&out, live)
+	}
+	cmd.Stdout, cmd.Stderr = io.MultiWriter(sink, &stdout), sink
 	// kill the whole group: `go test` / `cargo run` spawn the real binary as a child
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
@@ -329,12 +368,46 @@ type capBuf struct {
 	over bool
 }
 
+func (c *capBuf) String() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.buf.String()
+}
+
 func (c *capBuf) Write(p []byte) (int, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	room := maxOutput - c.buf.Len()
 	c.buf.Write(p[:min(len(p), room)])
 	c.over = c.over || len(p) > room
+	return len(p), nil
+}
+
+// tailBuf keeps only the latest output, for a live view of a command that may print without end.
+type tailBuf struct {
+	mu  sync.Mutex
+	buf []byte
+}
+
+const maxTail = 64 << 10 // far more than the few lines a live view shows
+
+func (t *tailBuf) String() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return string(t.buf)
+}
+
+func (t *tailBuf) Write(p []byte) (int, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.buf = append(t.buf, p...)
+	if over := len(t.buf) - maxTail; over > 0 {
+		t.buf = t.buf[over:]
+		if i := bytes.IndexByte(t.buf, '\n'); i >= 0 { // drop the cut line, which may start mid-rune
+			t.buf = t.buf[i+1:]
+		}
+		t.buf = slices.Clone(t.buf) // let the dropped head be freed
+	}
 	return len(p), nil
 }
 

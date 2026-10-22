@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -120,6 +121,21 @@ func TestCompileError(t *testing.T) {
 	e.writeAnswer("go", "go-ch01-q01", "main.go", "package main\n\nfunc Add(a, b int) int { return a + }\n")
 	e.key(tea.KeyEnter)
 	e.waitFor("✗ 編譯錯誤", "syntax error")
+}
+
+func TestGoCodeQuestion_KeepsTheLearnersGoMod(t *testing.T) {
+	e := start(t, newConfig(t))
+	enterFirstQuestion(e, "實作 Add")
+	// a renamed module with a package of its own builds only with the learner's go.mod, not the scaffold's
+	ws := filepath.Join(e.cfg.DataDir, "workspace", "go", "go-ch01-q01")
+	if err := os.MkdirAll(filepath.Join(ws, "calc"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	e.writeAnswer("go", "go-ch01-q01", "go.mod", "module mine\n\ngo 1.25\n")
+	e.writeAnswer("go", "go-ch01-q01", "calc/calc.go", "package calc\n\nfunc Sum(a, b int) int { return a + b }\n")
+	e.writeAnswer("go", "go-ch01-q01", "main.go", "package main\n\nimport \"mine/calc\"\n\nfunc Add(a, b int) int { return calc.Sum(a, b) }\n\nfunc main() {}\n")
+	e.key(tea.KeyEnter)
+	e.waitFor("✓ 通過")
 }
 
 func TestInfiniteLoopTimesOut(t *testing.T) {
@@ -509,6 +525,21 @@ func TestNodeLang_InstallsOnFirstEntryThenGrades(t *testing.T) {
 	e.waitFor("✓ 通過")
 }
 
+func TestNodeLang_TypeErrorIsCompileError(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/node")
+	e := start(t, cfg)
+	e.waitFor("TypeScript")
+	e.key(tea.KeyEnter)
+	e.waitFor("第一步")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 add")
+	// runs fine once types are stripped, so only the type check can catch it
+	e.writeAnswer("typescript", "ts-add", "add.ts", "export function add(a: number, b: number): number { return `${a + b}` as any as string }\n")
+	e.key(tea.KeyEnter)
+	e.waitFor("✗ 編譯錯誤", "TS2322")
+}
+
 func TestNodeLang_ReinstallsWhenBankWorkspaceChanges(t *testing.T) {
 	bank := t.TempDir() // typescript only, so the ⚙ marker can only be its own
 	if err := os.CopyFS(filepath.Join(bank, "typescript"), os.DirFS("testdata/node/typescript")); err != nil {
@@ -630,6 +661,44 @@ func TestInlineEditor_MissingMainFileShowsError(t *testing.T) {
 	enterFirstQuestion(e, "實作 Add", "錯誤：", "main.go")
 }
 
+func TestNodeLang_InstallShowsLiveOutput(t *testing.T) {
+	bin := t.TempDir() // a fake npm that prints CRLF lines in two steps; the first 30 in one write, so none is drawn as the last line
+	var lines strings.Builder
+	for i := 1; i <= 30; i++ {
+		fmt.Fprintf(&lines, "line %02d\\r\\n", i)
+	}
+	script := "#!/bin/sh\nprintf '" + lines.String() + "'\nsleep 1\nprintf 'line 31\\r\\n'\nsleep 1\n"
+	if err := os.WriteFile(filepath.Join(bin, "npm"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/node")
+	e := start(t, cfg)
+	e.waitFor("TypeScript")
+	e.key(tea.KeyEnter)
+	e.waitFor("安裝 TypeScript 依賴中", "line 29", "秒")
+	if out := e.waitFor("line 31"); strings.Contains(out, "line 05") {
+		t.Fatalf("the install view should keep only the last lines:\n%s", out)
+	}
+	e.waitFor("第一步") // chapter list once the install finishes
+}
+
+func TestNodeLang_InstallLiveOutputKeepsUpdatingPastTheCap(t *testing.T) {
+	bin := t.TempDir() // a fake npm that prints more than the 1 MiB output cap, then more lines
+	script := "#!/bin/sh\nhead -c 1100000 /dev/zero | tr '\\0' x\necho\necho 'after the cap'\nsleep 2\n"
+	if err := os.WriteFile(filepath.Join(bin, "npm"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/node")
+	e := start(t, cfg)
+	e.waitFor("TypeScript")
+	e.key(tea.KeyEnter)
+	e.waitFor("安裝 TypeScript 依賴中", "after the cap")
+}
+
 func TestNodeLang_FailedInstallCanBeRetried(t *testing.T) {
 	cfg := newConfig(t)
 	cfg.Bank = os.DirFS("testdata/badnode")
@@ -696,6 +765,29 @@ func TestEditorOpensSourceFileNotManifest(t *testing.T) {
 	}
 }
 
+func TestRust_FirstGradeNoteUntilABuildSucceeds(t *testing.T) {
+	cfg := newConfig(t)
+	cfg.Bank = os.DirFS("testdata/rust")
+	e := start(t, cfg)
+	e.waitFor("Rust", "⚙ 首次判定會下載並編譯依賴")
+	e.key(tea.KeyEnter)
+	e.waitFor("1")
+	e.key(tea.KeyEnter)
+	e.waitFor("實作 add")
+	e.writeAnswer("rust", "rust-add", "src/lib.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n")
+	e.key(tea.KeyEnter)
+	e.waitFor("執行中", "第一次編譯可能需要一到兩分鐘")
+	e.waitFor("✓ 通過")
+
+	e.key(tea.KeyEnter)
+	e.waitFor("印出 hello")
+	e.writeAnswer("rust", "rust-hello", "src/main.rs", "fn main() { println!(\"hello\"); }\n")
+	e.key(tea.KeyEnter)
+	if out := e.waitFor("✓ 通過"); strings.Contains(out, "第一次編譯") {
+		t.Fatalf("the first-build note stayed after a successful build:\n%s", out)
+	}
+}
+
 func TestInlineEditor_EditSaveAndGrade(t *testing.T) {
 	e := start(t, newConfig(t))
 	enterFirstQuestion(e, "實作 Add", "return 0", "tab 編輯")
@@ -739,7 +831,7 @@ func TestRunDrop_InRedoRemovesFromIDsAndQueuesReplacement(t *testing.T) {
 }
 
 func TestExecIn_CapsOutputOfPrintLoop(t *testing.T) {
-	res, _, err := execIn(t.Context(), t.TempDir(), time.Second, nil, []string{"yes"})
+	res, _, err := execIn(t.Context(), t.TempDir(), time.Second, nil, []string{"yes"}, "", nil)
 	if err != nil || res.Kind != KindTimeout || len(res.Output) > maxOutput+100 {
 		t.Fatalf("kind %v, %d bytes, err %v", res.Kind, len(res.Output), err)
 	}

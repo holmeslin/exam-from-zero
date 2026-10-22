@@ -1,7 +1,5 @@
 <script setup lang="ts">
-defineProps({
-  terms: { type: Array, required: true },
-})
+defineProps<{ terms: { id: number; word: string; meaning: string }[] }>()
 </script>
 
 <template>

@@ -1,0 +1,16 @@
+lang: typescript
+chapter: 2
+title: 純 JavaScript
+# the solution is valid JS that tsc rejects, so verify passes only if this chapter skips the type check
+js: true
+source: { repo: fixture, path: fixture, sha: fixture }
+sample: 1
+questions:
+  - id: ts-js-object
+    difficulty: 1
+    type: code
+    check: stdout
+    prompt: 幫物件加上屬性 b 並印出。
+    expected_stdout: "2\n"
+    hints: ["p.b = 2", "console.log(p.b)"]
+    ref: chapter2/01.md

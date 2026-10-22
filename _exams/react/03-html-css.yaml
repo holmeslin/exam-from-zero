@@ -2,6 +2,7 @@ lang: react
 chapter: "3"
 title: HTML 與 CSS
 source: { repo: holmeslin/learning-react-from-zero, path: zh-TW/src/chapter3, sha: 0e0e648967006d1c084a8fa73eec398cf6ed6993 }
+js: true
 sample: 5
 questions:
   - id: react-ch03-q01

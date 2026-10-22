@@ -1,0 +1,17 @@
+{
+  // shared by every question's tsconfig.json; grading type-checks with it before running the tests
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    // a question file without import/export is still its own module, not a global script
+    "moduleDetection": "force"
+  }
+}
