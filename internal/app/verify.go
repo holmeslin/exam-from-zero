@@ -23,7 +23,7 @@ func Verify(ctx context.Context, fsys fs.FS, only string, w io.Writer) error {
 	if only != "" && (len(b.Chapters[only]) == 0 || !slices.ContainsFunc(langs, func(l Lang) bool { return l.ID == only })) {
 		return fmt.Errorf("題庫沒有支援的語言 %q", only)
 	}
-	tmp, err := os.MkdirTemp("", "exam-verify-")
+	tmp, err := os.MkdirTemp("", "exam-from-zero-verify-")
 	if err != nil {
 		return err
 	}
